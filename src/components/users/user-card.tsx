@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { User } from "../types";
+import type { User } from "@/types/user";
 
 interface UserCardProps {
   user: User;

@@ -1,10 +1,10 @@
 "use client";
 
-import { useDeleteWalkIn } from "../hooks";
+import { useDeleteWalkIn } from "@/hooks/users";
 import { UserCard } from "./user-card";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { toast } from "sonner";
-import type { User } from "../types";
+import type { User } from "@/types/user";
 
 interface UserListProps {
   users?: User[];
@@ -13,13 +13,15 @@ interface UserListProps {
 }
 
 export const UserList = ({ users, isLoading, error }: UserListProps) => {
-  const deleteWalkIn = useDeleteWalkIn();
+  const { mutate, isLoading: isDeleting } = useDeleteWalkIn();
 
-  const handleDelete = (id: number) => {
-    deleteWalkIn.mutate(id, {
-      onSuccess: () => toast.success("User deleted"),
-      onError: () => toast.error("Failed to delete user"),
-    });
+  const handleDelete = async (id: number) => {
+    try {
+      await mutate(id);
+      toast.success("User deleted");
+    } catch {
+      toast.error("Failed to delete user");
+    }
   };
 
   if (isLoading) return <LoadingSpinner />;

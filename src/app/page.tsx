@@ -1,5 +1,5 @@
-import { HomeFeature } from "@/features/home";
+import { HomePage } from "@/components/home";
 
-export default function HomePage() {
-  return <HomeFeature />;
+export default function Home() {
+  return <HomePage />;
 }

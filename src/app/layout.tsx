@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ReduxProvider } from "@/providers/redux-provider";
-import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
@@ -27,11 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange
         >
           <ReduxProvider>
-            <QueryProvider>
-              <AuthProvider>
-                {children}
-              </AuthProvider>
-            </QueryProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
           </ReduxProvider>
           <Toaster position="top-right" richColors />
         </ThemeProvider>
