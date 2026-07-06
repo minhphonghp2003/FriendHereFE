@@ -1,4 +1,4 @@
-export { getUsers, getUserById } from "./get-users";
-export { createUser } from "./create-user";
-export { updateUser } from "./update-user";
-export { deleteUser } from "./delete-user";
+export { getUserById, getCurrentUser } from "./get-users";
+export { createWalkIn } from "./create-user";
+export { updateCurrentUser } from "./update-user";
+export { deleteWalkIn } from "./delete-user";

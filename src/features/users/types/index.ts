@@ -1,21 +1,41 @@
 export interface User {
-  id: string;
+  id: number;
   name: string;
+  image: string | null;
   email: string;
-  avatar?: string;
-  role: "admin" | "user";
-  createdAt: string;
-  updatedAt: string;
+  age: number;
+  genderId: number;
+  isWalkIn: boolean;
 }
 
 export interface CreateUserInput {
   name: string;
   email: string;
-  role?: "admin" | "user";
+  password: string;
+  age: number;
+  genderId: number;
 }
 
 export interface UpdateUserInput {
   name?: string;
-  email?: string;
-  role?: "admin" | "user";
+  image?: string | null;
+  age?: number;
+  genderId?: number;
+}
+
+export interface WalkInInput {
+  name: string;
+  age: number;
+  genderId: number;
+}
+
+export interface WalkInUser {
+  id: number;
+  name: string;
+  email: string | null;
+  passwordHash: string | null;
+  image: string | null;
+  age: number;
+  genderId: number;
+  isWalkIn: true;
 }

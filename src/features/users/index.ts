@@ -1,3 +1,3 @@
 export { UserList, UserCard } from "./components";
-export { useUsers, useUser, useCreateUser, useUpdateUser, useDeleteUser } from "./hooks";
-export type { User, CreateUserInput, UpdateUserInput } from "./types";
+export { useUser, useCurrentUser, useCreateWalkIn, useUpdateCurrentUser, useDeleteWalkIn } from "./hooks";
+export type { User, WalkInUser, WalkInInput, UpdateUserInput } from "./types";

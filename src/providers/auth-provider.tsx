@@ -7,8 +7,8 @@ import { TOKEN_KEY } from "@/constants";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
-  user: { id: string; email: string; name: string } | null;
-  login: (user: { id: string; email: string; name: string }, token: string) => void;
+  user: { id: number; email: string; name: string } | null;
+  login: (user: { id: number; email: string; name: string }, token: string) => void;
   logout: () => void;
 }
 
@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, [isAuthenticated]);
 
-  const login = (userData: { id: string; email: string; name: string }, token: string) => {
+  const login = (userData: { id: number; email: string; name: string }, token: string) => {
     localStorage.setItem(TOKEN_KEY, token);
     dispatch(setCredentials({ user: userData, token }));
   };

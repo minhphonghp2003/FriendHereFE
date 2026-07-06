@@ -1,18 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { getUsers } from "../api";
-import type { PaginationParams } from "@/types/api";
+import { getUserById, getCurrentUser } from "../api";
 
-export const useUsers = (params?: PaginationParams) => {
+export const useUser = (id: number) => {
   return useQuery({
-    queryKey: ["users", params],
-    queryFn: () => getUsers(params),
+    queryKey: ["users", id],
+    queryFn: () => getUserById(id),
+    enabled: !!id,
   });
 };
 
-export const useUser = (id: string) => {
+export const useCurrentUser = () => {
   return useQuery({
-    queryKey: ["users", id],
-    queryFn: () => import("../api").then((m) => m.getUserById(id)),
-    enabled: !!id,
+    queryKey: ["users", "me"],
+    queryFn: () => getCurrentUser(),
   });
 };

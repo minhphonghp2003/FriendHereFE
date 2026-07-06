@@ -1,17 +1,16 @@
 export interface Profile {
-  id: string;
+  id: number;
   name: string;
+  image: string | null;
   email: string;
-  avatar?: string;
-  bio?: string;
-  location?: string;
-  createdAt: string;
-  updatedAt: string;
+  age: number;
+  genderId: number;
+  isWalkIn: boolean;
 }
 
 export interface UpdateProfileInput {
   name?: string;
-  bio?: string;
-  location?: string;
-  avatar?: string;
+  image?: string | null;
+  age?: number;
+  genderId?: number;
 }

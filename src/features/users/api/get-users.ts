@@ -1,13 +1,13 @@
 import { httpClient } from "@/lib/axios";
-import type { ApiResponse, PaginatedResponse, PaginationParams } from "@/types/api";
+import type { ApiResponse } from "@/types/api";
 import type { User } from "../types";
 
-export const getUsers = async (params?: PaginationParams): Promise<PaginatedResponse<User>> => {
-  const { data } = await httpClient.get<ApiResponse<PaginatedResponse<User>>>("/users", { params });
+export const getUserById = async (id: number): Promise<User> => {
+  const { data } = await httpClient.get<ApiResponse<User>>(`/User/${id}`);
   return data.data;
 };
 
-export const getUserById = async (id: string): Promise<User> => {
-  const { data } = await httpClient.get<ApiResponse<User>>(`/users/${id}`);
+export const getCurrentUser = async (): Promise<User> => {
+  const { data } = await httpClient.get<ApiResponse<User>>("/User/me");
   return data.data;
 };

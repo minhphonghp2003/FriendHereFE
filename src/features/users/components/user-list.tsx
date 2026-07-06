@@ -1,16 +1,22 @@
 "use client";
 
-import { useUsers, useDeleteUser } from "../hooks";
+import { useDeleteWalkIn } from "../hooks";
 import { UserCard } from "./user-card";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { toast } from "sonner";
+import type { User } from "../types";
 
-export const UserList = () => {
-  const { data, isLoading, error } = useUsers();
-  const deleteUser = useDeleteUser();
+interface UserListProps {
+  users?: User[];
+  isLoading?: boolean;
+  error?: Error | null;
+}
 
-  const handleDelete = (id: string) => {
-    deleteUser.mutate(id, {
+export const UserList = ({ users, isLoading, error }: UserListProps) => {
+  const deleteWalkIn = useDeleteWalkIn();
+
+  const handleDelete = (id: number) => {
+    deleteWalkIn.mutate(id, {
       onSuccess: () => toast.success("User deleted"),
       onError: () => toast.error("Failed to delete user"),
     });
@@ -21,7 +27,7 @@ export const UserList = () => {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {data?.data.map((user) => (
+      {users?.map((user) => (
         <UserCard key={user.id} user={user} onDelete={handleDelete} />
       ))}
     </div>

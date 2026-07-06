@@ -9,7 +9,7 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (input: RegisterInput) => register(input),
     onSuccess: (data) => {
-      authLogin(data.user, data.tokens.accessToken);
+      authLogin({ id: data.userId, name: data.name, email: data.email }, data.token);
     },
   });
 };

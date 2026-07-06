@@ -1,8 +1,8 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
-import type { User, CreateUserInput } from "../types";
+import type { WalkInUser, WalkInInput } from "../types";
 
-export const createUser = async (input: CreateUserInput): Promise<User> => {
-  const { data } = await httpClient.post<ApiResponse<User>>("/users", input);
+export const createWalkIn = async (input: WalkInInput): Promise<WalkInUser> => {
+  const { data } = await httpClient.post<ApiResponse<WalkInUser>>("/WalkIn", input);
   return data.data;
 };

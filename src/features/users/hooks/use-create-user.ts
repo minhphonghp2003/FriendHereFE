@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser } from "../api";
-import type { CreateUserInput } from "../types";
+import { createWalkIn } from "../api";
+import type { WalkInInput } from "../types";
 
-export const useCreateUser = () => {
+export const useCreateWalkIn = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateUserInput) => createUser(input),
+    mutationFn: (input: WalkInInput) => createWalkIn(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },

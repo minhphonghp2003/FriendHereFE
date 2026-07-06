@@ -1,8 +1,8 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
-import type { AuthTokens, AuthUser, RegisterInput } from "../types";
+import type { AuthResponse, RegisterInput } from "../types";
 
-export const register = async (input: RegisterInput): Promise<{ user: AuthUser; tokens: AuthTokens }> => {
-  const { data } = await httpClient.post<ApiResponse<{ user: AuthUser; tokens: AuthTokens }>>("/auth/register", input);
+export const register = async (input: RegisterInput): Promise<AuthResponse> => {
+  const { data } = await httpClient.post<ApiResponse<AuthResponse>>("/Auth/register", input);
   return data.data;
 };

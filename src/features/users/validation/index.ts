@@ -1,16 +1,17 @@
 import { z } from "zod";
 
-export const createUserSchema = z.object({
+export const walkInSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  role: z.enum(["admin", "user"]).default("user"),
+  age: z.number().min(1, "Age is required").max(150, "Invalid age"),
+  genderId: z.number().min(1, "Gender is required"),
 });
 
 export const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
-  role: z.enum(["admin", "user"]).optional(),
+  image: z.string().url().nullable().optional(),
+  age: z.number().min(1).max(150).optional(),
+  genderId: z.number().min(1).optional(),
 });
 
-export type CreateUserFormData = z.infer<typeof createUserSchema>;
+export type WalkInFormData = z.infer<typeof walkInSchema>;
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>;
