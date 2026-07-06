@@ -4,28 +4,27 @@ import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useEffect } from "react";
 
-const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 };
-
 export default function HomePage() {
   const { user } = useAuth();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-  const [position, setPosition] = useState(DEFAULT_CENTER);
+  const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!("geolocation" in navigator)) return;
+    if (!("geolocation" in navigator)) {
+      setError("Geolocation not supported");
+      return;
+    }
 
-    const watchId = navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setPosition({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
+        setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      () => {
+        setError("Location access denied");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
     );
-
-    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   if (!apiKey) {
@@ -36,11 +35,27 @@ export default function HomePage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (!position) {
+    return (
+      <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
       <APIProvider apiKey={apiKey}>
         <Map
-          defaultCenter={DEFAULT_CENTER}
+          defaultCenter={position}
           defaultZoom={15}
           gestureHandling="greedy"
           disableDefaultUI
