@@ -1,14 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCredentials, logout } from "@/store/slices/auth-slice";
-import { TOKEN_KEY } from "@/constants";
+import { TOKEN_KEY, USER_ID_KEY } from "@/constants";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
-  user: { id: number; email: string; name: string } | null;
-  login: (user: { id: number; email: string; name: string }, token: string) => void;
+  user: { id: number; name: string; email: string; isWalkIn: boolean } | null;
+  token: string | null;
+  login: (user: { id: number; name: string; email: string; isWalkIn: boolean }, token?: string) => void;
   logout: () => void;
 }
 
@@ -20,27 +21,41 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const dispatch = useAppDispatch();
-  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user, token, isAuthenticated } = useAppSelector((state) => state.auth);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token && !isAuthenticated) {
-      localStorage.removeItem(TOKEN_KEY);
+    const userId = localStorage.getItem(USER_ID_KEY);
+    const storedToken = localStorage.getItem(TOKEN_KEY);
+    if (userId) {
+      dispatch(setCredentials({
+        user: { id: Number(userId), name: "", email: "", isWalkIn: !storedToken },
+        token: storedToken || undefined,
+      }));
     }
-  }, [isAuthenticated]);
+    setHydrated(true);
+  }, [dispatch]);
 
-  const login = (userData: { id: number; email: string; name: string }, token: string) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    dispatch(setCredentials({ user: userData, token }));
+  const handleLogin = (userData: { id: number; name: string; email: string; isWalkIn: boolean }, authToken?: string) => {
+    localStorage.setItem(USER_ID_KEY, String(userData.id));
+    if (authToken) {
+      localStorage.setItem(TOKEN_KEY, authToken);
+    }
+    dispatch(setCredentials({ user: userData, token: authToken }));
   };
 
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_ID_KEY);
     dispatch(logout());
   };
 
+  if (!hydrated) {
+    return null;
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout: handleLogout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, token, login: handleLogin, logout: handleLogout }}>
       {children}
     </AuthContext.Provider>
   );

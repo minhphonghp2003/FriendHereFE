@@ -13,7 +13,7 @@ export const useLogin = () => {
     setError(null);
     try {
       const data = await apiLogin(input);
-      authLogin({ id: data.userId, name: data.name, email: data.email }, data.token);
+      authLogin({ id: data.userId, name: data.name, email: data.email, isWalkIn: false }, data.token);
       return data;
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Login failed"));

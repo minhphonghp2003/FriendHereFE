@@ -1,6 +1,7 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
 import type { AuthResponse, LoginInput, RegisterInput, EscalateInput } from "@/types/auth";
+import type { WalkInUser, WalkInInput } from "@/types/user";
 
 export const login = async (input: LoginInput): Promise<AuthResponse> => {
   const { data } = await httpClient.post<ApiResponse<AuthResponse>>("/Auth/login", input);
@@ -17,6 +18,11 @@ export const escalate = async (userId: number, input: EscalateInput): Promise<Au
   return data.data;
 };
 
-export const logout = async (): Promise<void> => {
+export const createWalkIn = async (input: WalkInInput): Promise<WalkInUser> => {
+  const { data } = await httpClient.post<ApiResponse<WalkInUser>>("/WalkIn", input);
+  return data.data;
+};
+
+export const logoutApi = async (): Promise<void> => {
   await httpClient.post("/auth/logout");
 };
