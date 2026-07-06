@@ -3,22 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 
-declare global {
-  interface Window {
-    google: {
-      maps: {
-        Map: new (el: HTMLElement, opts: google.maps.MapOptions) => google.maps.Map;
-        Marker: new (opts: google.maps.MarkerOptions) => google.maps.Marker;
-      };
-    };
-  }
-}
-
 const DEFAULT_CENTER = { lat: 10.762622, lng: 106.660172 };
 
 function loadScript(apiKey: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (window.google?.maps) {
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src*="maps.googleapis.com/maps/api"]`,
+    );
+    if (existing) {
       resolve();
       return;
     }
@@ -27,7 +19,7 @@ function loadScript(apiKey: string): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
     document.head.appendChild(script);
   });
 }
@@ -50,35 +42,35 @@ export default function HomePage() {
     }
 
     let watchId: number | null = null;
+    let cancelled = false;
 
-    loadScript(apiKey)
-      .then(() => {
-        if (!mapRef.current) return;
+    const init = async () => {
+      try {
+        await loadScript(apiKey);
 
-        const map = new window.google.maps.Map(mapRef.current, {
+        const { Map } = (await google.maps.importLibrary("maps")) as google.maps.MapsLibrary;
+        const { Marker } = (await google.maps.importLibrary("marker")) as google.maps.MarkerLibrary;
+
+        if (cancelled || !mapRef.current) return;
+
+        const map = new Map(mapRef.current, {
           center: DEFAULT_CENTER,
           zoom: 15,
           disableDefaultUI: true,
-          zoomControl: false,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
           gestureHandling: "greedy",
-          styles: [
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
-          ],
+          mapId: "friendhere-map",
         });
 
         mapInstance.current = map;
 
-        const marker = new window.google.maps.Marker({
+        const marker = new Marker({
           position: DEFAULT_CENTER,
           map,
           title: user?.name || "You",
         });
         markerRef.current = marker;
 
-        setLoading(false);
+        if (!cancelled) setLoading(false);
 
         if ("geolocation" in navigator) {
           watchId = navigator.geolocation.watchPosition(
@@ -94,13 +86,18 @@ export default function HomePage() {
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
           );
         }
-      })
-      .catch(() => {
-        setError("Failed to load Google Maps");
-        setLoading(false);
-      });
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load Google Maps");
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
 
     return () => {
+      cancelled = true;
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
       }

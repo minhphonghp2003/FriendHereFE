@@ -22,8 +22,8 @@ export interface UserDto {
 
 export interface JoinLocationInput {
   userId: number;
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  speed: number;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+  speed?: number;
 }

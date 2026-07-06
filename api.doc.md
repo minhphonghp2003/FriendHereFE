@@ -302,16 +302,23 @@ wss://localhost:5001/Location
 ### Hub Methods (Client → Server)
 
 #### `Join`
-Join with initial location. Broadcasts `NewJoin` to all clients.
+Join with optional location. If location is provided, broadcasts `NewJoin` to all clients. If location is omitted (location service off), only stores user info.
 
 **Parameters:**
 ```json
 {
   "userId": 1,
-  "latitude": 10.762622,
-  "longitude": 106.660172,
-  "accuracy": 10.0,
-  "speed": 5.0
+  "latitude": 10.762622,    // optional
+  "longitude": 106.660172,  // optional
+  "accuracy": 10.0,         // optional
+  "speed": 5.0              // optional
+}
+```
+
+**Example (no location):**
+```json
+{
+  "userId": 1
 }
 ```
 
@@ -346,5 +353,11 @@ Join with initial location. Broadcasts `NewJoin` to all clients.
   "isWalkIn": false
 }
 ```
+
 ---
 
+## OpenAPI
+
+Development mode only:
+- Swagger UI: `/swagger`
+- OpenAPI spec: `/openapi/v1.json`
