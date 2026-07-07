@@ -1,24 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { USER_ID_KEY } from "@/constants";
+import { useAuth } from "@/providers/auth-provider";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [allowed, setAllowed] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const userId = localStorage.getItem(USER_ID_KEY);
-    if (!userId) {
+    if (!isAuthenticated) {
       router.replace("/init");
-    } else {
-      setAllowed(true);
     }
-  }, [router]);
+  }, [isAuthenticated, router]);
 
-  if (!allowed) return null;
+  if (!isAuthenticated) return null;
 
   return (
     <div className="flex min-h-dvh flex-col">
