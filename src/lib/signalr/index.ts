@@ -4,11 +4,13 @@ import type { LocationDto, UserDto, JoinLocationInput } from "./types";
 
 export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
 export type NewJoinCallback = (user: UserDto, location: LocationDto) => void;
+export type UserDisconnectCallback = (userId: number) => void;
 
 class LocationHub {
   private connection: signalR.HubConnection | null = null;
   private receiveLocationsCallback: ReceiveLocationsCallback | null = null;
   private newJoinCallback: NewJoinCallback | null = null;
+  private userDisconnectCallback: UserDisconnectCallback | null = null;
 
   async start(): Promise<void> {
     if (this.connection) {
@@ -27,6 +29,11 @@ class LocationHub {
 
     this.connection.on("NewJoin", (user: UserDto, location: LocationDto) => {
       this.newJoinCallback?.(user, location);
+    });
+
+    this.connection.on("ReceiveUserDisconnect", (userId: number) => {
+      console.log("[SignalR] User disconnected:", userId);
+      this.userDisconnectCallback?.(userId);
     });
 
     try {
@@ -58,6 +65,10 @@ class LocationHub {
 
   onNewJoin(callback: NewJoinCallback): void {
     this.newJoinCallback = callback;
+  }
+
+  onUserDisconnect(callback: UserDisconnectCallback): void {
+    this.userDisconnectCallback = callback;
   }
 
   getConnection(): signalR.HubConnection | null {

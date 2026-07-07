@@ -55,6 +55,11 @@ export default function HomePage() {
           });
         });
 
+        locationHub.onUserDisconnect((userId) => {
+          console.log("[SignalR] Removing user:", userId);
+          setLocations((prev) => prev.filter((l) => l.userId !== userId));
+        });
+
         await locationHub.join({
           userId: user.id,
           latitude: position.lat,
