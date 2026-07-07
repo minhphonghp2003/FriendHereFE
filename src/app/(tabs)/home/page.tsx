@@ -1,10 +1,12 @@
 "use client";
 
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { locationHub } from "@/lib/signalr";
+import { CustomMarker } from "@/components/home/custom-marker";
+import { MarkerDetail } from "@/components/home/marker-detail";
 import type { LocationDto } from "@/lib/signalr/types";
 
 export default function HomePage() {
@@ -15,6 +17,11 @@ export default function HomePage() {
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<{
+    name: string;
+    image?: string;
+    isCurrentUser: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -88,6 +95,25 @@ export default function HomePage() {
     };
   }, [user, position]);
 
+  const handleCurrentUserClick = useCallback(() => {
+    setSelectedMarker({
+      name: user?.name || "You",
+      isCurrentUser: true,
+    });
+  }, [user]);
+
+  const handleMarkerClick = useCallback((location: LocationDto) => {
+    setSelectedMarker({
+      name: location.name,
+      image: location.image,
+      isCurrentUser: false,
+    });
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedMarker(null);
+  }, []);
+
   if (!apiKey) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
@@ -124,7 +150,7 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
+    <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
       <APIProvider apiKey={apiKey}>
         <Map
           defaultCenter={position}
@@ -133,17 +159,33 @@ export default function HomePage() {
           disableDefaultUI
           mapId="friendhere-map"
         >
-          <AdvancedMarker position={position} title={`${user?.name || "You"} (me)`} />
+          <CustomMarker
+            position={position}
+            name={user?.name || "You"}
+            isCurrentUser
+            onClick={handleCurrentUserClick}
+          />
 
           {locations.map((loc) => (
-              <AdvancedMarker
-                key={loc.id}
-                position={{ lat: loc.latitude, lng: loc.longitude }}
-                title={loc.name}
-              />
-            ))}
+            <CustomMarker
+              key={loc.id}
+              position={{ lat: loc.latitude, lng: loc.longitude }}
+              name={loc.name}
+              image={loc.image}
+              onClick={() => handleMarkerClick(loc)}
+            />
+          ))}
         </Map>
       </APIProvider>
+
+      {selectedMarker && (
+        <MarkerDetail
+          name={selectedMarker.name}
+          image={selectedMarker.image}
+          isCurrentUser={selectedMarker.isCurrentUser}
+          onClose={handleCloseDetail}
+        />
+      )}
     </div>
   );
 }
