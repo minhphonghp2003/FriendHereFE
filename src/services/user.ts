@@ -22,6 +22,14 @@ export const createWalkIn = async (input: WalkInInput): Promise<WalkInUser> => {
   return data.data;
 };
 
+export const updateWalkIn = async (
+  id: number,
+  input: { name?: string; image?: string | null; age?: number; genderId?: number },
+): Promise<WalkInUser> => {
+  const { data } = await httpClient.put<ApiResponse<WalkInUser>>(`/WalkIn/${id}`, input);
+  return data.data;
+};
+
 export const deleteWalkIn = async (id: number): Promise<void> => {
   await httpClient.delete<ApiResponse<null>>(`/WalkIn/${id}`);
 };
