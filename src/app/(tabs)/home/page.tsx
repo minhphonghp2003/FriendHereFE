@@ -53,11 +53,16 @@ export default function HomePage() {
 
         locationHub.onReceiveLocations((locList) => {
           console.log("[SignalR] ReceiveLocations:", locList);
-          setLocations(locList);
+          setLocations((prev) => {
+            const serverIds = new Set(locList.map((l) => l.userId));
+            const extras = prev.filter((l) => !serverIds.has(l.userId));
+            return [...locList, ...extras];
+          });
         });
 
         locationHub.onNewJoin((_user, _location) => {
           console.log("[SignalR] NewJoin:", _user.name, _location);
+          if (_user.id === user?.id) return;
           setLocations((prev) => {
             const exists = prev.some((l) => l.userId === _user.id);
             if (exists) return prev;
