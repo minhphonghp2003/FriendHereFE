@@ -8,10 +8,16 @@ export const useUser = (id: number) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
 
     const fetchUser = async () => {
       setIsLoading(true);
+      setData(null);
       setError(null);
       try {
         const user = await getUserById(id);

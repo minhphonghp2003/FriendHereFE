@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { locationHub } from "@/lib/signalr";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
+import { useUser } from "@/hooks/users/use-users";
 import type { LocationDto } from "@/lib/signalr/types";
 
 export default function HomePage() {
@@ -17,11 +18,8 @@ export default function HomePage() {
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [kicked, setKicked] = useState(false);
-  const [selectedMarker, setSelectedMarker] = useState<{
-    name: string;
-    image?: string;
-    isCurrentUser: boolean;
-  } | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -101,22 +99,15 @@ export default function HomePage() {
   }, [user, position]);
 
   const handleCurrentUserClick = useCallback(() => {
-    setSelectedMarker({
-      name: user?.name || "You",
-      isCurrentUser: true,
-    });
+    setSelectedUserId(user?.id ?? null);
   }, [user]);
 
   const handleMarkerClick = useCallback((location: LocationDto) => {
-    setSelectedMarker({
-      name: location.name,
-      image: location.image,
-      isCurrentUser: false,
-    });
+    setSelectedUserId(location.userId);
   }, []);
 
   const handleCloseDetail = useCallback(() => {
-    setSelectedMarker(null);
+    setSelectedUserId(null);
   }, []);
 
   if (!apiKey) {
@@ -183,11 +174,12 @@ export default function HomePage() {
         </Map>
       </APIProvider>
 
-      {selectedMarker && (
+      {selectedUserId !== null && (
         <MarkerDetail
-          name={selectedMarker.name}
-          image={selectedMarker.image}
-          isCurrentUser={selectedMarker.isCurrentUser}
+          isCurrentUser={selectedUserId === user?.id}
+          currentUser={user}
+          userDetail={userDetail ?? null}
+          loading={loadingUserDetail}
           onClose={handleCloseDetail}
         />
       )}

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useId } from "react";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
-import { cn } from "@/lib/utils";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -37,9 +36,12 @@ interface CustomMarkerProps {
 
 export const CustomMarker = ({ position, name, image, isCurrentUser, onClick }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
+  const clipId = useId();
 
   const color = useMemo(() => stringToColor(name), [name]);
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
+
+  const pinColor = isCurrentUser ? "#3b82f6" : color;
 
   return (
     <AdvancedMarker
@@ -50,21 +52,54 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, onClick }: 
       onClick={onClick}
     >
       <div
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full border-2 border-white shadow-md transition-transform duration-200",
-          hovered && "scale-110",
-        )}
-        style={{ backgroundColor: isCurrentUser ? "#3b82f6" : color }}
+        className="transition-transform duration-200"
+        style={{
+          marginTop: -26,
+          transform: hovered ? "scale(1.1)" : "scale(1)",
+          transformOrigin: "bottom center",
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+        }}
       >
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            className="h-full w-full rounded-full object-cover"
+        <svg
+          width="48"
+          height="52"
+          viewBox="0 0 48 52"
+          style={{ display: "block" }}
+        >
+          <defs>
+            <clipPath id={clipId}>
+              <circle cx="24" cy="24" r="16" />
+            </clipPath>
+          </defs>
+          <path
+            d="M 4 24 A 20 20 0 1 1 44 24 C 44 34 36 42 24 52 C 12 42 4 34 4 24 Z"
+            fill={pinColor}
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
           />
-        ) : (
-          <span className="text-sm font-bold text-white">{firstLetter}</span>
-        )}
+          {image ? (
+            <image
+              href={image}
+              x="8" y="8" width="32" height="32"
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#${clipId})`}
+            />
+          ) : (
+            <>
+              <circle cx="24" cy="24" r="16" fill={pinColor} clipPath={`url(#${clipId})`} />
+              <text
+                x="24" y="24.5"
+                textAnchor="middle" dominantBaseline="central"
+                fill="white"
+                fontSize="18"
+                fontWeight="bold"
+              >
+                {firstLetter}
+              </text>
+            </>
+          )}
+        </svg>
       </div>
     </AdvancedMarker>
   );
