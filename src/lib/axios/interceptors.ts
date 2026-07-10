@@ -26,7 +26,7 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
         originalRequest._retry = true;
         if (typeof window !== "undefined") {
           localStorage.removeItem(TOKEN_KEY);
-          window.location.href = "/auth/login";
+          window.location.href = "/login";
         }
       }
       return Promise.reject(error);
