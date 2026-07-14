@@ -37,7 +37,7 @@ interface MarkerDetailProps {
 
 export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, onClose }: MarkerDetailProps) => {
   const name = userDetail?.name ?? (isCurrentUser ? currentUser?.name : null) ?? "Unknown";
-  const image = userDetail?.image ?? undefined;
+  const image = userDetail?.images?.[0]?.originalUrl ?? userDetail?.images?.[0]?.thumbUrl ?? undefined;
   const email = userDetail?.email ?? (isCurrentUser ? currentUser?.email : null);
   const age = userDetail?.age;
 

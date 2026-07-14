@@ -1,5 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
+import { TOKEN_KEY } from "@/constants";
 import type { LocationDto, UserDto, JoinLocationInput } from "./types";
 
 export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
@@ -14,13 +15,22 @@ class LocationHub {
   private userDisconnectCallback: UserDisconnectCallback | null = null;
   private kickedCallback: KickedCallback | null = null;
 
-  async start(): Promise<void> {
+  async start(userId?: number): Promise<void> {
     if (this.connection) {
       return;
     }
 
+    const url = userId
+      ? `${env.NEXT_PUBLIC_SIGNALR_URL}?userId=${userId}`
+      : env.NEXT_PUBLIC_SIGNALR_URL;
+
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(env.NEXT_PUBLIC_SIGNALR_URL)
+      .withUrl(url, {
+        accessTokenFactory: () => {
+          if (typeof window === "undefined") return "";
+          return localStorage.getItem(TOKEN_KEY) ?? "";
+        },
+      })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)
       .build();

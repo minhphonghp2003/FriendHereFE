@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUpdateWalkIn } from "@/hooks/users/use-update-walk-in";
+import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
+import { useUploadWalkInAvatar } from "@/hooks/users/use-upload-walk-in-avatar";
 import { getUserById } from "@/services/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, User, Bell, Shield, HelpCircle, Pencil } from "lucide-react";
+import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload } from "lucide-react";
 import type { User as UserType } from "@/types/user";
 
 export default function SettingsPage() {
@@ -20,6 +22,10 @@ export default function SettingsPage() {
   const { mutate: logout, isLoading: loggingOut } = useLogout();
   const { mutate: updateCurrentUser, isLoading: updatingMe } = useUpdateCurrentUser();
   const { mutate: updateWalkInUser, isLoading: updatingWalkIn } = useUpdateWalkIn();
+  const { mutate: uploadAvatar, isLoading: uploadingAvatar } = useUploadAvatar();
+  const { mutate: uploadWalkInAvatar, isLoading: uploadingWalkInAvatar } = useUploadWalkInAvatar();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [userDetail, setUserDetail] = useState<UserType | null>(null);
@@ -29,8 +35,8 @@ export default function SettingsPage() {
     name: "",
     age: "",
     genderId: "1",
-    image: "",
   });
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const fetchUserDetail = useCallback(async () => {
     if (!user) return;
@@ -56,8 +62,8 @@ export default function SettingsPage() {
       name: userDetail.name || "",
       age: String(userDetail.age || ""),
       genderId: String(userDetail.genderId || 1),
-      image: userDetail.image || "",
     });
+    setAvatarUrl(userDetail.images?.[0]?.originalUrl ?? userDetail.images?.[0]?.thumbUrl ?? "");
   }, [userDetail]);
 
   const handleOpenChange = (open: boolean) => {
@@ -65,6 +71,25 @@ export default function SettingsPage() {
     if (!open) {
       setError(null);
       setUserDetail(null);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setError(null);
+    try {
+      const result = user.isWalkIn
+        ? await uploadWalkInAvatar(user.id, file)
+        : await uploadAvatar(file);
+      setAvatarUrl(result.images?.[0]?.originalUrl ?? result.images?.[0]?.thumbUrl ?? "");
+      login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload avatar");
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -78,7 +103,6 @@ export default function SettingsPage() {
       name: form.name,
       age: Number(form.age),
       genderId: Number(form.genderId),
-      image: form.image || null,
     };
 
     try {
@@ -95,6 +119,7 @@ export default function SettingsPage() {
   };
 
   const isUpdating = updatingMe || updatingWalkIn;
+  const isUploading = uploadingAvatar || uploadingWalkInAvatar;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -104,8 +129,12 @@ export default function SettingsPage() {
         <CardHeader className="space-y-0 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100">
-                <User className="h-6 w-6 text-zinc-600" />
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-6 w-6 text-zinc-600" />
+                )}
               </div>
               <div>
                 <CardTitle className="text-lg">{user?.name || "Guest"}</CardTitle>
@@ -165,6 +194,38 @@ export default function SettingsPage() {
               </div>
             ) : (
               <>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-8 w-8 text-zinc-400" />
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="mr-1.5 h-3.5 w-3.5" />
+                    {isUploading ? "Uploading..." : "Change Avatar"}
+                  </Button>
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="edit-name">Name</Label>
                   <Input
@@ -205,19 +266,6 @@ export default function SettingsPage() {
                     <option value="4">Les</option>
                   </select>
                 </div>
-
-                {!user?.isWalkIn && (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="edit-image">Avatar URL</Label>
-                    <Input
-                      id="edit-image"
-                      type="url"
-                      placeholder="https://example.com/avatar.jpg"
-                      value={form.image}
-                      onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    />
-                  </div>
-                )}
               </>
             )}
 

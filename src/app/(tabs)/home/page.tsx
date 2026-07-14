@@ -46,7 +46,7 @@ export default function HomePage() {
     const init = async () => {
       try {
         console.log("[SignalR] Starting connection...");
-        await locationHub.start();
+        await locationHub.start(user?.id);
         console.log("[SignalR] Connected");
 
         locationHub.onReceiveLocations((locList) => {
@@ -167,7 +167,7 @@ export default function HomePage() {
               key={loc.id}
               position={{ lat: loc.latitude, lng: loc.longitude }}
               name={loc.name}
-              image={loc.image}
+              image={loc.image || undefined}
               onClick={() => handleMarkerClick(loc)}
             />
           ))}

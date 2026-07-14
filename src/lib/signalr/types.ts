@@ -1,8 +1,13 @@
+export interface ImageDto {
+  originalUrl: string;
+  thumbUrl: string;
+}
+
 export interface LocationDto {
   id: string;
   userId: number;
   name: string;
-  image: string;
+  image: string | null;
   latitude: number;
   longitude: number;
   accuracy: number;
@@ -13,7 +18,7 @@ export interface LocationDto {
 export interface UserDto {
   id: number;
   name: string;
-  image: string;
+  images: ImageDto[] | null;
   email: string;
   age: number;
   genderId: number;
