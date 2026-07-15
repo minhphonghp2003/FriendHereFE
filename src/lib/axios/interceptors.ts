@@ -25,8 +25,11 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         if (typeof window !== "undefined") {
+          const hadToken = !!localStorage.getItem(TOKEN_KEY);
           localStorage.removeItem(TOKEN_KEY);
-          window.location.href = "/login";
+          if (hadToken) {
+            window.location.href = "/login";
+          }
         }
       }
       return Promise.reject(error);

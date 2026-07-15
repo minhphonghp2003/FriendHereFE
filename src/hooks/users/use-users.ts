@@ -35,12 +35,21 @@ export const useUser = (id: number) => {
   return { data, isLoading, error };
 };
 
-export const useCurrentUser = () => {
+export const useCurrentUser = (options?: { enabled?: boolean }) => {
   const [data, setData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  const enabled = options?.enabled ?? true;
+
   useEffect(() => {
+    if (!enabled) {
+      setData(null);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchUser = async () => {
       setIsLoading(true);
       setError(null);
@@ -55,7 +64,7 @@ export const useCurrentUser = () => {
     };
 
     fetchUser();
-  }, []);
+  }, [enabled]);
 
   return { data, isLoading, error };
 };

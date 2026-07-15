@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { locationHub } from "@/lib/signalr";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
-import { useUser } from "@/hooks/users/use-users";
+import { UserLocationList } from "@/components/home/user-location-list";
+import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import type { LocationDto } from "@/lib/signalr/types";
 
 export default function HomePage() {
@@ -17,9 +18,11 @@ export default function HomePage() {
   const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(null);
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
+  const { data: currentUserProfile } = useCurrentUser({ enabled: !user?.isWalkIn });
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -32,14 +35,14 @@ export default function HomePage() {
         setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       () => {
-        setError("Location access denied");
+        setLocationDenied(true);
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }, []);
 
   useEffect(() => {
-    if (!user || !position) return;
+    if (!user || (!position && !locationDenied)) return;
 
     let cancelled = false;
 
@@ -81,8 +84,7 @@ export default function HomePage() {
 
         await locationHub.join({
           userId: user.id,
-          latitude: position.lat,
-          longitude: position.lng,
+          ...(position ? { latitude: position.lat, longitude: position.lng } : {}),
         });
         console.log("[SignalR] Join sent");
       } catch (err) {
@@ -96,7 +98,7 @@ export default function HomePage() {
       cancelled = true;
       locationHub.stop();
     };
-  }, [user, position]);
+  }, [user, position, locationDenied]);
 
   const handleCurrentUserClick = useCallback(() => {
     setSelectedUserId(user?.id ?? null);
@@ -137,10 +139,32 @@ export default function HomePage() {
     );
   }
 
-  if (!position) {
+  if (!position && !locationDenied) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+      </div>
+    );
+  }
+
+  if (locationDenied) {
+    return (
+      <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
+        <UserLocationList
+          users={locations}
+          currentUser={user}
+          onUserClick={(userId) => setSelectedUserId(userId)}
+        />
+
+        {selectedUserId !== null && (
+          <MarkerDetail
+            isCurrentUser={selectedUserId === user?.id}
+            currentUser={user}
+            userDetail={userDetail ?? null}
+            loading={loadingUserDetail}
+            onClose={handleCloseDetail}
+          />
+        )}
       </div>
     );
   }
@@ -158,6 +182,7 @@ export default function HomePage() {
           <CustomMarker
             position={position}
             name={user?.name || "You"}
+            image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
             isCurrentUser
             onClick={handleCurrentUserClick}
           />
