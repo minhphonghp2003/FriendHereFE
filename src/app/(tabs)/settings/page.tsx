@@ -52,9 +52,8 @@ export default function SettingsPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!showEditDialog || userDetail) return;
     fetchUserDetail();
-  }, [showEditDialog, userDetail, fetchUserDetail]);
+  }, [fetchUserDetail]);
 
   useEffect(() => {
     if (!userDetail) return;
