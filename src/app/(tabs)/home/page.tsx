@@ -15,7 +15,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const router = useRouter();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-  const [position, setPosition] = useState<google.maps.LatLngLiteral | null>(null);
+  const [position, setPosition] = useState<google.maps.LatLngLiteral | undefined>(undefined);
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
@@ -179,13 +179,15 @@ export default function HomePage() {
           disableDefaultUI
           mapId="friendhere-map"
         >
-          <CustomMarker
-            position={position}
-            name={user?.name || "You"}
-            image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
-            isCurrentUser
-            onClick={handleCurrentUserClick}
-          />
+          {position && (
+            <CustomMarker
+              position={position}
+              name={user?.name || "You"}
+              image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
+              isCurrentUser
+              onClick={handleCurrentUserClick}
+            />
+          )}
 
           {locations.map((loc) => (
             <CustomMarker

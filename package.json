@@ -14,7 +14,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "prepare": "husky"
+    "prepare": ""
   },
   "lint-staged": {
     "*.{ts,tsx}": [
