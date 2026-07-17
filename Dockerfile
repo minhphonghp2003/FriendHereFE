@@ -16,24 +16,26 @@ RUN npm ci
 
 FROM node:24-alpine AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-ENV NODE_ENV=production
-RUN npm run build
-
-FROM node:24-alpine AS runner
-RUN apk add --no-cache libc6-compat
-WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SIGNALR_URL
 ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 ARG NEXT_PUBLIC_APP_NAME
 
+ENV NODE_ENV=production
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SIGNALR_URL=$NEXT_PUBLIC_SIGNALR_URL
 ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+FROM node:24-alpine AS runner
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
 
 RUN addgroup -S nodejs -g 1001 \
     && adduser -S nextjs -u 1001 -G nodejs
