@@ -42,8 +42,7 @@ jobs:
             NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
 
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
