@@ -64,9 +64,9 @@ jobs:
 
             sed -i "s/^FE_IMAGE_TAG=.*/FE_IMAGE_TAG=${{ github.event.release.tag_name }}/" .env
 
-            docker compose pull web
+            docker compose pull frontend
 
-            docker compose up -d web
+            docker compose up -d frontend
 
             docker image prune -f
 
