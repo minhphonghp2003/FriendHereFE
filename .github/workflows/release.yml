@@ -63,7 +63,7 @@ jobs:
 
             cd /opt/livebuddy
 
-            sed -i "s/^WEB_VERSION=.*/WEB_VERSION=${{ github.event.release.tag_name }}/" .env
+            sed -i "s/^FE_IMAGE_TAG=.*/FE_IMAGE_TAG=${{ github.event.release.tag_name }}/" .env
 
             docker compose pull web
 
