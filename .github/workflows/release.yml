@@ -60,7 +60,7 @@ jobs:
           script: |
             set -euo pipefail
 
-            cd /opt/livebuddy
+            cd /home/minh/asdf/app
 
             sed -i "s/^FE_IMAGE_TAG=.*/FE_IMAGE_TAG=${{ github.event.release.tag_name }}/" .env
 
