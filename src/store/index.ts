@@ -1,11 +1,12 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { authReducer } from "./slices/auth-slice";
 import { appReducer } from "./slices/app-slice";
-import { loggerMiddleware } from "./middleware/logger";
+import { locationReducer } from "./slices/location-slice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
   app: appReducer,
+  location: locationReducer,
 });
 
 export const makeStore = (preloadedState?: Partial<RootState>) => {
@@ -13,7 +14,7 @@ export const makeStore = (preloadedState?: Partial<RootState>) => {
     reducer: rootReducer,
     preloadedState,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ serializableCheck: false }).concat(loggerMiddleware),
+      getDefaultMiddleware({ serializableCheck: false }),
   });
   return store;
 };

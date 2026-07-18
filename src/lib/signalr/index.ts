@@ -10,15 +10,30 @@ export type KickedCallback = () => void;
 
 class LocationHub {
   private connection: signalR.HubConnection | null = null;
+  private epoch = 0;
   private receiveLocationsCallback: ReceiveLocationsCallback | null = null;
   private newJoinCallback: NewJoinCallback | null = null;
   private userDisconnectCallback: UserDisconnectCallback | null = null;
   private kickedCallback: KickedCallback | null = null;
 
   async start(userId?: number): Promise<void> {
+    const myEpoch = ++this.epoch;
+
     if (this.connection) {
-      return;
+      const state = this.connection.state;
+      if (state === signalR.HubConnectionState.Connected) {
+        return;
+      }
+      const oldConnection = this.connection;
+      this.connection = null;
+      try {
+        await oldConnection.stop();
+      } catch {
+        // ignore stop errors during restart
+      }
     }
+
+    if (myEpoch !== this.epoch) return;
 
     const url = userId
       ? `${env.NEXT_PUBLIC_SIGNALR_URL}?userId=${userId}`
@@ -57,15 +72,23 @@ class LocationHub {
       await this.connection.start();
       console.log("SignalR connected.");
     } catch (err) {
-      console.error("SignalR connection error:", err);
-      throw err;
+      if (myEpoch === this.epoch) {
+        console.error("SignalR connection error:", err);
+        throw err;
+      }
     }
   }
 
   async stop(): Promise<void> {
-    if (this.connection) {
-      await this.connection.stop();
+    ++this.epoch;
+    const conn = this.connection;
+    if (conn) {
       this.connection = null;
+      try {
+        await conn.stop();
+      } catch {
+        // ignore stop errors
+      }
     }
   }
 
