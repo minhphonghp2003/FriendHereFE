@@ -150,7 +150,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           const prevPos = lastPosition.current;
           if (prevPos) {
             const dist = getDistance(prevPos.latitude, prevPos.longitude, latitude, longitude);
-            if (dist >= 0.1) {
+            if (dist >= 5) {
               console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, updating location`);
               locationHub.updateLocation(latitude, longitude, accuracy, speed ?? undefined);
             }

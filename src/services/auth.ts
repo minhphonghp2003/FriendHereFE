@@ -26,3 +26,11 @@ export const createWalkIn = async (input: WalkInInput): Promise<WalkInUser> => {
 export const logoutApi = async (): Promise<void> => {
   await httpClient.post("/auth/logout");
 };
+
+export const forgotPassword = async (email: string): Promise<void> => {
+  await httpClient.post<ApiResponse<null>>("/auth/forgot-password", { email });
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+  await httpClient.post<ApiResponse<null>>("/auth/reset-password", { token, newPassword });
+};
