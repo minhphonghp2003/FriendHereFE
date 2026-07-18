@@ -2,7 +2,6 @@ import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { authReducer } from "./slices/auth-slice";
 import { appReducer } from "./slices/app-slice";
 import { locationReducer } from "./slices/location-slice";
-import { loggerMiddleware } from "./middleware/logger";
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -15,7 +14,7 @@ export const makeStore = (preloadedState?: Partial<RootState>) => {
     reducer: rootReducer,
     preloadedState,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ serializableCheck: false }).concat(loggerMiddleware),
+      getDefaultMiddleware({ serializableCheck: false }),
   });
   return store;
 };

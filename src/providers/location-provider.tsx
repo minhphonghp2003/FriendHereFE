@@ -29,11 +29,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         await locationHub.start(user.id);
 
         locationHub.onReceiveLocations((locList) => {
+          console.log(`[SignalR] Received ${locList.length} location(s)`);
           dispatch(setLocations(locList));
         });
 
         locationHub.onNewJoin((_user, _location) => {
           if (_user.id === user.id) return;
+          console.log(`[SignalR] ${_user.name} connected at (${_location.latitude}, ${_location.longitude})`);
           dispatch(addLocation(_location));
         });
 
