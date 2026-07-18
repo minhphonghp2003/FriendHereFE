@@ -4,7 +4,21 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "./auth-provider";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch } from "@/store/hooks";
-import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, resetLocation } from "@/store/slices/location-slice";
+import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, resetLocation } from "@/store/slices/location-slice";
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -14,9 +28,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const geoReadyRef = useRef(false);
   const canJoinRef = useRef(false);
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
+  const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let watchId: number | null = null;
 
     if (!user) {
       if (startedRef.current) {
@@ -85,6 +101,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           locationHub.stop();
         });
 
+        locationHub.onReceiveOtherMovement((location) => {
+          console.log(`[SignalR] ${location.name} moved to (${location.latitude}, ${location.longitude})`);
+          dispatch(updateOtherLocation(location));
+        });
+
         hubReadyRef.current = true;
         if (geoReadyRef.current || !("geolocation" in navigator)) tryJoin();
       } catch (err) {
@@ -99,33 +120,54 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     if (!("geolocation" in navigator)) return;
 
-    console.log("[LocationProvider] Requesting geolocation...");
-    navigator.geolocation.getCurrentPosition(
+    console.log("[LocationProvider] Starting position watch...");
+    watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, accuracy, speed } = pos.coords;
-        console.log(`[LocationProvider] Geolocation success: lat=${latitude}, lng=${longitude}, acc=${accuracy}, speed=${speed}`);
+
+        const prev = pendingPosition.current;
         pendingPosition.current = { latitude, longitude, accuracy, speed: speed ?? undefined };
+
         dispatch(setCurrentPosition({ latitude, longitude, accuracy, speed: speed ?? undefined }));
-        geoReadyRef.current = true;
-        if (hubReadyRef.current) tryJoin();
+
+        if (!geoReadyRef.current) {
+          geoReadyRef.current = true;
+          if (hubReadyRef.current) tryJoin();
+        }
+
+        if (canJoinRef.current) {
+          const prevPos = lastPosition.current;
+          if (prevPos) {
+            const dist = getDistance(prevPos.latitude, prevPos.longitude, latitude, longitude);
+            if (dist >= 0.1) {
+              console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, updating location`);
+              locationHub.updateLocation(latitude, longitude, accuracy, speed ?? undefined);
+            }
+          }
+          lastPosition.current = { latitude, longitude };
+        }
       },
       (err) => {
-        console.warn("[LocationProvider] Geolocation error:", err.message);
+        console.warn("[LocationProvider] Geolocation watch error:", err.message);
         dispatch(setLocationDenied());
         geoReadyRef.current = true;
         if (hubReadyRef.current) tryJoin();
       },
-      { enableHighAccuracy: true, timeout: 15000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
     );
 
     return () => {
       cancelled = true;
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
       console.log("[LocationProvider] Effect cleanup");
       startedRef.current = false;
       hubReadyRef.current = false;
       geoReadyRef.current = false;
       canJoinRef.current = false;
       pendingPosition.current = null;
+      lastPosition.current = null;
       dispatch(resetLocation());
       locationHub.stop();
     };

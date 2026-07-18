@@ -52,9 +52,15 @@ const locationSlice = createSlice({
       if (action.payload.accuracy !== undefined) state.accuracy = action.payload.accuracy;
       if (action.payload.speed !== undefined) state.speed = action.payload.speed;
     },
+    updateOtherLocation: (state, action: PayloadAction<LocationDto>) => {
+      const idx = state.locations.findIndex((l) => l.userId === action.payload.userId);
+      if (idx !== -1) {
+        state.locations[idx] = action.payload;
+      }
+    },
     resetLocation: () => initialState,
   },
 });
 
-export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, resetLocation } = locationSlice.actions;
+export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, updateOtherLocation, resetLocation } = locationSlice.actions;
 export const locationReducer = locationSlice.reducer;
