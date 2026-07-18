@@ -5,8 +5,10 @@ import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHereFE";
+
 export const metadata: Metadata = {
-  title: "FriendHereFE",
+  title: appName,
   description: "Real-time chat and location tracking",
 };
 
