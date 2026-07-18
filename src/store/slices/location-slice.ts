@@ -4,11 +4,21 @@ import type { LocationDto } from "@/lib/signalr/types";
 interface LocationState {
   locations: LocationDto[];
   kicked: boolean;
+  locationDenied: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
+  speed: number | null;
 }
 
 const initialState: LocationState = {
   locations: [],
   kicked: false,
+  locationDenied: false,
+  latitude: null,
+  longitude: null,
+  accuracy: null,
+  speed: null,
 };
 
 const locationSlice = createSlice({
@@ -32,9 +42,19 @@ const locationSlice = createSlice({
     setKicked: (state, action: PayloadAction<boolean>) => {
       state.kicked = action.payload;
     },
+    setLocationDenied: (state) => {
+      state.locationDenied = true;
+    },
+    setCurrentPosition: (state, action: PayloadAction<{ latitude: number; longitude: number; accuracy?: number; speed?: number }>) => {
+      state.locationDenied = false;
+      state.latitude = action.payload.latitude;
+      state.longitude = action.payload.longitude;
+      if (action.payload.accuracy !== undefined) state.accuracy = action.payload.accuracy;
+      if (action.payload.speed !== undefined) state.speed = action.payload.speed;
+    },
     resetLocation: () => initialState,
   },
 });
 
-export const { setLocations, addLocation, removeLocation, setKicked, resetLocation } = locationSlice.actions;
+export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, resetLocation } = locationSlice.actions;
 export const locationReducer = locationSlice.reducer;

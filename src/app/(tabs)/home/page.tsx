@@ -2,9 +2,8 @@
 
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { locationHub } from "@/lib/signalr";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
@@ -18,35 +17,16 @@ export default function HomePage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const locations = useAppSelector((s) => s.location.locations);
   const kicked = useAppSelector((s) => s.location.kicked);
-  const [position, setPosition] = useState<google.maps.LatLngLiteral | undefined>(undefined);
-  const [error, setError] = useState<string | null>(null);
-  const [locationDenied, setLocationDenied] = useState(false);
+  const locationDenied = useAppSelector((s) => s.location.locationDenied);
+  const latitude = useAppSelector((s) => s.location.latitude);
+  const longitude = useAppSelector((s) => s.location.longitude);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser({ enabled: !user?.isWalkIn });
 
-  useEffect(() => {
-    if (!("geolocation" in navigator)) {
-      setError("Geolocation not supported");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setPosition(coords);
-        locationHub.join({
-          userId: user!.id,
-          latitude: coords.lat,
-          longitude: coords.lng,
-        }).catch(() => {});
-      },
-      () => {
-        setLocationDenied(true);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const position = latitude !== null && longitude !== null
+    ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral
+    : undefined;
 
   const handleCurrentUserClick = useCallback(() => {
     setSelectedUserId(user?.id ?? null);
@@ -64,14 +44,6 @@ export default function HomePage() {
     return (
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
         <p className="text-sm text-red-500">Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
-        <p className="text-sm text-red-500">{error}</p>
       </div>
     );
   }
