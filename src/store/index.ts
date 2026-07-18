@@ -1,11 +1,13 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { authReducer } from "./slices/auth-slice";
 import { appReducer } from "./slices/app-slice";
+import { locationReducer } from "./slices/location-slice";
 import { loggerMiddleware } from "./middleware/logger";
 
 const rootReducer = combineReducers({
   auth: authReducer,
   app: appReducer,
+  location: locationReducer,
 });
 
 export const makeStore = (preloadedState?: Partial<RootState>) => {
