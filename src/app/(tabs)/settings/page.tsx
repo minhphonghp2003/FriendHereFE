@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload } from "lucide-react";
+import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload, Moon } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { User as UserType } from "@/types/user";
 
 export default function SettingsPage() {
@@ -128,16 +129,16 @@ export default function SettingsPage() {
         <CardHeader className="space-y-0 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-muted">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <User className="h-6 w-6 text-zinc-600" />
+                  <User className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
               <div>
                 <CardTitle className="text-lg">{user?.name || "Guest"}</CardTitle>
-                <p className="text-sm text-zinc-500">{user?.email || "No email"}</p>
+                <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
@@ -150,29 +151,39 @@ export default function SettingsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <Bell className="h-5 w-5 text-zinc-600" />
+          <div className="flex w-full items-center gap-4 p-4">
+            <Moon className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1">Dark Mode</span>
+            <ThemeToggle />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Notifications</span>
-            <span className="text-zinc-400">›</span>
+            <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <Shield className="h-5 w-5 text-zinc-600" />
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <Shield className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Privacy</span>
-            <span className="text-zinc-400">›</span>
+            <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <HelpCircle className="h-5 w-5 text-zinc-600" />
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <HelpCircle className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Help</span>
-            <span className="text-zinc-400">›</span>
+            <span className="text-muted-foreground">›</span>
           </button>
         </CardContent>
       </Card>
 
       <Button
         variant="outline"
-        className="w-full text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => logout()}
         disabled={loggingOut}
       >
@@ -189,16 +200,16 @@ export default function SettingsPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {loadingDetail ? (
               <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
               </div>
             ) : (
               <>
                 <div className="flex flex-col items-center gap-3">
-                  <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+                  <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-muted">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                     ) : (
-                      <User className="h-8 w-8 text-zinc-400" />
+                      <User className="h-8 w-8 text-muted-foreground" />
                     )}
                     {isUploading && (
                       <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
@@ -255,7 +266,7 @@ export default function SettingsPage() {
                   <Label htmlFor="edit-gender">Gender</Label>
                   <select
                     id="edit-gender"
-                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
                     value={form.genderId}
                     onChange={(e) => setForm({ ...form, genderId: e.target.value })}
                   >

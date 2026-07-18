@@ -6,6 +6,7 @@ import { LogIn, User } from "lucide-react";
 
 import { env } from "@/config/env";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 function GoogleIcon() {
   return (
@@ -78,6 +79,10 @@ export default function InitPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
+      <div className="fixed right-4 top-4 z-50">
+        <ThemeToggle />
+      </div>
+
       {/* Hero */}
       <div className="relative h-[42vh] w-full overflow-hidden">
         {/* Replace this image with your own generated hero */}
@@ -149,10 +154,10 @@ export default function InitPage() {
             </Button>
           </Link>
 
-          <Link href="/walk-in">
+          <Link href="/walk-in" >
             <Button
               variant="secondary"
-              className="h-12 w-full rounded-xl gap-3"
+              className="h-12 mt-2 w-full rounded-xl gap-3"
             >
               <User className="size-5" />
               Continue as guest
