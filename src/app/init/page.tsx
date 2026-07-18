@@ -52,7 +52,7 @@ type OAuthProvider = "google" | "facebook" | "apple";
 const providers = [
   {
     provider: "google" as const,
-    label: "Continue with Google",
+    label: "Tiếp tục với Google",
     icon: GoogleIcon,
     variant: "outline" as const,
     className:
@@ -60,13 +60,13 @@ const providers = [
   },
   {
     provider: "facebook" as const,
-    label: "Continue with Facebook",
+    label: "Tiếp tục với Facebook",
     icon: FacebookIcon,
     className: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
   },
   {
     provider: "apple" as const,
-    label: "Continue with Apple",
+    label: "Tiếp tục với Apple",
     icon: AppleIcon,
     className: "bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black",
   },
@@ -115,7 +115,7 @@ export default function InitPage() {
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Stay close. Meet nearby. Chat instantly.
+            Gần nhau hơn. Gặp gỡ xung quanh. Trò chuyện ngay.
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export default function InitPage() {
 
             <div className="relative flex justify-center">
               <span className="bg-background px-3 text-xs uppercase text-muted-foreground">
-                or
+                hoặc
               </span>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function InitPage() {
               className="h-12 w-full rounded-xl gap-3"
             >
               <LogIn className="size-5" />
-              Log in with email
+              Đăng nhập bằng email
             </Button>
           </Link>
 
@@ -160,17 +160,17 @@ export default function InitPage() {
               className="h-12 mt-2 w-full rounded-xl gap-3"
             >
               <User className="size-5" />
-              Continue as guest
+              Tiếp tục với tư cách khách
             </Button>
           </Link>
 
           <p className="pt-2 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            Chưa có tài khoản?{" "}
             <Link
               href="/register"
               className="font-semibold text-primary hover:underline"
             >
-              Register
+              Đăng ký
             </Link>
           </p>
         </div>

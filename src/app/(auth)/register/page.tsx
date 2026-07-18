@@ -32,7 +32,7 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+      setError("Mật khẩu không khớp");
       return;
     }
 
@@ -60,7 +60,7 @@ export default function RegisterPage() {
 
       router.push("/home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : "Đăng ký thất bại");
     } finally {
       setIsLoading(false);
     }
@@ -74,16 +74,16 @@ export default function RegisterPage() {
           className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back
+          Quay lại
         </Link>
 
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight">
-            Create account
+            Tạo tài khoản
           </h1>
 
           <p className="mt-3 text-muted-foreground">
-            Join LiveBuddy and start discovering friends around you.
+            Tham gia LiveBuddy và bắt đầu khám phá bạn bè xung quanh bạn.
           </p>
         </div>
 
@@ -93,10 +93,10 @@ export default function RegisterPage() {
         >
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Tên</Label>
 
               <Input
-                placeholder="Your name"
+                placeholder="Tên của bạn"
                 className="h-12 rounded-xl"
                 value={form.name}
                 onChange={(e) =>
@@ -130,7 +130,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Age</Label>
+                <Label>Tuổi</Label>
 
                 <Input
                   type="number"
@@ -150,7 +150,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Gender</Label>
+                <Label>Giới tính</Label>
 
                 <select
                   className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -162,20 +162,20 @@ export default function RegisterPage() {
                     }))
                   }
                 >
-                  <option value="1">Male</option>
-                  <option value="2">Female</option>
+                  <option value="1">Nam</option>
+                  <option value="2">Nữ</option>
                   <option value="3">Gay</option>
-                  <option value="4">Lesbian</option>
+                  <option value="4">Les</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Password</Label>
+              <Label>Mật khẩu</Label>
 
               <Input
                 type="password"
-                placeholder="At least 8 characters"
+                placeholder="Ít nhất 8 ký tự"
                 className="h-12 rounded-xl"
                 value={form.password}
                 onChange={(e) =>
@@ -190,11 +190,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Confirm password</Label>
+              <Label>Xác nhận mật khẩu</Label>
 
               <Input
                 type="password"
-                placeholder="Re-enter your password"
+                placeholder="Nhập lại mật khẩu"
                 className="h-12 rounded-xl"
                 value={form.confirmPassword}
                 onChange={(e) =>
@@ -221,16 +221,16 @@ export default function RegisterPage() {
               className="h-12 w-full rounded-xl text-base"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create account"}
+              {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </Button>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Đã có tài khoản?{" "}
               <Link
                 href="/login"
                 className="font-semibold text-primary hover:underline"
               >
-                Sign in
+                Đăng nhập
               </Link>
             </p>
           </div>

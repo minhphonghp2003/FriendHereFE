@@ -9,7 +9,7 @@ const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHereFE";
 
 export const metadata: Metadata = {
   title: appName,
-  description: "Real-time chat and location tracking",
+  description: "Trò chuyện thời gian thực và theo dõi vị trí",
 };
 
 export const viewport: Viewport = {

@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { Home, Settings } from "lucide-react";
 
 const tabs = [
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/home", label: "Trang chủ", icon: Home },
+  { href: "/settings", label: "Cài đặt", icon: Settings },
 ];
 
 export const BottomNav = () => {

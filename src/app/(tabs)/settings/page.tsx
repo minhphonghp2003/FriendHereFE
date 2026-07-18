@@ -86,7 +86,7 @@ export default function SettingsPage() {
       setAvatarUrl(result.images?.[0]?.originalUrl ?? result.images?.[0]?.thumbUrl ?? "");
       login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload avatar");
+      setError(err instanceof Error ? err.message : "Tải ảnh lên thất bại");
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -114,7 +114,7 @@ export default function SettingsPage() {
       login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
       setShowEditDialog(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setError(err instanceof Error ? err.message : "Cập nhật hồ sơ thất bại");
     }
   };
 
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">Cài đặt</h1>
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
@@ -137,13 +137,13 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <CardTitle className="text-lg">{user?.name || "Guest"}</CardTitle>
-                <p className="text-sm text-muted-foreground">{user?.email || "No email"}</p>
+                <CardTitle className="text-lg">{user?.name || "Khách"}</CardTitle>
+                <p className="text-sm text-muted-foreground">{user?.email || "Không có email"}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
+              Sửa
             </Button>
           </div>
         </CardHeader>
@@ -153,7 +153,7 @@ export default function SettingsPage() {
         <CardContent className="p-0">
           <div className="flex w-full items-center gap-4 p-4">
             <Moon className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1">Dark Mode</span>
+            <span className="flex-1">Chế độ tối</span>
             <ThemeToggle />
           </div>
         </CardContent>
@@ -163,19 +163,19 @@ export default function SettingsPage() {
         <CardContent className="p-0">
           <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1">Notifications</span>
+            <span className="flex-1">Thông báo</span>
             <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
           <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <Shield className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1">Privacy</span>
+            <span className="flex-1">Quyền riêng tư</span>
             <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
           <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1">Help</span>
+            <span className="flex-1">Trợ giúp</span>
             <span className="text-muted-foreground">›</span>
           </button>
         </CardContent>
@@ -188,13 +188,13 @@ export default function SettingsPage() {
         disabled={loggingOut}
       >
         <LogOut className="mr-2 h-4 w-4" />
-        {loggingOut ? "Logging out..." : "Log Out"}
+        {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
       </Button>
 
       <Dialog open={showEditDialog} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogTitle>Chỉnh sửa hồ sơ</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -232,15 +232,15 @@ export default function SettingsPage() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="mr-1.5 h-3.5 w-3.5" />
-                    {isUploading ? "Uploading..." : "Change Avatar"}
+                    {isUploading ? "Đang tải lên..." : "Đổi ảnh đại diện"}
                   </Button>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-name">Name</Label>
+                  <Label htmlFor="edit-name">Tên</Label>
                   <Input
                     id="edit-name"
-                    placeholder="Your name"
+                    placeholder="Tên của bạn"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
@@ -249,11 +249,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-age">Age</Label>
+                  <Label htmlFor="edit-age">Tuổi</Label>
                   <Input
                     id="edit-age"
                     type="number"
-                    placeholder="Your age"
+                    placeholder="Tuổi của bạn"
                     value={form.age}
                     onChange={(e) => setForm({ ...form, age: e.target.value })}
                     required
@@ -263,15 +263,15 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-gender">Gender</Label>
+                  <Label htmlFor="edit-gender">Giới tính</Label>
                   <select
                     id="edit-gender"
                     className="rounded-md border border-border bg-background px-3 py-2 text-sm"
                     value={form.genderId}
                     onChange={(e) => setForm({ ...form, genderId: e.target.value })}
                   >
-                    <option value="1">Male</option>
-                    <option value="2">Female</option>
+                    <option value="1">Nam</option>
+                    <option value="2">Nữ</option>
                     <option value="3">Gay</option>
                     <option value="4">Les</option>
                   </select>
@@ -283,10 +283,10 @@ export default function SettingsPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                Hủy
               </Button>
               <Button type="submit" disabled={isUpdating || loadingDetail}>
-                {isUpdating ? "Saving..." : "Save"}
+                {isUpdating ? "Đang lưu..." : "Lưu"}
               </Button>
             </DialogFooter>
           </form>

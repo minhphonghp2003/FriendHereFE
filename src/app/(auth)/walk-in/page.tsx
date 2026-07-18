@@ -47,7 +47,7 @@ export default function WalkInPage() {
 
       router.push("/home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create guest");
+      setError(err instanceof Error ? err.message : "Không thể tạo tài khoản khách");
     } finally {
       setIsLoading(false);
     }
@@ -66,11 +66,11 @@ export default function WalkInPage() {
 
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight">
-            Try as guest
+            Dùng thử với tư cách khách
           </h1>
 
           <p className="mt-3 text-muted-foreground">
-            Jump in instantly. You can create a permanent account later.
+            Trải nghiệm ngay lập tức. Bạn có thể tạo tài khoản sau.
           </p>
         </div>
 
@@ -80,10 +80,10 @@ export default function WalkInPage() {
         >
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Tên</Label>
 
               <Input
-                placeholder="What should people call you?"
+                placeholder="Mọi người nên gọi bạn là gì?"
                 className="h-12 rounded-xl"
                 value={form.name}
                 onChange={(e) =>
@@ -98,7 +98,7 @@ export default function WalkInPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Age</Label>
+                <Label>Tuổi</Label>
 
                 <Input
                   type="number"
@@ -118,7 +118,7 @@ export default function WalkInPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Gender</Label>
+                <Label>Giới tính</Label>
 
                 <select
                   className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -130,10 +130,10 @@ export default function WalkInPage() {
                     }))
                   }
                 >
-                  <option value="1">Male</option>
-                  <option value="2">Female</option>
+                  <option value="1">Nam</option>
+                  <option value="2">Nữ</option>
                   <option value="3">Gay</option>
-                  <option value="4">Lesbian</option>
+                  <option value="4">Les</option>
                 </select>
               </div>
             </div>
@@ -145,8 +145,8 @@ export default function WalkInPage() {
             )}
 
             <div className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
-              Guest accounts are temporary. Create a permanent account later to
-              save your profile, friends, and chat history.
+              Tài khoản khách chỉ là tạm thời. Tạo tài khoản vĩnh viễn sau để
+              lưu hồ sơ, bạn bè và lịch sử trò chuyện.
             </div>
           </div>
 
@@ -156,16 +156,16 @@ export default function WalkInPage() {
               disabled={isLoading}
               className="h-12 w-full rounded-xl text-base"
             >
-              {isLoading ? "Entering..." : "Continue as Guest"}
+              {isLoading ? "Đang vào..." : "Tiếp tục với tư cách khách"}
             </Button>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Want to keep your account?{" "}
+              Muốn giữ tài khoản?{" "}
               <Link
                 href="/register"
                 className="font-semibold text-primary hover:underline"
               >
-                Create one instead
+                Tạo tài khoản ngay
               </Link>
             </p>
           </div>

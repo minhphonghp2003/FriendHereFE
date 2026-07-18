@@ -45,7 +45,7 @@ export default function LoginPage() {
 
       router.push("/home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
       setIsLoading(false);
     }
@@ -59,16 +59,16 @@ export default function LoginPage() {
           className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back
+          Quay lại
         </Link>
 
         <div className="mb-10">
           <h1 className="text-4xl font-bold tracking-tight">
-            Welcome back
+            Chào mừng trở lại
           </h1>
 
           <p className="mt-3 text-muted-foreground">
-            Sign in to continue chatting and see where your friends are.
+            Đăng nhập để tiếp tục trò chuyện và xem bạn bè ở đâu.
           </p>
         </div>
 
@@ -97,19 +97,19 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Password</Label>
+                <Label>Mật khẩu</Label>
 
                 <Link
                   href="/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
-                  Forgot?
+                  Quên?
                 </Link>
               </div>
 
               <Input
                 type="password"
-                placeholder="Password"
+                placeholder="Mật khẩu"
                 value={form.password}
                 onChange={(e) =>
                   setForm((x) => ({
@@ -136,16 +136,16 @@ export default function LoginPage() {
               disabled={isLoading}
               className="h-12 w-full rounded-xl text-base"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Chưa có tài khoản?{" "}
               <Link
                 href="/register"
                 className="font-semibold text-primary hover:underline"
               >
-                Create one
+                Tạo tài khoản
               </Link>
             </p>
           </div>
