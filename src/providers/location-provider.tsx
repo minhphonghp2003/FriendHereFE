@@ -10,36 +10,19 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const startedRef = useRef(false);
-  const joinedRef = useRef(false);
+  const hubReadyRef = useRef(false);
+  const geoReadyRef = useRef(false);
+  const canJoinRef = useRef(false);
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
-
-  const doJoin = (pos?: { latitude: number; longitude: number; accuracy: number; speed?: number }) => {
-    const payload: Record<string, unknown> = { userId: user!.id };
-    const position = pos ?? pendingPosition.current;
-    if (position) {
-      payload.latitude = position.latitude;
-      payload.longitude = position.longitude;
-      payload.accuracy = position.accuracy;
-      if (position.speed !== undefined) payload.speed = position.speed;
-    }
-
-    if (joinedRef.current) {
-      if (!position) return;
-      console.log("[LocationProvider] Updating position:", JSON.stringify(payload));
-    } else {
-      joinedRef.current = true;
-      console.log("[LocationProvider] Joining with payload:", JSON.stringify(payload));
-    }
-
-    return locationHub.join(payload as any);
-  };
 
   useEffect(() => {
     if (!user) {
       if (startedRef.current) {
         console.log("[LocationProvider] User logged out, stopping");
         startedRef.current = false;
-        joinedRef.current = false;
+        hubReadyRef.current = false;
+        geoReadyRef.current = false;
+        canJoinRef.current = false;
         pendingPosition.current = null;
         dispatch(resetLocation());
         locationHub.stop();
@@ -54,9 +37,22 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     startedRef.current = true;
     console.log("[LocationProvider] Starting effect for user", user.id);
 
-    const onConnected = (source: string) => {
-      console.log(`[LocationProvider] onConnected called from ${source}, joined=${joinedRef.current}, pendingPos=${JSON.stringify(pendingPosition.current)}`);
-      doJoin(pendingPosition.current ?? undefined);
+    const tryJoin = () => {
+      if (canJoinRef.current) return;
+      canJoinRef.current = true;
+
+      const payload: Record<string, unknown> = { userId: user!.id };
+      const position = pendingPosition.current;
+      if (position) {
+        payload.latitude = position.latitude;
+        payload.longitude = position.longitude;
+        payload.accuracy = position.accuracy;
+        if (position.speed !== undefined) payload.speed = position.speed;
+      }
+      console.log("[LocationProvider] Joining with payload:", JSON.stringify(payload));
+      locationHub.join(payload as any).catch((err) =>
+        console.error("[LocationProvider] Join error:", err),
+      );
     };
 
     const init = async () => {
@@ -85,7 +81,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           locationHub.stop();
         });
 
-        onConnected("hub");
+        hubReadyRef.current = true;
+        if (geoReadyRef.current || !("geolocation" in navigator)) tryJoin();
       } catch (err) {
         console.error("[LocationProvider] SignalR init error:", err);
         startedRef.current = false;
@@ -94,11 +91,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     init();
 
-    if (!("geolocation" in navigator)) {
-      console.log("[LocationProvider] Geolocation not supported");
-      onConnected("no-geo");
-      return;
-    }
+    if (!("geolocation" in navigator)) return;
 
     console.log("[LocationProvider] Requesting geolocation...");
     navigator.geolocation.getCurrentPosition(
@@ -107,12 +100,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         console.log(`[LocationProvider] Geolocation success: lat=${latitude}, lng=${longitude}, acc=${accuracy}, speed=${speed}`);
         pendingPosition.current = { latitude, longitude, accuracy, speed: speed ?? undefined };
         dispatch(setCurrentPosition({ latitude, longitude, accuracy, speed: speed ?? undefined }));
-        onConnected("geo");
+        geoReadyRef.current = true;
+        if (hubReadyRef.current) tryJoin();
       },
       (err) => {
         console.warn("[LocationProvider] Geolocation error:", err.message);
         dispatch(setLocationDenied());
-        onConnected("geo-error");
+        geoReadyRef.current = true;
+        if (hubReadyRef.current) tryJoin();
       },
       { enableHighAccuracy: true, timeout: 15000 },
     );
