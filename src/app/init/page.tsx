@@ -68,12 +68,7 @@ const providers = [
     icon: FacebookIcon,
     className: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
   },
-  {
-    provider: "apple" as const,
-    label: "Tiếp tục với Apple",
-    icon: AppleIcon,
-    className: "bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black",
-  },
+
 ];
 
 export default function InitPage() {
@@ -87,11 +82,8 @@ export default function InitPage() {
   }, [isAuthenticated, router]);
 
   const handleOAuth = (provider: OAuthProvider) => {
-    if (provider === "google") {
-      window.location.href = `${env.NEXT_PUBLIC_API_URL}/auth/google`;
-      return;
-    }
-    console.log(provider);
+    const base = `${env.NEXT_PUBLIC_API_URL}/auth`;
+    window.location.href = `${base}/${provider}`;
   };
 
   return (
