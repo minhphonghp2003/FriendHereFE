@@ -1,21 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { useAuth } from "@/providers/auth-provider";
 import { login as apiLogin } from "@/services/auth";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -23,71 +26,131 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await apiLogin(form);
+
       login(
-        { id: result.userId, name: result.name, email: result.email, isWalkIn: false },
+        {
+          id: result.userId,
+          name: result.name,
+          email: result.email,
+          isWalkIn: false,
+        },
         result.token,
       );
+
       router.push("/home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <Link href="/init" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700">
-          <ArrowLeft className="h-4 w-4" />
-          Back
+    <main className="flex min-h-dvh flex-col bg-background">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
+        <Link
+          href="/init"
+          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          Quay lại
         </Link>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Login</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Chào mừng trở lại
+          </h1>
+
+          <p className="mt-3 text-muted-foreground">
+            Đăng nhập để tiếp tục trò chuyện và xem bạn bè ở đâu.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col"
+        >
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>Email</Label>
+
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) =>
+                  setForm((x) => ({
+                    ...x,
+                    email: e.target.value,
+                  }))
+                }
+                className="h-12 rounded-xl"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Mật khẩu</Label>
+
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Quên?
+                </Link>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Your password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                  minLength={8}
-                />
+              <Input
+                type="password"
+                placeholder="Mật khẩu"
+                value={form.password}
+                onChange={(e) =>
+                  setForm((x) => ({
+                    ...x,
+                    password: e.target.value,
+                  }))
+                }
+                className="h-12 rounded-xl"
+                required
+                minLength={8}
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
               </div>
+            )}
+          </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="mt-auto pt-10">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="h-12 w-full rounded-xl text-base"
+            >
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </Button>
 
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Chưa có tài khoản?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-primary hover:underline"
+              >
+                Tạo tài khoản
+              </Link>
+            </p>
+          </div>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }

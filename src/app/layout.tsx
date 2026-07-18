@@ -5,9 +5,11 @@ import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHereFE";
+
 export const metadata: Metadata = {
-  title: "FriendHereFE",
-  description: "Real-time chat and location tracking",
+  title: appName,
+  description: "Trò chuyện thời gian thực và theo dõi vị trí",
 };
 
 export const viewport: Viewport = {
@@ -24,8 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           <ReduxProvider>

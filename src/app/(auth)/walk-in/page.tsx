@@ -1,21 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { useAuth } from "@/providers/auth-provider";
 import { createWalkIn } from "@/services/auth";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 
 export default function WalkInPage() {
   const router = useRouter();
   const { login } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     name: "",
     age: "",
@@ -24,6 +27,7 @@ export default function WalkInPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setIsLoading(true);
     setError(null);
 
@@ -33,80 +37,140 @@ export default function WalkInPage() {
         age: Number(form.age),
         genderId: Number(form.genderId),
       });
-      login(
-        { id: result.id, name: result.name, email: result.email || "", isWalkIn: true },
-      );
+
+      login({
+        id: result.id,
+        name: result.name,
+        email: result.email ?? "",
+        isWalkIn: true,
+      });
+
       router.push("/home");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create guest");
+      setError(err instanceof Error ? err.message : "Không thể tạo tài khoản khách");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <Link href="/init" className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700">
-          <ArrowLeft className="h-4 w-4" />
+    <main className="flex min-h-dvh flex-col bg-background">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
+        <Link
+          href="/init"
+          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
           Back
         </Link>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Guest Mode</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Your name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Dùng thử với tư cách khách
+          </h1>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="age">Age</Label>
+          <p className="mt-3 text-muted-foreground">
+            Trải nghiệm ngay lập tức. Bạn có thể tạo tài khoản sau.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-1 flex-col"
+        >
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label>Tên</Label>
+
+              <Input
+                placeholder="Mọi người nên gọi bạn là gì?"
+                className="h-12 rounded-xl"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((x) => ({
+                    ...x,
+                    name: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tuổi</Label>
+
                 <Input
-                  id="age"
                   type="number"
-                  placeholder="Your age"
-                  value={form.age}
-                  onChange={(e) => setForm({ ...form, age: e.target.value })}
-                  required
+                  placeholder="18"
+                  className="h-12 rounded-xl"
                   min={1}
-                  max={150}
+                  max={120}
+                  value={form.age}
+                  onChange={(e) =>
+                    setForm((x) => ({
+                      ...x,
+                      age: e.target.value,
+                    }))
+                  }
+                  required
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="gender">Gender</Label>
+              <div className="space-y-2">
+                <Label>Giới tính</Label>
+
                 <select
-                  id="gender"
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                  className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={form.genderId}
-                  onChange={(e) => setForm({ ...form, genderId: e.target.value })}
+                  onChange={(e) =>
+                    setForm((x) => ({
+                      ...x,
+                      genderId: e.target.value,
+                    }))
+                  }
                 >
-                  <option value="1">Male</option>
-                  <option value="2">Female</option>
+                  <option value="1">Nam</option>
+                  <option value="2">Nữ</option>
                   <option value="3">Gay</option>
                   <option value="4">Les</option>
                 </select>
               </div>
+            </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Creating..." : "Continue as Guest"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <div className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
+              Tài khoản khách chỉ là tạm thời. Tạo tài khoản vĩnh viễn sau để
+              lưu hồ sơ, bạn bè và lịch sử trò chuyện.
+            </div>
+          </div>
+
+          <div className="mt-auto pt-8">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="h-12 w-full rounded-xl text-base"
+            >
+              {isLoading ? "Đang vào..." : "Tiếp tục với tư cách khách"}
+            </Button>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Muốn giữ tài khoản?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-primary hover:underline"
+              >
+                Tạo tài khoản ngay
+              </Link>
+            </p>
+          </div>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }

@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload } from "lucide-react";
+import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload, Moon } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import type { User as UserType } from "@/types/user";
 
 export default function SettingsPage() {
@@ -85,7 +86,7 @@ export default function SettingsPage() {
       setAvatarUrl(result.images?.[0]?.originalUrl ?? result.images?.[0]?.thumbUrl ?? "");
       login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload avatar");
+      setError(err instanceof Error ? err.message : "Tải ảnh lên thất bại");
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -113,7 +114,7 @@ export default function SettingsPage() {
       login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
       setShowEditDialog(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setError(err instanceof Error ? err.message : "Cập nhật hồ sơ thất bại");
     }
   };
 
@@ -122,27 +123,27 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">Cài đặt</h1>
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-muted">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <User className="h-6 w-6 text-zinc-600" />
+                  <User className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
               <div>
-                <CardTitle className="text-lg">{user?.name || "Guest"}</CardTitle>
-                <p className="text-sm text-zinc-500">{user?.email || "No email"}</p>
+                <CardTitle className="text-lg">{user?.name || "Khách"}</CardTitle>
+                <p className="text-sm text-muted-foreground">{user?.email || "Không có email"}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
+              Sửa
             </Button>
           </div>
         </CardHeader>
@@ -150,55 +151,65 @@ export default function SettingsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <Bell className="h-5 w-5 text-zinc-600" />
-            <span className="flex-1">Notifications</span>
-            <span className="text-zinc-400">›</span>
+          <div className="flex w-full items-center gap-4 p-4">
+            <Moon className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1">Chế độ tối</span>
+            <ThemeToggle />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1">Thông báo</span>
+            <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <Shield className="h-5 w-5 text-zinc-600" />
-            <span className="flex-1">Privacy</span>
-            <span className="text-zinc-400">›</span>
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1">Quyền riêng tư</span>
+            <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-zinc-50">
-            <HelpCircle className="h-5 w-5 text-zinc-600" />
-            <span className="flex-1">Help</span>
-            <span className="text-zinc-400">›</span>
+          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+            <HelpCircle className="h-5 w-5 text-muted-foreground" />
+            <span className="flex-1">Trợ giúp</span>
+            <span className="text-muted-foreground">›</span>
           </button>
         </CardContent>
       </Card>
 
       <Button
         variant="outline"
-        className="w-full text-red-600 hover:bg-red-50 hover:text-red-700"
+        className="w-full text-destructive hover:bg-destructive/10"
         onClick={() => logout()}
         disabled={loggingOut}
       >
         <LogOut className="mr-2 h-4 w-4" />
-        {loggingOut ? "Logging out..." : "Log Out"}
+        {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
       </Button>
 
       <Dialog open={showEditDialog} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogTitle>Chỉnh sửa hồ sơ</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {loadingDetail ? (
               <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-600" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
               </div>
             ) : (
               <>
                 <div className="flex flex-col items-center gap-3">
-                  <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-zinc-100">
+                  <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-muted">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                     ) : (
-                      <User className="h-8 w-8 text-zinc-400" />
+                      <User className="h-8 w-8 text-muted-foreground" />
                     )}
                     {isUploading && (
                       <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
@@ -221,15 +232,15 @@ export default function SettingsPage() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="mr-1.5 h-3.5 w-3.5" />
-                    {isUploading ? "Uploading..." : "Change Avatar"}
+                    {isUploading ? "Đang tải lên..." : "Đổi ảnh đại diện"}
                   </Button>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-name">Name</Label>
+                  <Label htmlFor="edit-name">Tên</Label>
                   <Input
                     id="edit-name"
-                    placeholder="Your name"
+                    placeholder="Tên của bạn"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
@@ -238,11 +249,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-age">Age</Label>
+                  <Label htmlFor="edit-age">Tuổi</Label>
                   <Input
                     id="edit-age"
                     type="number"
-                    placeholder="Your age"
+                    placeholder="Tuổi của bạn"
                     value={form.age}
                     onChange={(e) => setForm({ ...form, age: e.target.value })}
                     required
@@ -252,15 +263,15 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-gender">Gender</Label>
+                  <Label htmlFor="edit-gender">Giới tính</Label>
                   <select
                     id="edit-gender"
-                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm"
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
                     value={form.genderId}
                     onChange={(e) => setForm({ ...form, genderId: e.target.value })}
                   >
-                    <option value="1">Male</option>
-                    <option value="2">Female</option>
+                    <option value="1">Nam</option>
+                    <option value="2">Nữ</option>
                     <option value="3">Gay</option>
                     <option value="4">Les</option>
                   </select>
@@ -272,10 +283,10 @@ export default function SettingsPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-                Cancel
+                Hủy
               </Button>
               <Button type="submit" disabled={isUpdating || loadingDetail}>
-                {isUpdating ? "Saving..." : "Save"}
+                {isUpdating ? "Đang lưu..." : "Lưu"}
               </Button>
             </DialogFooter>
           </form>

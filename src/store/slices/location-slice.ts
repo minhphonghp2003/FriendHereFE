@@ -9,6 +9,7 @@ interface LocationState {
   longitude: number | null;
   accuracy: number | null;
   speed: number | null;
+  movingUserIds: number[];
 }
 
 const initialState: LocationState = {
@@ -19,6 +20,7 @@ const initialState: LocationState = {
   longitude: null,
   accuracy: null,
   speed: null,
+  movingUserIds: [],
 };
 
 const locationSlice = createSlice({
@@ -52,9 +54,23 @@ const locationSlice = createSlice({
       if (action.payload.accuracy !== undefined) state.accuracy = action.payload.accuracy;
       if (action.payload.speed !== undefined) state.speed = action.payload.speed;
     },
+    updateOtherLocation: (state, action: PayloadAction<LocationDto>) => {
+      const idx = state.locations.findIndex((l) => l.userId === action.payload.userId);
+      if (idx !== -1) {
+        state.locations[idx] = action.payload;
+      }
+    },
+    setMovingUser: (state, action: PayloadAction<number>) => {
+      if (!state.movingUserIds.includes(action.payload)) {
+        state.movingUserIds.push(action.payload);
+      }
+    },
+    clearMovingUser: (state, action: PayloadAction<number>) => {
+      state.movingUserIds = state.movingUserIds.filter((id) => id !== action.payload);
+    },
     resetLocation: () => initialState,
   },
 });
 
-export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, resetLocation } = locationSlice.actions;
+export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } = locationSlice.actions;
 export const locationReducer = locationSlice.reducer;

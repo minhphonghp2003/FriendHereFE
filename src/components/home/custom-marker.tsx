@@ -31,10 +31,11 @@ interface CustomMarkerProps {
   name: string;
   image?: string;
   isCurrentUser?: boolean;
+  moving?: boolean;
   onClick?: () => void;
 }
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, onClick }: CustomMarkerProps) => {
+export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onClick }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
   const clipId = useId();
 
@@ -52,12 +53,14 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, onClick }: 
       onClick={onClick}
     >
       <div
-        className="transition-transform duration-200"
+        className={`transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
         style={{
           marginTop: -26,
           transform: hovered ? "scale(1.1)" : "scale(1)",
           transformOrigin: "bottom center",
-          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+          filter: moving
+            ? "drop-shadow(0 2px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 12px " + pinColor + ")"
+            : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
         <svg
@@ -70,7 +73,22 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, onClick }: 
             <clipPath id={clipId}>
               <circle cx="24" cy="24" r="16" />
             </clipPath>
+            {moving && (
+              <>
+                <style>{`@keyframes markerPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }`}</style>
+              </>
+            )}
           </defs>
+          {moving && (
+            <circle
+              cx="24" cy="24" r="22"
+              fill="none"
+              stroke={pinColor}
+              strokeWidth="2.5"
+              opacity="0.5"
+              style={{ animation: "markerPulse 1s ease-in-out infinite" }}
+            />
+          )}
           <path
             d="M 4 24 A 20 20 0 1 1 44 24 C 44 34 36 42 24 52 C 12 42 4 34 4 24 Z"
             fill={pinColor}

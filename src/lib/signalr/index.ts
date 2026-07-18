@@ -7,6 +7,7 @@ export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
 export type NewJoinCallback = (user: UserDto, location: LocationDto) => void;
 export type UserDisconnectCallback = (userId: number) => void;
 export type KickedCallback = () => void;
+export type ReceiveOtherMovementCallback = (location: LocationDto) => void;
 
 class LocationHub {
   private connection: signalR.HubConnection | null = null;
@@ -15,6 +16,7 @@ class LocationHub {
   private newJoinCallback: NewJoinCallback | null = null;
   private userDisconnectCallback: UserDisconnectCallback | null = null;
   private kickedCallback: KickedCallback | null = null;
+  private receiveOtherMovementCallback: ReceiveOtherMovementCallback | null = null;
 
   async start(userId?: number): Promise<void> {
     const myEpoch = ++this.epoch;
@@ -39,6 +41,24 @@ class LocationHub {
       ? `${env.NEXT_PUBLIC_SIGNALR_URL}?userId=${userId}`
       : env.NEXT_PUBLIC_SIGNALR_URL;
 
+    const logger: signalR.ILogger = {
+      log(logLevel: signalR.LogLevel, message: string): void {
+        if (message.includes("stopped during negotiation")) return;
+        if (message.includes("WebSockets transport")) return;
+        switch (logLevel) {
+          case signalR.LogLevel.Error:
+            console.error(message);
+            break;
+          case signalR.LogLevel.Warning:
+            console.warn(message);
+            break;
+          default:
+            console.log(message);
+            break;
+        }
+      },
+    };
+
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(url, {
         accessTokenFactory: () => {
@@ -47,7 +67,7 @@ class LocationHub {
         },
       })
       .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(logger)
       .build();
 
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {
@@ -66,6 +86,10 @@ class LocationHub {
     this.connection.on("ReceiveKicked", () => {
       console.log("[SignalR] Kicked by another session");
       this.kickedCallback?.();
+    });
+
+    this.connection.on("ReceiveOtherMovement", (location: LocationDto) => {
+      this.receiveOtherMovementCallback?.(location);
     });
 
     try {
@@ -113,6 +137,19 @@ class LocationHub {
 
   onKicked(callback: KickedCallback): void {
     this.kickedCallback = callback;
+  }
+
+  onReceiveOtherMovement(callback: ReceiveOtherMovementCallback): void {
+    this.receiveOtherMovementCallback = callback;
+  }
+
+  async updateLocation(latitude: number, longitude: number, accuracy?: number, speed?: number): Promise<void> {
+    if (!this.connection) return;
+    try {
+      await this.connection.invoke("UpdateLocation", latitude, longitude, accuracy, speed);
+    } catch (err) {
+      console.error("[SignalR] UpdateLocation error:", err);
+    }
   }
 
   getConnection(): signalR.HubConnection | null {
