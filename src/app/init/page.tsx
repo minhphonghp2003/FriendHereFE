@@ -96,11 +96,14 @@ export default function InitPage() {
       {/* Content */}
       <div className="-mt-8 flex flex-1 flex-col rounded-t-[32px] bg-background px-6 pt-8 pb-10">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
-            <span className="text-2xl font-bold text-primary-foreground">
-              {env.NEXT_PUBLIC_APP_NAME.charAt(0)}
-            </span>
-          </div>
+          <Image
+            src="/images/logo.webp"
+            alt={env.NEXT_PUBLIC_APP_NAME}
+            width={64}
+            height={64}
+            priority
+            className="mx-auto mb-4"
+          />
 
           <h1 className="text-3xl font-bold tracking-tight">
             {env.NEXT_PUBLIC_APP_NAME}
