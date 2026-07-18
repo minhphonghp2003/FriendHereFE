@@ -16,6 +16,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!user) {
       if (startedRef.current) {
         console.log("[LocationProvider] User logged out, stopping");
@@ -59,6 +61,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log("[LocationProvider] init: starting hub...");
         await locationHub.start(user.id);
+        if (cancelled) return;
+
         console.log("[LocationProvider] init: hub started");
 
         locationHub.onReceiveLocations((locList) => {
@@ -84,8 +88,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         hubReadyRef.current = true;
         if (geoReadyRef.current || !("geolocation" in navigator)) tryJoin();
       } catch (err) {
-        console.error("[LocationProvider] SignalR init error:", err);
-        startedRef.current = false;
+        if (!cancelled) {
+          console.error("[LocationProvider] SignalR init error:", err);
+          startedRef.current = false;
+        }
       }
     };
 
@@ -111,6 +117,18 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       },
       { enableHighAccuracy: true, timeout: 15000 },
     );
+
+    return () => {
+      cancelled = true;
+      console.log("[LocationProvider] Effect cleanup");
+      startedRef.current = false;
+      hubReadyRef.current = false;
+      geoReadyRef.current = false;
+      canJoinRef.current = false;
+      pendingPosition.current = null;
+      dispatch(resetLocation());
+      locationHub.stop();
+    };
   }, [user, dispatch]);
 
   return children;

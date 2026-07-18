@@ -39,6 +39,23 @@ class LocationHub {
       ? `${env.NEXT_PUBLIC_SIGNALR_URL}?userId=${userId}`
       : env.NEXT_PUBLIC_SIGNALR_URL;
 
+    const logger: signalR.ILogger = {
+      log(logLevel: signalR.LogLevel, message: string): void {
+        if (message.includes("stopped during negotiation")) return;
+        switch (logLevel) {
+          case signalR.LogLevel.Error:
+            console.error(message);
+            break;
+          case signalR.LogLevel.Warning:
+            console.warn(message);
+            break;
+          default:
+            console.log(message);
+            break;
+        }
+      },
+    };
+
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(url, {
         accessTokenFactory: () => {
@@ -47,7 +64,7 @@ class LocationHub {
         },
       })
       .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(logger)
       .build();
 
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {

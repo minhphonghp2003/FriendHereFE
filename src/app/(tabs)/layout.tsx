@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { LocationProvider } from "@/providers/location-provider";
 import { BottomNav } from "@/components/mobile/bottom-nav";
+import { locationHub } from "@/lib/signalr";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isAuthenticated) {
+      locationHub.stop();
       router.replace("/init");
     }
   }, [isAuthenticated, router]);
