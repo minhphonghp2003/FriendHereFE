@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "./auth-provider";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch } from "@/store/hooks";
-import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, resetLocation } from "@/store/slices/location-slice";
+import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -29,6 +29,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const canJoinRef = useRef(false);
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
   const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
+  const movingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +105,16 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         locationHub.onReceiveOtherMovement((location) => {
           console.log(`[SignalR] ${location.name} moved to (${location.latitude}, ${location.longitude})`);
           dispatch(updateOtherLocation(location));
+          dispatch(setMovingUser(location.userId));
+          const existing = movingTimers.current.get(location.userId);
+          if (existing) clearTimeout(existing);
+          movingTimers.current.set(
+            location.userId,
+            setTimeout(() => {
+              dispatch(clearMovingUser(location.userId));
+              movingTimers.current.delete(location.userId);
+            }, 2000),
+          );
         });
 
         hubReadyRef.current = true;
@@ -161,6 +172,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
       }
+      movingTimers.current.forEach((timer) => clearTimeout(timer));
+      movingTimers.current.clear();
       console.log("[LocationProvider] Effect cleanup");
       startedRef.current = false;
       hubReadyRef.current = false;

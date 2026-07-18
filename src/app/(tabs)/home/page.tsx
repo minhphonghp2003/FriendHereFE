@@ -18,6 +18,7 @@ export default function HomePage() {
   const locations = useAppSelector((s) => s.location.locations);
   const kicked = useAppSelector((s) => s.location.kicked);
   const locationDenied = useAppSelector((s) => s.location.locationDenied);
+  const movingUserIds = useAppSelector((s) => s.location.movingUserIds);
   const latitude = useAppSelector((s) => s.location.latitude);
   const longitude = useAppSelector((s) => s.location.longitude);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -117,6 +118,7 @@ export default function HomePage() {
                 position={{ lat: loc.latitude, lng: loc.longitude }}
                 name={loc.name}
                 image={loc.image || undefined}
+                moving={movingUserIds.includes(loc.userId)}
                 onClick={() => handleMarkerClick(loc)}
               />
             ))}
