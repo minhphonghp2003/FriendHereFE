@@ -14,12 +14,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
 
   const doJoin = (pos?: { latitude: number; longitude: number; accuracy: number; speed?: number }) => {
-    if (joinedRef.current) {
-      console.log("[LocationProvider] Already joined, skipping");
-      return;
-    }
-    joinedRef.current = true;
-
     const payload: Record<string, unknown> = { userId: user!.id };
     const position = pos ?? pendingPosition.current;
     if (position) {
@@ -28,7 +22,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       payload.accuracy = position.accuracy;
       if (position.speed !== undefined) payload.speed = position.speed;
     }
-    console.log("[LocationProvider] Joining with payload:", JSON.stringify(payload));
+
+    if (joinedRef.current) {
+      if (!position) return;
+      console.log("[LocationProvider] Updating position:", JSON.stringify(payload));
+    } else {
+      joinedRef.current = true;
+      console.log("[LocationProvider] Joining with payload:", JSON.stringify(payload));
+    }
+
     return locationHub.join(payload as any);
   };
 
@@ -54,7 +56,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     const onConnected = (source: string) => {
       console.log(`[LocationProvider] onConnected called from ${source}, joined=${joinedRef.current}, pendingPos=${JSON.stringify(pendingPosition.current)}`);
-      if (!joinedRef.current) doJoin(pendingPosition.current ?? undefined);
+      doJoin(pendingPosition.current ?? undefined);
     };
 
     const init = async () => {
