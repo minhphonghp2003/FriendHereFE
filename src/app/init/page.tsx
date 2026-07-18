@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LogIn, User } from "lucide-react";
+
+import { useAuth } from "@/providers/auth-provider";
 
 import { env } from "@/config/env";
 import { Button } from "@/components/ui/button";
@@ -73,7 +77,20 @@ const providers = [
 ];
 
 export default function InitPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/home");
+    }
+  }, [isAuthenticated, router]);
+
   const handleOAuth = (provider: OAuthProvider) => {
+    if (provider === "google") {
+      window.location.href = `${env.NEXT_PUBLIC_API_URL}/auth/google`;
+      return;
+    }
     console.log(provider);
   };
 
