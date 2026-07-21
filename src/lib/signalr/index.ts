@@ -35,12 +35,15 @@ class LocationHub {
 
     if (myEpoch !== this.epoch) return;
 
+    const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+    if (!token) {
+      console.warn("[LocationHub] No token available, skipping connection");
+      return;
+    }
+
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(env.NEXT_PUBLIC_SIGNALR_URL, {
-        accessTokenFactory: () => {
-          if (typeof window === "undefined") return "";
-          return localStorage.getItem(TOKEN_KEY) ?? "";
-        },
+        accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
       .build();
