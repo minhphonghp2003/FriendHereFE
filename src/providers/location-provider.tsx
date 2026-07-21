@@ -184,7 +184,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       appHub.stop();
       locationHub.stop();
     };
-  }, [user, dispatch]);
+  }, [user?.id, dispatch]);
 
   return children;
 }

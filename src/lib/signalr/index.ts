@@ -65,12 +65,16 @@ class LocationHub {
       this.receiveOtherMovementCallback?.(location);
     });
 
+    this.connection.onclose(() => {
+      console.log("[LocationHub] Disconnected");
+    });
+
     try {
       await this.connection.start();
       console.log("[LocationHub] Connected");
     } catch (err) {
       if (myEpoch === this.epoch) {
-        console.error("[LocationHub] Connection error:", err);
+        this.connection = null;
         throw err;
       }
     }
