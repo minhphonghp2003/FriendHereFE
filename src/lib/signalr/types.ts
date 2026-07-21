@@ -22,13 +22,4 @@ export interface UserDto {
   email: string;
   age: number;
   genderId: number;
-  isWalkIn: boolean;
-}
-
-export interface JoinLocationInput {
-  userId: number;
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-  speed?: number;
 }

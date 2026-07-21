@@ -1,4 +1,4 @@
-export { loginSchema, registerSchema, escalateSchema } from "./auth";
-export type { LoginFormData, RegisterFormData, EscalateFormData } from "./auth";
-export { walkInSchema, updateUserSchema } from "./user";
-export type { WalkInFormData, UpdateUserFormData } from "./user";
+export { loginSchema, registerSchema } from "./auth";
+export type { LoginFormData, RegisterFormData } from "./auth";
+export { updateUserSchema } from "./user";
+export type { UpdateUserFormData } from "./user";

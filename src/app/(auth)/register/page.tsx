@@ -53,7 +53,6 @@ export default function RegisterPage() {
           id: result.userId,
           name: result.name,
           email: result.email,
-          isWalkIn: false,
         },
         result.token,
       );

@@ -38,7 +38,6 @@ export default function LoginPage() {
           id: result.userId,
           name: result.name,
           email: result.email,
-          isWalkIn: false,
         },
         result.token,
       );
