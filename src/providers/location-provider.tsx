@@ -64,7 +64,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       canJoinRef.current = true;
 
       console.log("[LocationProvider] Joining location hub...");
-      locationHub.join().catch((err) =>
+      const pos = pendingPosition.current;
+      locationHub.join({
+        ...(pos && {
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          accuracy: pos.accuracy,
+          speed: pos.speed,
+        }),
+      }).catch((err) =>
         console.error("[LocationProvider] Join error:", err),
       );
     };

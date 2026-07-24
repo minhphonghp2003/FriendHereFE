@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { LocationDto, UserDto } from "./types";
+import type { JoinRequest, LocationDto, UserDto } from "./types";
 
 export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
 export type NewJoinCallback = (user: UserDto, location: LocationDto) => void;
@@ -93,11 +93,11 @@ class LocationHub {
     }
   }
 
-  async join(): Promise<void> {
+  async join(request: JoinRequest): Promise<void> {
     if (!this.connection) {
       throw new Error("Connection not started. Call start() first.");
     }
-    await this.connection.invoke("Join");
+    await this.connection.invoke("Join", request);
   }
 
   onReceiveLocations(callback: ReceiveLocationsCallback): void {
