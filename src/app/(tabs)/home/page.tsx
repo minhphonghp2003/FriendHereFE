@@ -2,18 +2,20 @@
 
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
-import { useAppSelector } from "@/store/hooks";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { resetLocation } from "@/store/slices/location-slice";
 import type { LocationDto } from "@/lib/signalr/types";
 
 export default function HomePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const locations = useAppSelector((s) => s.location.locations);
   const kicked = useAppSelector((s) => s.location.kicked);
@@ -24,6 +26,13 @@ export default function HomePage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
+
+  useEffect(() => {
+    if (kicked) {
+      dispatch(resetLocation());
+      router.replace("/init");
+    }
+  }, [kicked, dispatch, router]);
 
   const position = latitude !== null && longitude !== null
     ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral
@@ -50,14 +59,7 @@ export default function HomePage() {
   }
 
   if (kicked) {
-    return (
-      <div className="flex h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-4 p-4">
-        <p className="text-sm text-zinc-500">You were disconnected because you opened the app in another tab.</p>
-        <button onClick={() => router.refresh()} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">
-          Reconnect
-        </button>
-      </div>
-    );
+    return null;
   }
 
   if (!position && !locationDenied) {
