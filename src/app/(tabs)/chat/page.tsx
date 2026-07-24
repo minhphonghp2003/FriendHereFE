@@ -86,7 +86,7 @@ export default function ChatListPage() {
                 {conv.image?.thumbUrl ? (
                   <img src={conv.image.thumbUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-lg font-bold text-muted-foreground">{conv.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-lg font-bold text-muted-foreground">{conv.name?.charAt(0).toUpperCase() ?? '?'}</span>
                 )}
               </div>
               {conv.isOnline && (
