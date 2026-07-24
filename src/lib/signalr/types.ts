@@ -15,6 +15,13 @@ export interface LocationDto {
   updatedAt: string;
 }
 
+export interface JoinRequest {
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+  speed?: number;
+}
+
 export interface UserDto {
   id: number;
   name: string;
