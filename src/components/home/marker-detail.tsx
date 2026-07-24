@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { getOpponentConversation } from "@/services/chat";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
 
@@ -43,6 +45,21 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
 
   const color = useMemo(() => stringToColor(name), [name]);
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
+  const router = useRouter();
+
+  const handleChat = useCallback(async () => {
+    if (isCurrentUser || !userDetail) return;
+    try {
+      const res = await getOpponentConversation(userDetail.id);
+      if (res.data?.id) {
+        router.push(`/chat/${res.data.id}?name=${encodeURIComponent(name)}&isOnline=true&memberCount=2`);
+      } else {
+        router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
+      }
+    } catch {
+      router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
+    }
+  }, [isCurrentUser, userDetail, name, router]);
 
   if (loading) {
     return (
@@ -88,12 +105,18 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
           )}
           <p className="mt-0.5 text-xs text-emerald-500">Online</p>
         </div>
-        <button
-          onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
-        >
-          ✕
-        </button>
+        <div className="flex flex-col gap-2">
+          {!isCurrentUser && (
+            <button onClick={handleChat} className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              Nhắn tin
+            </button>
+          )}
+          <div className="flex justify-end">
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400">
+              ✕
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
+import { addConversation } from "@/store/slices/chat-slice";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -115,6 +116,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               movingTimers.current.delete(location.userId);
             }, 2000),
           );
+        });
+
+        appHub.onReceiveNewConversation((conversation, initialMessage) => {
+          dispatch(addConversation(conversation));
         });
 
         locationHubReadyRef.current = true;
