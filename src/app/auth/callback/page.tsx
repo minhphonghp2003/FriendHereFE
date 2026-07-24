@@ -42,12 +42,11 @@ export default function AuthCallbackPage() {
       id: Number(payload.sub),
       name: payload.name ?? "",
       email: payload.email ?? "",
-      isWalkIn: false,
     };
 
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_ID_KEY, String(user.id));
-    localStorage.setItem(USER_INFO_KEY, JSON.stringify({ name: user.name, email: user.email, isWalkIn: false }));
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify({ name: user.name, email: user.email }));
 
     login(user, token);
     router.replace("/home");

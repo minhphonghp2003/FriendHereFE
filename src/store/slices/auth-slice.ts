@@ -4,7 +4,6 @@ interface User {
   id: number;
   name: string;
   email: string;
-  isWalkIn: boolean;
 }
 
 interface AuthState {

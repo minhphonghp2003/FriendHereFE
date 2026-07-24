@@ -11,11 +11,6 @@ export interface RegisterInput {
   genderId: number;
 }
 
-export interface EscalateInput {
-  email: string;
-  password: string;
-}
-
 export interface AuthResponse {
   userId: number;
   name: string;
@@ -28,5 +23,4 @@ export interface AuthUser {
   id: number;
   name: string;
   email: string;
-  isWalkIn: boolean;
 }

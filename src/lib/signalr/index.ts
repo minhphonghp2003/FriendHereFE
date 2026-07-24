@@ -1,12 +1,11 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { LocationDto, UserDto, JoinLocationInput } from "./types";
+import type { LocationDto, UserDto } from "./types";
 
 export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
 export type NewJoinCallback = (user: UserDto, location: LocationDto) => void;
 export type UserDisconnectCallback = (userId: number) => void;
-export type KickedCallback = () => void;
 export type ReceiveOtherMovementCallback = (location: LocationDto) => void;
 
 class LocationHub {
@@ -15,10 +14,9 @@ class LocationHub {
   private receiveLocationsCallback: ReceiveLocationsCallback | null = null;
   private newJoinCallback: NewJoinCallback | null = null;
   private userDisconnectCallback: UserDisconnectCallback | null = null;
-  private kickedCallback: KickedCallback | null = null;
   private receiveOtherMovementCallback: ReceiveOtherMovementCallback | null = null;
 
-  async start(userId?: number): Promise<void> {
+  async start(): Promise<void> {
     const myEpoch = ++this.epoch;
 
     if (this.connection) {
@@ -37,37 +35,17 @@ class LocationHub {
 
     if (myEpoch !== this.epoch) return;
 
-    const url = userId
-      ? `${env.NEXT_PUBLIC_SIGNALR_URL}?userId=${userId}`
-      : env.NEXT_PUBLIC_SIGNALR_URL;
-
-    const logger: signalR.ILogger = {
-      log(logLevel: signalR.LogLevel, message: string): void {
-        if (message.includes("stopped during negotiation")) return;
-        if (message.includes("WebSockets transport")) return;
-        switch (logLevel) {
-          case signalR.LogLevel.Error:
-            console.error(message);
-            break;
-          case signalR.LogLevel.Warning:
-            console.warn(message);
-            break;
-          default:
-            console.log(message);
-            break;
-        }
-      },
-    };
+    const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+    if (!token) {
+      console.warn("[LocationHub] No token available, skipping connection");
+      return;
+    }
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(url, {
-        accessTokenFactory: () => {
-          if (typeof window === "undefined") return "";
-          return localStorage.getItem(TOKEN_KEY) ?? "";
-        },
+      .withUrl(env.NEXT_PUBLIC_SIGNALR_URL, {
+        accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
-      .configureLogging(logger)
       .build();
 
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {
@@ -83,21 +61,20 @@ class LocationHub {
       this.userDisconnectCallback?.(userId);
     });
 
-    this.connection.on("ReceiveKicked", () => {
-      console.log("[SignalR] Kicked by another session");
-      this.kickedCallback?.();
-    });
-
     this.connection.on("ReceiveOtherMovement", (location: LocationDto) => {
       this.receiveOtherMovementCallback?.(location);
     });
 
+    this.connection.onclose(() => {
+      console.log("[LocationHub] Disconnected");
+    });
+
     try {
       await this.connection.start();
-      console.log("SignalR connected.");
+      console.log("[LocationHub] Connected");
     } catch (err) {
       if (myEpoch === this.epoch) {
-        console.error("SignalR connection error:", err);
+        this.connection = null;
         throw err;
       }
     }
@@ -116,11 +93,11 @@ class LocationHub {
     }
   }
 
-  async join(input: JoinLocationInput): Promise<void> {
+  async join(): Promise<void> {
     if (!this.connection) {
       throw new Error("Connection not started. Call start() first.");
     }
-    await this.connection.invoke("Join", input);
+    await this.connection.invoke("Join");
   }
 
   onReceiveLocations(callback: ReceiveLocationsCallback): void {
@@ -135,10 +112,6 @@ class LocationHub {
     this.userDisconnectCallback = callback;
   }
 
-  onKicked(callback: KickedCallback): void {
-    this.kickedCallback = callback;
-  }
-
   onReceiveOtherMovement(callback: ReceiveOtherMovementCallback): void {
     this.receiveOtherMovementCallback = callback;
   }
@@ -148,7 +121,7 @@ class LocationHub {
     try {
       await this.connection.invoke("UpdateLocation", latitude, longitude, accuracy, speed);
     } catch (err) {
-      console.error("[SignalR] UpdateLocation error:", err);
+      console.error("[LocationHub] UpdateLocation error:", err);
     }
   }
 

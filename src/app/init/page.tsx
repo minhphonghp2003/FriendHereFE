@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, User } from "lucide-react";
+import { LogIn } from "lucide-react";
 
 import { useAuth } from "@/providers/auth-provider";
 
@@ -160,16 +160,6 @@ export default function InitPage() {
             >
               <LogIn className="size-5" />
               Đăng nhập bằng email
-            </Button>
-          </Link>
-
-          <Link href="/walk-in" >
-            <Button
-              variant="secondary"
-              className="h-12 mt-2 w-full rounded-xl gap-3"
-            >
-              <User className="size-5" />
-              Tiếp tục với tư cách khách
             </Button>
           </Link>
 

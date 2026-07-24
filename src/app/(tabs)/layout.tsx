@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { LocationProvider } from "@/providers/location-provider";
 import { BottomNav } from "@/components/mobile/bottom-nav";
+import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +14,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isAuthenticated) {
+      appHub.stop();
       locationHub.stop();
       router.replace("/init");
     }

@@ -8,9 +8,9 @@ import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
-  user: { id: number; name: string; email: string; isWalkIn: boolean } | null;
+  user: { id: number; name: string; email: string } | null;
   token: string | null;
-  login: (user: { id: number; name: string; email: string; isWalkIn: boolean }, token?: string) => void;
+  login: (user: { id: number; name: string; email: string }, token?: string) => void;
   logout: () => void;
 }
 
@@ -31,19 +31,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (userId) {
       let name = "";
       let email = "";
-      let isWalkIn = !storedToken;
       try {
         const storedInfo = localStorage.getItem(USER_INFO_KEY);
         if (storedInfo) {
           const info = JSON.parse(storedInfo);
           name = info.name ?? "";
           email = info.email ?? "";
-          isWalkIn = info.isWalkIn ?? !storedToken;
         }
       } catch {}
 
       dispatch(setCredentials({
-        user: { id: Number(userId), name, email, isWalkIn },
+        user: { id: Number(userId), name, email },
         token: storedToken || undefined,
       }));
 
@@ -51,13 +49,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           const detail = await getUserById(Number(userId));
           dispatch(setCredentials({
-            user: { id: detail.id, name: detail.name, email: detail.email ?? "", isWalkIn },
+            user: { id: detail.id, name: detail.name, email: detail.email ?? "" },
             token: storedToken || undefined,
           }));
           localStorage.setItem(USER_INFO_KEY, JSON.stringify({
             name: detail.name,
             email: detail.email ?? "",
-            isWalkIn,
           }));
         } catch {
           // keep cached data if fetch fails
@@ -68,12 +65,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setHydrated(true);
   }, [dispatch]);
 
-  const handleLogin = (userData: { id: number; name: string; email: string; isWalkIn: boolean }, authToken?: string) => {
+  const handleLogin = (userData: { id: number; name: string; email: string }, authToken?: string) => {
     localStorage.setItem(USER_ID_KEY, String(userData.id));
     localStorage.setItem(USER_INFO_KEY, JSON.stringify({
       name: userData.name,
       email: userData.email,
-      isWalkIn: userData.isWalkIn,
     }));
     if (authToken) {
       localStorage.setItem(TOKEN_KEY, authToken);

@@ -10,7 +10,6 @@ export interface User {
   email: string;
   age: number;
   genderId: number;
-  isWalkIn: boolean;
 }
 
 export interface CreateUserInput {
@@ -25,21 +24,4 @@ export interface UpdateUserInput {
   name?: string;
   age?: number;
   genderId?: number;
-}
-
-export interface WalkInInput {
-  name: string;
-  age: number;
-  genderId: number;
-}
-
-export interface WalkInUser {
-  id: number;
-  name: string;
-  email: string | null;
-  passwordHash: string | null;
-  images: ImageDto[] | null;
-  age: number;
-  genderId: number;
-  isWalkIn: true;
 }

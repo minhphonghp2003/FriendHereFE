@@ -15,7 +15,7 @@ export const UserCard = ({ user, onDelete }: UserCardProps) => {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{user.name}</CardTitle>
         <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">
-          {user.isWalkIn ? "Walk-in" : "User"}
+          User
         </span>
       </CardHeader>
       <CardContent>

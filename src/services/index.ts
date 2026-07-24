@@ -1,2 +1,2 @@
-export { login, register, escalate, createWalkIn, logoutApi } from "./auth";
-export { getUserById, getCurrentUser, updateCurrentUser, deleteWalkIn } from "./user";
+export { login, register, logoutApi } from "./auth";
+export { getUserById, getCurrentUser, updateCurrentUser } from "./user";

@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
-import { useUpdateWalkIn } from "@/hooks/users/use-update-walk-in";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
-import { useUploadWalkInAvatar } from "@/hooks/users/use-upload-walk-in-avatar";
 import { getUserById } from "@/services/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +20,7 @@ export default function SettingsPage() {
   const { user, token, login } = useAuth();
   const { mutate: logout, isLoading: loggingOut } = useLogout();
   const { mutate: updateCurrentUser, isLoading: updatingMe } = useUpdateCurrentUser();
-  const { mutate: updateWalkInUser, isLoading: updatingWalkIn } = useUpdateWalkIn();
   const { mutate: uploadAvatar, isLoading: uploadingAvatar } = useUploadAvatar();
-  const { mutate: uploadWalkInAvatar, isLoading: uploadingWalkInAvatar } = useUploadWalkInAvatar();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,11 +76,9 @@ export default function SettingsPage() {
 
     setError(null);
     try {
-      const result = user.isWalkIn
-        ? await uploadWalkInAvatar(user.id, file)
-        : await uploadAvatar(file);
+      const result = await uploadAvatar(file);
       setAvatarUrl(result.images?.[0]?.originalUrl ?? result.images?.[0]?.thumbUrl ?? "");
-      login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
+      login({ id: user.id, name: form.name, email: user.email }, token || undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tải ảnh lên thất bại");
     }
@@ -106,20 +100,16 @@ export default function SettingsPage() {
     };
 
     try {
-      if (user.isWalkIn) {
-        await updateWalkInUser(user.id, payload);
-      } else {
-        await updateCurrentUser(payload);
-      }
-      login({ id: user.id, name: form.name, email: user.email, isWalkIn: user.isWalkIn }, token || undefined);
+      await updateCurrentUser(payload);
+      login({ id: user.id, name: form.name, email: user.email }, token || undefined);
       setShowEditDialog(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cập nhật hồ sơ thất bại");
     }
   };
 
-  const isUpdating = updatingMe || updatingWalkIn;
-  const isUploading = uploadingAvatar || uploadingWalkInAvatar;
+  const isUpdating = updatingMe;
+  const isUploading = uploadingAvatar;
 
   return (
     <div className="flex flex-col gap-4 p-4">

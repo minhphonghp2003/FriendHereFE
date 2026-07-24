@@ -23,7 +23,7 @@ export default function HomePage() {
   const longitude = useAppSelector((s) => s.location.longitude);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
-  const { data: currentUserProfile } = useCurrentUser({ enabled: !user?.isWalkIn });
+  const { data: currentUserProfile } = useCurrentUser();
 
   const position = latitude !== null && longitude !== null
     ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral
