@@ -39,6 +39,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_SIGNALR_URL=${{ vars.NEXT_PUBLIC_SIGNALR_URL }}
+            NEXT_PUBLIC_SIGNALR_APP_UR=${{ vars.NEXT_PUBLIC_SIGNALR_APP_UR }}
             NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
 
