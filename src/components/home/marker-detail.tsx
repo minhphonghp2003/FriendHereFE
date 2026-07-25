@@ -6,7 +6,7 @@ import { getOpponentConversation } from "@/services/chat";
 import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship } from "@/services/friendship";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
-import { isPendingStatus } from "@/types/friendship";
+import { isPendingStatus, isAcceptedStatus } from "@/types/friendship";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -142,7 +142,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
         <button
           onClick={handleSendFriendRequest}
           disabled={actionLoading}
-          className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           {actionLoading ? "..." : "Kết bạn"}
         </button>
@@ -150,26 +150,46 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     }
 
     if (isPendingStatus(friendship)) {
-      if (friendship.requestedById === userDetail?.id) {
-        return null;
+      const isReceived = friendship.requestedById === userDetail?.id;
+      if (isReceived) {
+        return (
+          <div className="flex flex-1 gap-2">
+            <button
+              onClick={handleAccept}
+              disabled={actionLoading}
+              className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Chấp nhận
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={actionLoading}
+              className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+            >
+              Từ chối
+            </button>
+          </div>
+        );
       }
       return (
-        <div className="flex gap-2 w-full">
-          <button
-            onClick={handleAccept}
-            disabled={actionLoading}
-            className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            Chấp nhận
-          </button>
-          <button
-            onClick={handleReject}
-            disabled={actionLoading}
-            className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-          >
-            Từ chối
-          </button>
-        </div>
+        <button
+          disabled
+          className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+        >
+          Đã gửi lời mời
+        </button>
+      );
+    }
+
+    if (isAcceptedStatus(friendship)) {
+      return (
+        <button
+          onClick={handleRemove}
+          disabled={actionLoading}
+          className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+        >
+          {actionLoading ? "..." : "Bạn bè ✓"}
+        </button>
       );
     }
 
@@ -205,22 +225,18 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
           )}
           <p className="mt-0.5 text-xs text-emerald-500">Online</p>
         </div>
-        <div className="flex flex-col gap-2">
-          {!isCurrentUser && (
-            <>
-              {renderFriendshipButton()}
-              <button onClick={handleChat} className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                Nhắn tin
-              </button>
-            </>
-          )}
-          <div className="flex justify-end">
-            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400">
-              ✕
-            </button>
-          </div>
-        </div>
+        <button onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400">
+          ✕
+        </button>
       </div>
+      {!isCurrentUser && (
+        <div className="mt-3 flex gap-2">
+          {renderFriendshipButton()}
+          <button onClick={handleChat} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Nhắn tin
+          </button>
+        </div>
+      )}
     </div>
   );
 };
