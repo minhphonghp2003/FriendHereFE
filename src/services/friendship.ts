@@ -27,6 +27,11 @@ export async function rejectFriendRequest(id: number): Promise<FriendshipDto> {
   return data.data;
 }
 
+export async function revokeFriendRequest(id: number): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/revoke`);
+  return data.data;
+}
+
 export async function blockUser(id: number): Promise<FriendshipDto> {
   const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/block`);
   return data.data;
