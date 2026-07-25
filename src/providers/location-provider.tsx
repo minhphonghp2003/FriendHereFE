@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
 import { addConversation } from "@/store/slices/chat-slice";
+import { userInfo } from "os";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -24,7 +26,10 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const router = useRouter();
   const dispatch = useAppDispatch();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const startedRef = useRef(false);
   const locationHubReadyRef = useRef(false);
   const geoReadyRef = useRef(false);
@@ -126,8 +131,23 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           );
         });
 
-        appHub.onReceiveNewConversation((conversation, initialMessage) => {
+        appHub.onReceiveNewConversation(async (conversation, initialMessage) => {
           dispatch(addConversation(conversation));
+          if (conversation.id && initialMessage.senderId === user.id) {
+       
+            try {
+              await appHub.sendMessage({
+                conversationId: conversation.id,
+                receiverId: null,
+                content: initialMessage.content ?? "",
+                messageType: initialMessage.type,
+                replyToId: initialMessage.replyToId,
+              });
+            } catch (err) {
+              console.error(err);
+            }
+            routerRef.current.push(`/chat/${conversation.id}`);
+          }
         });
 
         locationHubReadyRef.current = true;

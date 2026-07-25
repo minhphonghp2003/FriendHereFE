@@ -1,15 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAppDispatch } from "@/store/hooks";
-import { addConversation, setActiveConversation } from "@/store/slices/chat-slice";
 import { appHub } from "@/lib/signalr/app-hub";
 import { ArrowLeft } from "lucide-react";
 
 export default function NewChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const dispatch = useAppDispatch();
   const receiverId = Number(searchParams.get("receiverId"));
   const name = searchParams.get("name") ?? "";
   const [input, setInput] = useState("");
