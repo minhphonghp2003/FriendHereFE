@@ -33,4 +33,5 @@ export interface SendMessageRequest {
   content: string;
   messageType: 0 | 1 | 2 | 3 | 4;
   replyToId: number | null;
+  idempotencyKey: string;
 }

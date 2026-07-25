@@ -23,7 +23,7 @@ export default function NewChatPage() {
     setSending(true);
     setError("");
     try {
-      await appHub.sendMessage({ conversationId: null, receiverId, content: text, messageType: 0, replyToId: null });
+      await appHub.sendMessage({ conversationId: null, receiverId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
       setInput("");
     } catch (err) {
       setError("Không thể gửi tin nhắn");

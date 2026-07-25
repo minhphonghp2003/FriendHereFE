@@ -142,6 +142,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
                 content: initialMessage.content ?? "",
                 messageType: initialMessage.type,
                 replyToId: initialMessage.replyToId,
+                idempotencyKey: crypto.randomUUID(),
               });
             } catch (err) {
               console.error(err);
