@@ -5,13 +5,17 @@ export interface ImageDto {
 
 export interface MessageDto {
   id: number;
+  conversationId: number;
   senderId: number;
+  senderName: string;
+  senderAvatar: ImageDto | null;
+  senderRole: string;
   content: string | null;
   replyToId: number | null;
-  type: 0 | 1 | 2 | 3 | 4;
-  attachments: ImageDto[] | null;
+  type: string;
+  attachments: ImageDto[];
   createdAt: string;
-  conversationId?: number | null;
+  isDeleted: boolean;
 }
 
 export interface ConversationDto {
@@ -29,10 +33,9 @@ export interface ConversationDto {
 }
 
 export interface SendMessageRequest {
-  conversationId: number | null;
-  receiverId: number | null;
+  conversationId: number;
   content: string;
-  messageType: 0 | 1 | 2 | 3 | 4;
+  messageType: number;
   replyToId: number | null;
   idempotencyKey: string;
 }

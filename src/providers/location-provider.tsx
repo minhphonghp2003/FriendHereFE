@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
 import { addConversation } from "@/store/slices/chat-slice";
-import { userInfo } from "os";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -26,10 +24,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const router = useRouter();
   const dispatch = useAppDispatch();
-  const routerRef = useRef(router);
-  routerRef.current = router;
   const startedRef = useRef(false);
   const locationHubReadyRef = useRef(false);
   const geoReadyRef = useRef(false);
@@ -131,34 +126,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           );
         });
 
-        appHub.onReceiveNewConversation(async (conversation, initialMessage) => {
-          appHub.pendingInitReceiverId = null;
+        appHub.onReceiveNewConversation((conversation) => {
           dispatch(addConversation(conversation));
-          if (conversation.id && initialMessage.senderId === user.id) {
-            try {
-              await appHub.sendMessage({
-                conversationId: conversation.id,
-                receiverId: null,
-                content: initialMessage.content ?? "",
-                messageType: initialMessage.type,
-                replyToId: initialMessage.replyToId,
-                idempotencyKey: crypto.randomUUID(),
-              });
-            } catch (err) {
-              console.error(err);
-            }
-            routerRef.current.replace(`/chat/${conversation.id}`);
-          }
-        });
-
-        appHub.onReceiveMessage((message) => {
-          if (appHub.pendingInitReceiverId) {
-            const convId = (message as any).conversationId;
-            if (convId) {
-              appHub.pendingInitReceiverId = null;
-              routerRef.current.replace(`/chat/${convId}`);
-            }
-          }
         });
 
         locationHubReadyRef.current = true;

@@ -37,3 +37,16 @@ export async function getMessages(
   });
   return res.data;
 }
+
+export async function createConversation(
+  receiverId: number,
+  content: string,
+  messageType: number
+): Promise<{
+  data: number;
+  success: boolean;
+  message?: string;
+}> {
+  const res = await httpClient.post("/chat", { receiverId, content, messageType });
+  return res.data;
+}

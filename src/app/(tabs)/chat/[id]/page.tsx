@@ -79,7 +79,7 @@ export default function ChatScreenPage() {
     setSending(true);
     setInput("");
     try {
-      await appHub.sendMessage({ conversationId, receiverId: null, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
+      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
     } catch (err) {
       console.error("Failed to send message", err);
       setInput(text);
