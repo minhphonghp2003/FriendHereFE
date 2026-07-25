@@ -56,7 +56,7 @@ export default function ChatScreenPage() {
         dispatch(appendMessage({ conversationId, message }));
       }
     };
-    appHub.onReceiveMessage(cb);
+    return appHub.onReceiveMessage(cb);
   }, [conversationId, dispatch]);
 
   useEffect(() => {

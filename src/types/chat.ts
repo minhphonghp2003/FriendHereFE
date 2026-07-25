@@ -11,6 +11,7 @@ export interface MessageDto {
   type: 0 | 1 | 2 | 3 | 4;
   attachments: ImageDto[] | null;
   createdAt: string;
+  conversationId?: number | null;
 }
 
 export interface ConversationDto {

@@ -132,9 +132,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         });
 
         appHub.onReceiveNewConversation(async (conversation, initialMessage) => {
+          appHub.pendingInitReceiverId = null;
           dispatch(addConversation(conversation));
           if (conversation.id && initialMessage.senderId === user.id) {
-       
             try {
               await appHub.sendMessage({
                 conversationId: conversation.id,
@@ -148,6 +148,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               console.error(err);
             }
             routerRef.current.replace(`/chat/${conversation.id}`);
+          }
+        });
+
+        appHub.onReceiveMessage((message) => {
+          const convId = message.conversationId;
+          if (appHub.pendingInitReceiverId && convId) {
+            appHub.pendingInitReceiverId = null;
+            routerRef.current.replace(`/chat/${convId}`);
           }
         });
 
