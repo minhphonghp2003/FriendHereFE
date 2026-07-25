@@ -14,11 +14,22 @@ export async function getConversations(skip = 0, take = 20): Promise<{
 }
 
 export async function getOpponentConversation(opponentId: number): Promise<{
-  data: ConversationDto | null;
+  data: number | null;
   success: boolean;
   message?: string;
 }> {
   const res = await httpClient.get(`/chat/opponent/${opponentId}`);
+  return res.data;
+}
+
+export async function getConversation(
+  conversationId: number
+): Promise<{
+  data: ConversationDto;
+  success: boolean;
+  message?: string;
+}> {
+  const res = await httpClient.get(`/chat/${conversationId}`);
   return res.data;
 }
 
@@ -35,5 +46,18 @@ export async function getMessages(
   const res = await httpClient.get(`/chat/${conversationId}/messages`, {
     params: { skip, take },
   });
+  return res.data;
+}
+
+export async function createConversation(
+  receiverId: number,
+  content: string,
+  messageType: number
+): Promise<{
+  data: number;
+  success: boolean;
+  message?: string;
+}> {
+  const res = await httpClient.post("/chat", { receiverId, content, messageType });
   return res.data;
 }

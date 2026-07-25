@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { appHub } from "@/lib/signalr/app-hub";
+import { createConversation } from "@/services/chat";
 import { ArrowLeft } from "lucide-react";
 
 export default function NewChatPage() {
@@ -23,9 +24,14 @@ export default function NewChatPage() {
     setSending(true);
     setError("");
     try {
-      appHub.pendingInitReceiverId = receiverId;
-      await appHub.sendMessage({ conversationId: null, receiverId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
-      setInput("");
+      const res = await createConversation(receiverId, text, 0);
+      if (!res.success || !res.data) {
+        setError("Không thể tạo cuộc trò chuyện");
+        return;
+      }
+      const conversationId = res.data;
+      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
+      router.replace(`/chat/${conversationId}`);
     } catch (err) {
       setError("Không thể gửi tin nhắn");
       console.error(err);

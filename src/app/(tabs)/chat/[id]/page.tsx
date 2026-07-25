@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
-import { getMessages } from "@/services/chat";
+import { getMessages, getConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send } from "lucide-react";
@@ -12,12 +12,11 @@ import type { MessageDto } from "@/types/chat";
 export default function ChatScreenPage() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { user } = useAuth();
   const conversationId = Number(params.id);
-  const name = searchParams.get("name") ?? "Chat";
-  const isOnline = searchParams.get("isOnline") === "true";
+  const [convName, setConvName] = useState("Chat");
+  const [convOnline, setConvOnline] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -43,7 +42,15 @@ export default function ChatScreenPage() {
     dispatch(setActiveConversation(conversationId));
     dispatch(resetUnreadCount(conversationId));
     setLoading(true);
-    fetchMessages(0).finally(() => setLoading(false));
+    Promise.all([
+      getConversation(conversationId).then((res) => {
+        if (res.data) {
+          setConvName(res.data.name);
+          setConvOnline(res.data.isOnline);
+        }
+      }).catch(() => {}),
+      fetchMessages(0),
+    ]).finally(() => setLoading(false));
     appHub.joinConversation(conversationId).catch(console.error);
     return () => {
       dispatch(setActiveConversation(null));
@@ -53,8 +60,7 @@ export default function ChatScreenPage() {
 
   useEffect(() => {
     const cb = (message: MessageDto) => {
-      const msgConvId = (message as any).conversationId ?? conversationId;
-      if (msgConvId === conversationId) {
+      if (message.conversationId === conversationId) {
         dispatch(appendMessage({ conversationId, message }));
       }
     };
@@ -79,7 +85,7 @@ export default function ChatScreenPage() {
     setSending(true);
     setInput("");
     try {
-      await appHub.sendMessage({ conversationId, receiverId: null, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
+      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
     } catch (err) {
       console.error("Failed to send message", err);
       setInput(text);
@@ -107,9 +113,9 @@ export default function ChatScreenPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold truncate">{name}</p>
-          <p className={`text-xs ${isOnline ? "text-emerald-500" : "text-zinc-400"}`}>
-            {isOnline ? "Online" : "Offline"}
+          <p className="font-semibold truncate">{convName}</p>
+          <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
+            {convOnline ? "Online" : "Offline"}
           </p>
         </div>
       </div>
@@ -117,16 +123,33 @@ export default function ChatScreenPage() {
         {messages.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!</p>
         )}
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderId === user?.id ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
-              <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-              <p className="text-[10px] mt-1 opacity-70 text-right">
-                {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </p>
+        {messages.map((msg) => {
+          const isMe = msg.senderId === user?.id;
+          return (
+            <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+              {!isMe && (
+                <div className="shrink-0 self-end">
+                  {msg.senderAvatar?.thumbUrl ? (
+                    <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
+                {!isMe && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className="text-[10px] mt-1 opacity-70 text-right">
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
       <div className="flex items-center gap-2 p-3 border-t border-border">

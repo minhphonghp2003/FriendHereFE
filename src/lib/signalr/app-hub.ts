@@ -14,7 +14,6 @@ class AppHub {
   private receiveMessageCallbacks: Set<ReceiveMessageCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
   private joinedConversations: Set<number> = new Set();
-  pendingInitReceiverId: number | null = null;
 
   async start(): Promise<void> {
     const myEpoch = ++this.epoch;
