@@ -123,16 +123,33 @@ export default function ChatScreenPage() {
         {messages.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!</p>
         )}
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderId === user?.id ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
-              <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-              <p className="text-[10px] mt-1 opacity-70 text-right">
-                {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </p>
+        {messages.map((msg) => {
+          const isMe = msg.senderId === user?.id;
+          return (
+            <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+              {!isMe && (
+                <div className="shrink-0 self-end">
+                  {msg.senderAvatar?.thumbUrl ? (
+                    <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
+                {!isMe && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className="text-[10px] mt-1 opacity-70 text-right">
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
       <div className="flex items-center gap-2 p-3 border-t border-border">
