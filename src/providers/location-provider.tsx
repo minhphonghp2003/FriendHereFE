@@ -146,7 +146,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             } catch (err) {
               console.error(err);
             }
-            routerRef.current.push(`/chat/${conversation.id}`);
+            routerRef.current.replace(`/chat/${conversation.id}`);
           }
         });
 

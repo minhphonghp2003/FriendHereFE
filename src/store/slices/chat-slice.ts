@@ -78,7 +78,9 @@ const chatSlice = createSlice({
       if (!state.messages[conversationId]) {
         state.messages[conversationId] = [];
       }
-      state.messages[conversationId].push(message);
+      if (!state.messages[conversationId].some((m) => m.id === message.id)) {
+        state.messages[conversationId].push(message);
+      }
     },
     resetChat: () => initialState,
   },
