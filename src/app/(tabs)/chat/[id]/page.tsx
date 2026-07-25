@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
 import { getMessages } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
+import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send } from "lucide-react";
 import type { MessageDto } from "@/types/chat";
 
@@ -13,6 +14,7 @@ export default function ChatScreenPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const { user } = useAuth();
   const conversationId = Number(params.id);
   const name = searchParams.get("name") ?? "Chat";
   const isOnline = searchParams.get("isOnline") === "true";
@@ -116,8 +118,8 @@ export default function ChatScreenPage() {
           <p className="text-center text-sm text-muted-foreground py-8">Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!</p>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.senderId === (typeof window !== "undefined" ? Number(localStorage.getItem("user_id")) : -1) ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderId === (typeof window !== "undefined" ? Number(localStorage.getItem("user_id")) : -1) ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+          <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderId === user?.id ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
               <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
               <p className="text-[10px] mt-1 opacity-70 text-right">
                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
