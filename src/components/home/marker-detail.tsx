@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOpponentConversation } from "@/services/chat";
-import { getFriendshipsByUserId, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship } from "@/services/friendship";
-import { useAuth } from "@/providers/auth-provider";
+import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship } from "@/services/friendship";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
-import type { FriendshipDto } from "@/types/friendship";
+import { isPendingStatus } from "@/types/friendship";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -50,30 +49,9 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
   const color = useMemo(() => stringToColor(name), [name]);
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
   const router = useRouter();
-  const { user } = useAuth();
-  const [friendship, setFriendship] = useState<FriendshipDto | null>(null);
-  const [friendshipLoading, setFriendshipLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (!userDetail || isCurrentUser || !user) {
-      setFriendship(null);
-      return;
-    }
-    setFriendshipLoading(true);
-    getFriendshipsByUserId(user.id)
-      .then((list) => {
-        const found = list.find(
-          (f) =>
-            f.status !== "Removed" &&
-            ((f.user1Id === user.id && f.user2Id === userDetail.id) ||
-              (f.user1Id === userDetail.id && f.user2Id === user.id))
-        );
-        setFriendship(found ?? null);
-      })
-      .catch(() => setFriendship(null))
-      .finally(() => setFriendshipLoading(false));
-  }, [userDetail?.id, isCurrentUser, user?.id]);
+  const friendship = userDetail?.friendship ?? null;
 
   const handleChat = useCallback(async () => {
     if (isCurrentUser || !userDetail) return;
@@ -93,8 +71,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     if (!userDetail || actionLoading) return;
     setActionLoading(true);
     try {
-      const res = await sendFriendRequest(userDetail.id);
-      setFriendship(res);
+      await sendFriendRequest(userDetail.id);
       onFriendshipChange?.();
     } catch (err) {
       console.error("Failed to send friend request", err);
@@ -107,8 +84,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     if (!friendship || actionLoading) return;
     setActionLoading(true);
     try {
-      const res = await acceptFriendRequest(friendship.id);
-      setFriendship(res);
+      await acceptFriendRequest(friendship.friendshipId);
       onFriendshipChange?.();
     } catch (err) {
       console.error("Failed to accept friend request", err);
@@ -121,8 +97,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     if (!friendship || actionLoading) return;
     setActionLoading(true);
     try {
-      const res = await rejectFriendRequest(friendship.id);
-      setFriendship(res);
+      await rejectFriendRequest(friendship.friendshipId);
       onFriendshipChange?.();
     } catch (err) {
       console.error("Failed to reject friend request", err);
@@ -135,8 +110,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     if (!friendship || actionLoading) return;
     setActionLoading(true);
     try {
-      await removeFriendship(friendship.id);
-      setFriendship(null);
+      await removeFriendship(friendship.friendshipId);
       onFriendshipChange?.();
     } catch (err) {
       console.error("Failed to remove friendship", err);
@@ -161,7 +135,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
   }
 
   const renderFriendshipButton = () => {
-    if (isCurrentUser || friendshipLoading) return null;
+    if (isCurrentUser) return null;
 
     if (!friendship) {
       return (
@@ -175,8 +149,8 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
       );
     }
 
-    if (friendship.status === "Pending") {
-      if (friendship.requestedById === user?.id) {
+    if (isPendingStatus(friendship)) {
+      if (friendship.requestedById === userDetail?.id) {
         return null;
       }
       return (

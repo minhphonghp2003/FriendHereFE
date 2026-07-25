@@ -7,6 +7,7 @@ import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
 import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship } from "@/services/friendship";
+import { isPending, isAccepted, isRemoved } from "@/types/friendship";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,7 @@ export default function SettingsPage() {
     if (!user) return;
     try {
       const list = await getFriendshipsByUserId(user.id);
-      setFriendships(list.filter((f) => f.status !== "Removed"));
+      setFriendships(list.filter((f) => !isRemoved(f)));
     } catch {}
   }, [user]);
 
@@ -100,9 +101,9 @@ export default function SettingsPage() {
   const isUpdating = updatingMe;
   const isUploading = uploadingAvatar;
 
-  const pendingReceived = friendships.filter((f) => f.status === "Pending" && f.requestedById !== user?.id);
-  const pendingSent = friendships.filter((f) => f.status === "Pending" && f.requestedById === user?.id);
-  const friends = friendships.filter((f) => f.status === "Accepted");
+  const pendingReceived = friendships.filter((f) => isPending(f) && f.requestedById !== user?.id);
+  const pendingSent = friendships.filter((f) => isPending(f) && f.requestedById === user?.id);
+  const friends = friendships.filter((f) => isAccepted(f));
 
   const handleAccept = async (id: number) => {
     setActionLoading(id);
@@ -222,11 +223,15 @@ export default function SettingsPage() {
                   <p className="py-4 text-center text-sm text-muted-foreground">Không có lời mời nào</p>
                 ) : pendingReceived.map((f) => (
                   <div key={f.id} className="flex items-center gap-3 rounded-lg border p-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
-                      {f.requestedById}
-                    </div>
+                    {f.otherUserImage?.thumbUrl ? (
+                      <img src={f.otherUserImage.thumbUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                        {f.otherUserName?.charAt(0)?.toUpperCase() ?? "?"}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">User #{f.requestedById}</p>
+                      <p className="text-sm font-medium truncate">{f.otherUserName}</p>
                       <p className="text-xs text-muted-foreground">{new Date(f.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex gap-2">
@@ -238,21 +243,22 @@ export default function SettingsPage() {
                 <p className="text-xs font-medium text-muted-foreground uppercase mt-2">Đã gửi</p>
                 {pendingSent.length === 0 ? (
                   <p className="py-4 text-center text-sm text-muted-foreground">Chưa gửi lời mời nào</p>
-                ) : pendingSent.map((f) => {
-                  const otherId = f.user1Id === user?.id ? f.user2Id : f.user1Id;
-                  return (
+                ) : pendingSent.map((f) => (
                     <div key={f.id} className="flex items-center gap-3 rounded-lg border p-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
-                        {otherId}
-                      </div>
+                      {f.otherUserImage?.thumbUrl ? (
+                        <img src={f.otherUserImage.thumbUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                          {f.otherUserName?.charAt(0)?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">User #{otherId}</p>
+                        <p className="text-sm font-medium truncate">{f.otherUserName}</p>
                         <p className="text-xs text-muted-foreground">{new Date(f.createdAt).toLocaleDateString()}</p>
                       </div>
                       <Button size="sm" variant="outline" disabled={actionLoading === f.id} onClick={() => handleRevoke(f.id)}>Thu hồi</Button>
                     </div>
-                  );
-                })}
+                ))}
               </div>
             )}
           </div>
@@ -269,22 +275,23 @@ export default function SettingsPage() {
               <p className="py-8 text-center text-sm text-muted-foreground">Chưa có bạn bè</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {friends.map((f) => {
-                  const otherId = f.user1Id === user?.id ? f.user2Id : f.user1Id;
-                  return (
+                {friends.map((f) => (
                     <div key={f.id} className="flex items-center gap-3 rounded-lg border p-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
-                        {otherId}
-                      </div>
+                      {f.otherUserImage?.thumbUrl ? (
+                        <img src={f.otherUserImage.thumbUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                          {f.otherUserName?.charAt(0)?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">User #{otherId}</p>
+                        <p className="text-sm font-medium truncate">{f.otherUserName}</p>
                       </div>
                       <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleRemove(f.id)}>
                         Hủy
                       </Button>
                     </div>
-                  );
-                })}
+                ))}
               </div>
             )}
           </div>
