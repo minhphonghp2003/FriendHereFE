@@ -152,10 +152,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         });
 
         appHub.onReceiveMessage((message) => {
-          const convId = message.conversationId;
-          if (appHub.pendingInitReceiverId && convId) {
-            appHub.pendingInitReceiverId = null;
-            routerRef.current.replace(`/chat/${convId}`);
+          if (appHub.pendingInitReceiverId) {
+            const convId = (message as any).conversationId;
+            if (convId) {
+              appHub.pendingInitReceiverId = null;
+              routerRef.current.replace(`/chat/${convId}`);
+            }
           }
         });
 
