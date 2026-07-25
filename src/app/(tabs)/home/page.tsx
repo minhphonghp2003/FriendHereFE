@@ -22,7 +22,7 @@ export default function HomePage() {
   const latitude = useAppSelector((s) => s.location.latitude);
   const longitude = useAppSelector((s) => s.location.longitude);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const { data: userDetail, isLoading: loadingUserDetail } = useUser(selectedUserId ?? 0);
+  const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
 
   const position = latitude !== null && longitude !== null
@@ -98,6 +98,7 @@ export default function HomePage() {
               userDetail={userDetail ?? null}
               loading={loadingUserDetail}
               onClose={handleCloseDetail}
+              onFriendshipChange={refetchUserDetail}
             />
           )}
         </div>
@@ -149,6 +150,7 @@ export default function HomePage() {
             userDetail={userDetail ?? null}
             loading={loadingUserDetail}
             onClose={handleCloseDetail}
+            onFriendshipChange={refetchUserDetail}
           />
         )}
       </div>

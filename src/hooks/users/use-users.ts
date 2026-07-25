@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserById, getCurrentUser } from "@/services/user";
 import type { User } from "@/types/user";
 
@@ -6,8 +6,15 @@ export const useUser = (id: number) => {
   const [data, setData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const prevIdRef = useRef(id);
+
+  const refetch = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   useEffect(() => {
+    const idChanged = prevIdRef.current !== id;
+    prevIdRef.current = id;
+
     if (!id) {
       setData(null);
       setIsLoading(false);
@@ -15,9 +22,12 @@ export const useUser = (id: number) => {
       return;
     }
 
+    if (idChanged) {
+      setData(null);
+    }
+
     const fetchUser = async () => {
       setIsLoading(true);
-      setData(null);
       setError(null);
       try {
         const user = await getUserById(id);
@@ -30,9 +40,9 @@ export const useUser = (id: number) => {
     };
 
     fetchUser();
-  }, [id]);
+  }, [id, refreshKey]);
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, refetch };
 };
 
 export const useCurrentUser = (options?: { enabled?: boolean }) => {
