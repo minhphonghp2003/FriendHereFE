@@ -11,9 +11,10 @@ class AppHub {
   private connection: signalR.HubConnection | null = null;
   private epoch = 0;
   private kickedCallback: KickedCallback | null = null;
-  private receiveMessageCallback: ReceiveMessageCallback | null = null;
+  private receiveMessageCallbacks: Set<ReceiveMessageCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
   private joinedConversations: Set<number> = new Set();
+  pendingInitReceiverId: number | null = null;
 
   async start(): Promise<void> {
     const myEpoch = ++this.epoch;
@@ -52,7 +53,7 @@ class AppHub {
     });
 
     this.connection.on("ReceiveMessage", (message: MessageDto) => {
-      this.receiveMessageCallback?.(message);
+      this.receiveMessageCallbacks.forEach((cb) => cb(message));
     });
 
     this.connection.on("ReceiveNewConversation", (conversation: ConversationDto, initialMessage: MessageDto) => {
@@ -121,8 +122,9 @@ class AppHub {
     this.kickedCallback = callback;
   }
 
-  onReceiveMessage(callback: ReceiveMessageCallback): void {
-    this.receiveMessageCallback = callback;
+  onReceiveMessage(callback: ReceiveMessageCallback): () => void {
+    this.receiveMessageCallbacks.add(callback);
+    return () => { this.receiveMessageCallbacks.delete(callback); };
   }
 
   onReceiveNewConversation(callback: ReceiveNewConversationCallback): void {
