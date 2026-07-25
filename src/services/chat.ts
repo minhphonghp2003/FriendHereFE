@@ -22,6 +22,17 @@ export async function getOpponentConversation(opponentId: number): Promise<{
   return res.data;
 }
 
+export async function getConversation(
+  conversationId: number
+): Promise<{
+  data: ConversationDto;
+  success: boolean;
+  message?: string;
+}> {
+  const res = await httpClient.get(`/chat/${conversationId}`);
+  return res.data;
+}
+
 export async function getMessages(
   conversationId: number,
   skip = 0,

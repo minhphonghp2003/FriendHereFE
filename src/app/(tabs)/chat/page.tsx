@@ -46,7 +46,7 @@ export default function ChatListPage() {
 
   const handleChatClick = useCallback((conv: ConversationDto) => {
     if (conv.id) {
-      router.push(`/chat/${conv.id}?name=${encodeURIComponent(conv.name)}&isOnline=${conv.isOnline}&memberCount=${conv.memberCount ?? 2}`);
+      router.push(`/chat/${conv.id}`);
     }
   }, [router]);
 

@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
-import { getMessages } from "@/services/chat";
+import { getMessages, getConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send } from "lucide-react";
@@ -12,12 +12,11 @@ import type { MessageDto } from "@/types/chat";
 export default function ChatScreenPage() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const { user } = useAuth();
   const conversationId = Number(params.id);
-  const name = searchParams.get("name") ?? "Chat";
-  const isOnline = searchParams.get("isOnline") === "true";
+  const [convName, setConvName] = useState("Chat");
+  const [convOnline, setConvOnline] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -43,7 +42,15 @@ export default function ChatScreenPage() {
     dispatch(setActiveConversation(conversationId));
     dispatch(resetUnreadCount(conversationId));
     setLoading(true);
-    fetchMessages(0).finally(() => setLoading(false));
+    Promise.all([
+      getConversation(conversationId).then((res) => {
+        if (res.data) {
+          setConvName(res.data.name);
+          setConvOnline(res.data.isOnline);
+        }
+      }).catch(() => {}),
+      fetchMessages(0),
+    ]).finally(() => setLoading(false));
     appHub.joinConversation(conversationId).catch(console.error);
     return () => {
       dispatch(setActiveConversation(null));
@@ -53,8 +60,7 @@ export default function ChatScreenPage() {
 
   useEffect(() => {
     const cb = (message: MessageDto) => {
-      const msgConvId = (message as any).conversationId ?? conversationId;
-      if (msgConvId === conversationId) {
+      if (message.conversationId === conversationId) {
         dispatch(appendMessage({ conversationId, message }));
       }
     };
@@ -107,9 +113,9 @@ export default function ChatScreenPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold truncate">{name}</p>
-          <p className={`text-xs ${isOnline ? "text-emerald-500" : "text-zinc-400"}`}>
-            {isOnline ? "Online" : "Offline"}
+          <p className="font-semibold truncate">{convName}</p>
+          <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
+            {convOnline ? "Online" : "Offline"}
           </p>
         </div>
       </div>
