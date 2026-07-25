@@ -14,7 +14,7 @@ export async function getConversations(skip = 0, take = 20): Promise<{
 }
 
 export async function getOpponentConversation(opponentId: number): Promise<{
-  data: ConversationDto | null;
+  data: number | null;
   success: boolean;
   message?: string;
 }> {

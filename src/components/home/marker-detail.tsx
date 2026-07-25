@@ -51,8 +51,8 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     if (isCurrentUser || !userDetail) return;
     try {
       const res = await getOpponentConversation(userDetail.id);
-      if (res.data?.id) {
-        router.push(`/chat/${res.data.id}?name=${encodeURIComponent(name)}&isOnline=true&memberCount=2`);
+      if (res.data) {
+        router.push(`/chat/${res.data}?name=${encodeURIComponent(name)}&isOnline=true&memberCount=2`);
       } else {
         router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
       }
