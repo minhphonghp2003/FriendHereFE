@@ -3,10 +3,10 @@
 import { useMemo, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getOpponentConversation } from "@/services/chat";
-import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship } from "@/services/friendship";
+import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship, blockUser } from "@/services/friendship";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
-import { isPendingStatus, isAcceptedStatus } from "@/types/friendship";
+import { isPendingStatus, isAcceptedStatus, isBlockedStatus } from "@/types/friendship";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -119,6 +119,19 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     }
   }, [friendship, actionLoading, onFriendshipChange]);
 
+  const handleBlock = useCallback(async () => {
+    if (!friendship || actionLoading) return;
+    setActionLoading(true);
+    try {
+      await blockUser(friendship.friendshipId);
+      onFriendshipChange?.();
+    } catch (err) {
+      console.error("Failed to block user", err);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [friendship, actionLoading, onFriendshipChange]);
+
   if (loading) {
     return (
       <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
@@ -136,6 +149,17 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
 
   const renderFriendshipButton = () => {
     if (isCurrentUser) return null;
+
+    if (friendship && isBlockedStatus(friendship)) {
+      return (
+        <button
+          disabled
+          className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+        >
+          Đã chặn
+        </button>
+      );
+    }
 
     if (!friendship) {
       return (
@@ -230,11 +254,22 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
         </button>
       </div>
       {!isCurrentUser && (
-        <div className="mt-3 flex gap-2">
-          {renderFriendshipButton()}
-          <button onClick={handleChat} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Nhắn tin
-          </button>
+        <div className="mt-3">
+          <div className="flex gap-2">
+            {renderFriendshipButton()}
+            <button onClick={handleChat} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              Nhắn tin
+            </button>
+          </div>
+          {friendship && !isBlockedStatus(friendship) && (
+            <button
+              onClick={handleBlock}
+              disabled={actionLoading}
+              className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950"
+            >
+              Chặn người dùng
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
-import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship } from "@/services/friendship";
+import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser } from "@/services/friendship";
 import { isPending, isAccepted, isRemoved } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
@@ -157,6 +157,10 @@ export default function SettingsPage() {
   const handleRemove = async (id: number) => {
     setActionLoading(id);
     try { await removeFriendship(id); setFriendships((p) => p.filter((f) => f.id !== id)); } catch {} finally { setActionLoading(null); }
+  };
+  const handleBlock = async (id: number) => {
+    setActionLoading(id);
+    try { const res = await blockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
   };
 
   return (
@@ -324,9 +328,14 @@ export default function SettingsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{f.otherUserName}</p>
                       </div>
-                      <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleRemove(f.id)}>
-                        Hủy
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleBlock(f.id)}>
+                          Chặn
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleRemove(f.id)}>
+                          Hủy
+                        </Button>
+                      </div>
                     </div>
                 ))}
               </div>
