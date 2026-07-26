@@ -28,7 +28,7 @@ export default function AuthCallbackPage() {
     const error = params.get("error");
 
     if (error || !token) {
-      router.replace("/init");
+      router.replace(error ? `/init?error=${encodeURIComponent(error)}` : "/init");
       return;
     }
 

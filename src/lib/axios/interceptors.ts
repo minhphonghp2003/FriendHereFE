@@ -1,6 +1,6 @@
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { env } from "@/config/env";
-import { TOKEN_KEY } from "@/constants";
+import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
 
 export const setupRequestInterceptor = (instance: AxiosInstance): void => {
   instance.interceptors.request.use(
@@ -27,8 +27,10 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
         if (typeof window !== "undefined") {
           const hadToken = !!localStorage.getItem(TOKEN_KEY);
           localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_ID_KEY);
+          localStorage.removeItem(USER_INFO_KEY);
           if (hadToken) {
-            window.location.href = "/login";
+            window.location.replace("/init");
           }
         }
       }

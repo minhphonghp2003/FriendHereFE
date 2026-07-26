@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/providers/auth-provider";
 
@@ -71,15 +72,29 @@ const providers = [
 
 ];
 
+const ERROR_MESSAGES: Record<string, string> = {
+  facebook_email_not_shared: "Facebook không chia sẻ địa chỉ email. Vui lòng sử dụng Google hoặc đăng nhập bằng email.",
+};
+
 export default function InitPage() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (isAuthenticated) {
       router.replace("/home");
     }
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error) {
+      const message = ERROR_MESSAGES[error] ?? "Đăng nhập thất bại. Vui lòng thử lại.";
+      toast.error(message);
+      router.replace("/init");
+    }
+  }, [searchParams, router]);
 
   const handleOAuth = (provider: OAuthProvider) => {
     const base = `${env.NEXT_PUBLIC_API_URL}/auth`;
