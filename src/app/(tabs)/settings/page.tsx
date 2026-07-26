@@ -7,7 +7,8 @@ import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
 import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship } from "@/services/friendship";
-import { isPending, isAccepted, isRemoved } from "@/types/friendship";
+import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
+import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +59,43 @@ export default function SettingsPage() {
   }, [user]);
 
   useEffect(() => { fetchUserDetail(); }, [fetchUserDetail]);
-  useEffect(() => { fetchFriendships(); }, [fetchFriendships]);
+
+  useEffect(() => {
+    if (!showFriendRequests && !showFriendsList) return;
+    fetchFriendships();
+  }, [showFriendRequests, showFriendsList, fetchFriendships]);
+
+  useEffect(() => {
+    if (!showFriendRequests && !showFriendsList) return;
+
+    const unsubCreated = appHub.onReceiveFriendshipCreated((dto) => {
+      setFriendships((prev) => {
+        if (prev.some((f) => f.id === dto.id)) {
+          return prev.map((f) => (f.id === dto.id ? dto : f));
+        }
+        return isRemoved(dto) ? prev : [...prev, dto];
+      });
+    });
+
+    const unsubAccepted = appHub.onReceiveFriendshipAccepted((dto) => {
+      setFriendships((prev) => prev.map((f) => (f.id === dto.id ? dto : f)));
+    });
+
+    const unsubBlocked = appHub.onReceiveFriendshipBlocked((dto) => {
+      setFriendships((prev) => {
+        if (prev.some((f) => f.id === dto.id)) {
+          return prev.map((f) => (f.id === dto.id ? dto : f));
+        }
+        return [...prev, dto];
+      });
+    });
+
+    return () => {
+      unsubCreated();
+      unsubAccepted();
+      unsubBlocked();
+    };
+  }, [showFriendRequests, showFriendsList]);
 
   useEffect(() => {
     if (!userDetail) return;
