@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { useAuth } from "./auth-provider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
 import { addConversation } from "@/store/slices/chat-slice";
 
@@ -25,6 +26,9 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
+  const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+  const activeConversationIdRef = useRef(activeConversationId);
+  activeConversationIdRef.current = activeConversationId;
   const startedRef = useRef(false);
   const locationHubReadyRef = useRef(false);
   const geoReadyRef = useRef(false);
@@ -128,6 +132,27 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         appHub.onReceiveNewConversation((conversation) => {
           dispatch(addConversation(conversation));
+          if (conversation.name) {
+            toast.info(`Cuộc trò chuyện mới: ${conversation.name}`);
+          }
+        });
+
+        appHub.onReceiveFriendshipCreated((dto) => {
+          toast.info(`${dto.otherUserName} đã gửi lời mời kết bạn`);
+        });
+
+        appHub.onReceiveFriendshipAccepted((dto) => {
+          toast.success(`${dto.otherUserName} đã chấp nhận lời mời kết bạn`);
+        });
+
+
+
+        appHub.onReceiveMessage((message) => {
+          if (message.senderId === user.id) return;
+          if (message.conversationId === activeConversationIdRef.current) return;
+          toast.info(`Tin nhắn mới từ ${message.senderName}`, {
+            description: message.content?.slice(0, 50),
+          });
         });
 
         locationHubReadyRef.current = true;
