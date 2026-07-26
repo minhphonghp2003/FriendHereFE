@@ -6,8 +6,9 @@ import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
-import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship } from "@/services/friendship";
-import { isPending, isAccepted, isRemoved } from "@/types/friendship";
+import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
+import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
+import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,7 +59,48 @@ export default function SettingsPage() {
   }, [user]);
 
   useEffect(() => { fetchUserDetail(); }, [fetchUserDetail]);
-  useEffect(() => { fetchFriendships(); }, [fetchFriendships]);
+
+  useEffect(() => {
+    if (!showFriendRequests && !showFriendsList) return;
+    fetchFriendships();
+  }, [showFriendRequests, showFriendsList, fetchFriendships]);
+
+  useEffect(() => {
+    if (!showFriendRequests && !showFriendsList) return;
+
+    const unsubCreated = appHub.onReceiveFriendshipCreated((dto) => {
+      setFriendships((prev) => {
+        if (prev.some((f) => f.id === dto.id)) {
+          return prev.map((f) => (f.id === dto.id ? dto : f));
+        }
+        return isRemoved(dto) ? prev : [...prev, dto];
+      });
+    });
+
+    const unsubAccepted = appHub.onReceiveFriendshipAccepted((dto) => {
+      setFriendships((prev) => prev.map((f) => (f.id === dto.id ? dto : f)));
+    });
+
+    const unsubBlocked = appHub.onReceiveFriendshipBlocked((dto) => {
+      setFriendships((prev) => {
+        if (prev.some((f) => f.id === dto.id)) {
+          return prev.map((f) => (f.id === dto.id ? dto : f));
+        }
+        return [...prev, dto];
+      });
+    });
+
+    const unsubUnblocked = appHub.onReceiveFriendshipUnblocked((dto) => {
+      setFriendships((prev) => prev.map((f) => (f.id === dto.id ? dto : f)));
+    });
+
+    return () => {
+      unsubCreated();
+      unsubAccepted();
+      unsubBlocked();
+      unsubUnblocked();
+    };
+  }, [showFriendRequests, showFriendsList]);
 
   useEffect(() => {
     if (!userDetail) return;
@@ -103,7 +145,7 @@ export default function SettingsPage() {
 
   const pendingReceived = friendships.filter((f) => isPending(f) && f.requestedById !== user?.id);
   const pendingSent = friendships.filter((f) => isPending(f) && f.requestedById === user?.id);
-  const friends = friendships.filter((f) => isAccepted(f));
+  const friends = friendships.filter((f) => isAccepted(f) || isBlocked(f));
 
   const handleAccept = async (id: number) => {
     setActionLoading(id);
@@ -120,6 +162,14 @@ export default function SettingsPage() {
   const handleRemove = async (id: number) => {
     setActionLoading(id);
     try { await removeFriendship(id); setFriendships((p) => p.filter((f) => f.id !== id)); } catch {} finally { setActionLoading(null); }
+  };
+  const handleBlock = async (id: number) => {
+    setActionLoading(id);
+    try { const res = await blockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
+  };
+  const handleUnblock = async (id: number) => {
+    setActionLoading(id);
+    try { const res = await unblockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
   };
 
   return (
@@ -286,10 +336,28 @@ export default function SettingsPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{f.otherUserName}</p>
+                        {isBlocked(f) && (
+                          <p className="text-xs text-destructive">Đã chặn</p>
+                        )}
                       </div>
-                      <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleRemove(f.id)}>
-                        Hủy
-                      </Button>
+                      <div className="flex gap-2">
+                        {isBlocked(f) && f.blockedById === user?.id ? (
+                          <Button size="sm" variant="outline" disabled={actionLoading === f.id} onClick={() => handleUnblock(f.id)}>
+                            Bỏ chặn
+                          </Button>
+                        ) : isBlocked(f) ? null : (
+                          <>
+                            {isAccepted(f) && (
+                              <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleBlock(f.id)}>
+                                Chặn
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" disabled={actionLoading === f.id} onClick={() => handleRemove(f.id)}>
+                              Hủy
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                 ))}
               </div>

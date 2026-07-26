@@ -2,13 +2,14 @@
 
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useAppSelector } from "@/store/hooks";
 import type { LocationDto } from "@/lib/signalr/types";
+import { appHub } from "@/lib/signalr/app-hub";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,42 @@ export default function HomePage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
+
+  useEffect(() => {
+    if (selectedUserId === null || !user) return;
+
+    const getOpponentId = (dto: { user1Id: number; user2Id: number }) => {
+      return dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
+    };
+
+    const unsubCreated = appHub.onReceiveFriendshipCreated((dto) => {
+      if (getOpponentId(dto) === selectedUserId) {
+        refetchUserDetail();
+      }
+    });
+    const unsubAccepted = appHub.onReceiveFriendshipAccepted((dto) => {
+      if (getOpponentId(dto) === selectedUserId) {
+        refetchUserDetail();
+      }
+    });
+    const unsubBlocked = appHub.onReceiveFriendshipBlocked((dto) => {
+      if (getOpponentId(dto) === selectedUserId) {
+        refetchUserDetail();
+      }
+    });
+    const unsubUnblocked = appHub.onReceiveFriendshipUnblocked((dto) => {
+      if (getOpponentId(dto) === selectedUserId) {
+        refetchUserDetail();
+      }
+    });
+
+    return () => {
+      unsubCreated();
+      unsubAccepted();
+      unsubBlocked();
+      unsubUnblocked();
+    };
+  }, [selectedUserId, user, refetchUserDetail]);
 
   const position = latitude !== null && longitude !== null
     ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral

@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
 import { getMessages, getConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
+import { isBlockedStatus } from "@/types/friendship";
 import { ArrowLeft, Send } from "lucide-react";
 import type { MessageDto } from "@/types/chat";
 
@@ -20,6 +21,7 @@ export default function ChatScreenPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -67,6 +69,39 @@ export default function ChatScreenPage() {
     return appHub.onReceiveMessage(cb);
   }, [conversationId, dispatch]);
 
+  const opponentId = useMemo(() => {
+    if (!user) return null;
+    const otherMessages = messages.filter((m) => m.senderId !== user.id);
+    if (otherMessages.length > 0) return otherMessages[0].senderId;
+    return null;
+  }, [messages, user]);
+
+  useEffect(() => {
+    if (!opponentId || !user) return;
+
+    const unsub = appHub.onReceiveFriendshipBlocked((dto) => {
+      const otherId = dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
+      if (otherId === opponentId && isBlockedStatus(dto)) {
+        setIsBlocked(true);
+      }
+    });
+
+    return unsub;
+  }, [opponentId, user]);
+
+  useEffect(() => {
+    if (!opponentId || !user) return;
+
+    const unsub = appHub.onReceiveFriendshipUnblocked((dto) => {
+      const otherId = dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
+      if (otherId === opponentId) {
+        setIsBlocked(false);
+      }
+    });
+
+    return unsub;
+  }, [opponentId, user]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
@@ -81,7 +116,7 @@ export default function ChatScreenPage() {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || sending || isBlocked) return;
     setSending(true);
     setInput("");
     try {
@@ -92,10 +127,10 @@ export default function ChatScreenPage() {
     } finally {
       setSending(false);
     }
-  }, [input, sending, conversationId]);
+  }, [input, sending, conversationId, isBlocked]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
   };
 
   if (loading) {
@@ -152,12 +187,18 @@ export default function ChatScreenPage() {
         })}
         <div ref={messagesEndRef} />
       </div>
-      <div className="flex items-center gap-2 p-3 border-t border-border">
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
-        <button onClick={handleSend} disabled={!input.trim() || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-          <Send className="w-4 h-4" />
-        </button>
-      </div>
+      {isBlocked ? (
+        <div className="flex items-center justify-center p-3 border-t border-border bg-muted/50">
+          <p className="text-sm text-muted-foreground">Không thể gửi tin nhắn. Cuộc trò chuyện đã bị chặn.</p>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 p-3 border-t border-border">
+          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
+          <button onClick={handleSend} disabled={!input.trim() || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

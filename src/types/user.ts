@@ -8,6 +8,7 @@ export interface FriendshipStatusDto {
   status: string | number;
   type: string | number;
   requestedById: number;
+  blockedById?: number | null;
 }
 
 export interface User {

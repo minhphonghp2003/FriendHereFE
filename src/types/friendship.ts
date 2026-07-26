@@ -38,3 +38,11 @@ export function isAccepted(f: FriendshipDto): boolean {
 export function isRemoved(f: FriendshipDto): boolean {
   return isRemovedStatus(f);
 }
+
+export function isBlockedStatus(f: { status: string | number }): boolean {
+  return f.status === "Blocked" || f.status === 2;
+}
+
+export function isBlocked(f: FriendshipDto): boolean {
+  return isBlockedStatus(f);
+}

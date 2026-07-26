@@ -2,10 +2,15 @@ import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
 import type { MessageDto, ConversationDto, SendMessageRequest } from "@/types/chat";
+import type { FriendshipDto } from "@/types/friendship";
 
 export type KickedCallback = () => void;
 export type ReceiveMessageCallback = (message: MessageDto) => void;
 export type ReceiveNewConversationCallback = (conversation: ConversationDto, initialMessage: MessageDto) => void;
+export type ReceiveFriendshipCreatedCallback = (dto: FriendshipDto) => void;
+export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
+export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
+export type ReceiveFriendshipUnblockedCallback = (dto: FriendshipDto) => void;
 
 class AppHub {
   private connection: signalR.HubConnection | null = null;
@@ -13,6 +18,10 @@ class AppHub {
   private kickedCallback: KickedCallback | null = null;
   private receiveMessageCallbacks: Set<ReceiveMessageCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
+  private receiveFriendshipCreatedCallbacks: Set<ReceiveFriendshipCreatedCallback> = new Set();
+  private receiveFriendshipAcceptedCallbacks: Set<ReceiveFriendshipAcceptedCallback> = new Set();
+  private receiveFriendshipBlockedCallbacks: Set<ReceiveFriendshipBlockedCallback> = new Set();
+  private receiveFriendshipUnblockedCallbacks: Set<ReceiveFriendshipUnblockedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -59,6 +68,22 @@ class AppHub {
       this.receiveNewConversationCallback?.(conversation, initialMessage);
     });
 
+    this.connection.on("ReceiveFriendshipCreated", (dto: FriendshipDto) => {
+      this.receiveFriendshipCreatedCallbacks.forEach((cb) => cb(dto));
+    });
+
+    this.connection.on("ReceiveFriendshipAccepted", (dto: FriendshipDto) => {
+      this.receiveFriendshipAcceptedCallbacks.forEach((cb) => cb(dto));
+    });
+
+    this.connection.on("ReceiveFriendshipBlocked", (dto: FriendshipDto) => {
+      this.receiveFriendshipBlockedCallbacks.forEach((cb) => cb(dto));
+    });
+
+    this.connection.on("ReceiveFriendshipUnblocked", (dto: FriendshipDto) => {
+      this.receiveFriendshipUnblockedCallbacks.forEach((cb) => cb(dto));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -90,6 +115,10 @@ class AppHub {
   async stop(): Promise<void> {
     ++this.epoch;
     this.joinedConversations.clear();
+    this.receiveFriendshipCreatedCallbacks.clear();
+    this.receiveFriendshipAcceptedCallbacks.clear();
+    this.receiveFriendshipBlockedCallbacks.clear();
+    this.receiveFriendshipUnblockedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -128,6 +157,26 @@ class AppHub {
 
   onReceiveNewConversation(callback: ReceiveNewConversationCallback): void {
     this.receiveNewConversationCallback = callback;
+  }
+
+  onReceiveFriendshipCreated(callback: ReceiveFriendshipCreatedCallback): () => void {
+    this.receiveFriendshipCreatedCallbacks.add(callback);
+    return () => { this.receiveFriendshipCreatedCallbacks.delete(callback); };
+  }
+
+  onReceiveFriendshipAccepted(callback: ReceiveFriendshipAcceptedCallback): () => void {
+    this.receiveFriendshipAcceptedCallbacks.add(callback);
+    return () => { this.receiveFriendshipAcceptedCallbacks.delete(callback); };
+  }
+
+  onReceiveFriendshipBlocked(callback: ReceiveFriendshipBlockedCallback): () => void {
+    this.receiveFriendshipBlockedCallbacks.add(callback);
+    return () => { this.receiveFriendshipBlockedCallbacks.delete(callback); };
+  }
+
+  onReceiveFriendshipUnblocked(callback: ReceiveFriendshipUnblockedCallback): () => void {
+    this.receiveFriendshipUnblockedCallbacks.add(callback);
+    return () => { this.receiveFriendshipUnblockedCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {
