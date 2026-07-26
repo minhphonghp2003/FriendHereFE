@@ -40,7 +40,7 @@ export function isRemoved(f: FriendshipDto): boolean {
 }
 
 export function isBlockedStatus(f: { status: string | number }): boolean {
-  return f.status === "Blocked" || f.status === 5;
+  return f.status === "Blocked" || f.status === 2;
 }
 
 export function isBlocked(f: FriendshipDto): boolean {

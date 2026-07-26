@@ -286,7 +286,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
               Nhắn tin
             </button>
           </div>
-          {friendship && !isBlockedStatus(friendship) && (
+          {friendship && isAcceptedStatus(friendship) && !isBlockedStatus(friendship) && (
             <button
               onClick={handleBlock}
               disabled={actionLoading}
