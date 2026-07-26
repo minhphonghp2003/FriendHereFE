@@ -7,7 +7,7 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
-import { addConversation } from "@/store/slices/chat-slice";
+import { addConversation, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -143,6 +143,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         appHub.onReceiveFriendshipAccepted((dto) => {
           toast.success(`${dto.otherUserName} đã chấp nhận lời mời kết bạn`);
+        });
+
+        appHub.onReceiveChatBlocked((_data) => {
+          toast.warning("Bạn đã bị chặn trong một cuộc trò chuyện");
         });
 
 

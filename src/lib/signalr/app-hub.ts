@@ -12,6 +12,13 @@ export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipUnblockedCallback = (dto: FriendshipDto) => void;
 
+export interface ChatBlockedData {
+  targetUserId: number;
+}
+
+export type ReceiveChatBlockedCallback = (data: ChatBlockedData) => void;
+export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
+
 class AppHub {
   private connection: signalR.HubConnection | null = null;
   private epoch = 0;
@@ -22,6 +29,8 @@ class AppHub {
   private receiveFriendshipAcceptedCallbacks: Set<ReceiveFriendshipAcceptedCallback> = new Set();
   private receiveFriendshipBlockedCallbacks: Set<ReceiveFriendshipBlockedCallback> = new Set();
   private receiveFriendshipUnblockedCallbacks: Set<ReceiveFriendshipUnblockedCallback> = new Set();
+  private receiveChatBlockedCallbacks: Set<ReceiveChatBlockedCallback> = new Set();
+  private receiveChatUnblockedCallbacks: Set<ReceiveChatUnblockedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -84,6 +93,14 @@ class AppHub {
       this.receiveFriendshipUnblockedCallbacks.forEach((cb) => cb(dto));
     });
 
+    this.connection.on("ReceiveChatBlocked", (data: ChatBlockedData) => {
+      this.receiveChatBlockedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveChatUnblocked", (data: ChatBlockedData) => {
+      this.receiveChatUnblockedCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -119,6 +136,8 @@ class AppHub {
     this.receiveFriendshipAcceptedCallbacks.clear();
     this.receiveFriendshipBlockedCallbacks.clear();
     this.receiveFriendshipUnblockedCallbacks.clear();
+    this.receiveChatBlockedCallbacks.clear();
+    this.receiveChatUnblockedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -177,6 +196,16 @@ class AppHub {
   onReceiveFriendshipUnblocked(callback: ReceiveFriendshipUnblockedCallback): () => void {
     this.receiveFriendshipUnblockedCallbacks.add(callback);
     return () => { this.receiveFriendshipUnblockedCallbacks.delete(callback); };
+  }
+
+  onReceiveChatBlocked(callback: ReceiveChatBlockedCallback): () => void {
+    this.receiveChatBlockedCallbacks.add(callback);
+    return () => { this.receiveChatBlockedCallbacks.delete(callback); };
+  }
+
+  onReceiveChatUnblocked(callback: ReceiveChatUnblockedCallback): () => void {
+    this.receiveChatUnblockedCallbacks.add(callback);
+    return () => { this.receiveChatUnblockedCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {

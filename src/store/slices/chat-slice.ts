@@ -62,6 +62,20 @@ const chatSlice = createSlice({
         conv.unreadCount = 0;
       }
     },
+    setConversationBlocked: (state, action: PayloadAction<{ conversationId: number; blockedById: number }>) => {
+      const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
+      if (conv) {
+        conv.isBlocked = true;
+        conv.blockedById = action.payload.blockedById;
+      }
+    },
+    setConversationUnblocked: (state, action: PayloadAction<number>) => {
+      const conv = state.conversations.find((c) => c.id === action.payload);
+      if (conv) {
+        conv.isBlocked = false;
+        conv.blockedById = null;
+      }
+    },
     setMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; totalCount: number }>) => {
       state.messages[action.payload.conversationId] = action.payload.messages;
       state.messageTotalCount[action.payload.conversationId] = action.payload.totalCount;
@@ -93,6 +107,8 @@ export const {
   updateConversationWithLastMessage,
   setActiveConversation,
   resetUnreadCount,
+  setConversationBlocked,
+  setConversationUnblocked,
   setMessages,
   prependMessages,
   appendMessage,

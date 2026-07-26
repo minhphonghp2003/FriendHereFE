@@ -27,6 +27,8 @@ export interface ConversationDto {
   isOnline: boolean;
   unreadCount: number | null;
   lastReadAt: string | null;
+  isBlocked: boolean;
+  blockedById: number | null;
   image: ImageDto | null;
   lastReadMessage: MessageDto | null;
   lastMessage: MessageDto | null;

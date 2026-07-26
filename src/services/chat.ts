@@ -61,3 +61,17 @@ export async function createConversation(
   const res = await httpClient.post("/chat", { receiverId, content, messageType });
   return res.data;
 }
+
+export async function blockChatUser(
+  targetUserId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post("/Chat/block-user", { targetUserId });
+  return res.data;
+}
+
+export async function unblockChatUser(
+  targetUserId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post("/Chat/unblock-user", { targetUserId });
+  return res.data;
+}
