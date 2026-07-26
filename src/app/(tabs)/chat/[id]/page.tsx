@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
@@ -22,7 +22,6 @@ export default function ChatScreenPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [opponentId, setOpponentId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -70,19 +69,12 @@ export default function ChatScreenPage() {
     return appHub.onReceiveMessage(cb);
   }, [conversationId, dispatch]);
 
-  useEffect(() => {
-    if (!user) return;
-    const selfMessages = messages.filter((m) => m.senderId === user.id);
+  const opponentId = useMemo(() => {
+    if (!user) return null;
     const otherMessages = messages.filter((m) => m.senderId !== user.id);
-    if (otherMessages.length > 0) {
-      setOpponentId(otherMessages[0].senderId);
-    } else if (selfMessages.length > 0) {
-      const receiverId = messages[messages.length - 1].senderId === user.id
-        ? null
-        : messages[messages.length - 1].senderId;
-      if (receiverId && receiverId !== user.id) setOpponentId(receiverId);
-    }
-  }, [messages, user?.id]);
+    if (otherMessages.length > 0) return otherMessages[0].senderId;
+    return null;
+  }, [messages, user]);
 
   useEffect(() => {
     if (!opponentId || !user) return;
@@ -95,7 +87,7 @@ export default function ChatScreenPage() {
     });
 
     return unsub;
-  }, [opponentId, user?.id]);
+  }, [opponentId, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

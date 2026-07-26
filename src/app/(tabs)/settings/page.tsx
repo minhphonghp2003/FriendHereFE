@@ -7,7 +7,7 @@ import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
 import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship } from "@/services/friendship";
-import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
+import { isPending, isAccepted, isRemoved } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

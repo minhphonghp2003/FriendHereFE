@@ -54,7 +54,7 @@ export default function HomePage() {
       unsubAccepted();
       unsubBlocked();
     };
-  }, [selectedUserId, user?.id, refetchUserDetail]);
+  }, [selectedUserId, user, refetchUserDetail]);
 
   const position = latitude !== null && longitude !== null
     ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral
