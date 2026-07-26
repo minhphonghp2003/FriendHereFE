@@ -10,6 +10,7 @@ export type ReceiveNewConversationCallback = (conversation: ConversationDto, ini
 export type ReceiveFriendshipCreatedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
+export type ReceiveFriendshipUnblockedCallback = (dto: FriendshipDto) => void;
 
 class AppHub {
   private connection: signalR.HubConnection | null = null;
@@ -20,6 +21,7 @@ class AppHub {
   private receiveFriendshipCreatedCallbacks: Set<ReceiveFriendshipCreatedCallback> = new Set();
   private receiveFriendshipAcceptedCallbacks: Set<ReceiveFriendshipAcceptedCallback> = new Set();
   private receiveFriendshipBlockedCallbacks: Set<ReceiveFriendshipBlockedCallback> = new Set();
+  private receiveFriendshipUnblockedCallbacks: Set<ReceiveFriendshipUnblockedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -78,6 +80,10 @@ class AppHub {
       this.receiveFriendshipBlockedCallbacks.forEach((cb) => cb(dto));
     });
 
+    this.connection.on("ReceiveFriendshipUnblocked", (dto: FriendshipDto) => {
+      this.receiveFriendshipUnblockedCallbacks.forEach((cb) => cb(dto));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -112,6 +118,7 @@ class AppHub {
     this.receiveFriendshipCreatedCallbacks.clear();
     this.receiveFriendshipAcceptedCallbacks.clear();
     this.receiveFriendshipBlockedCallbacks.clear();
+    this.receiveFriendshipUnblockedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -165,6 +172,11 @@ class AppHub {
   onReceiveFriendshipBlocked(callback: ReceiveFriendshipBlockedCallback): () => void {
     this.receiveFriendshipBlockedCallbacks.add(callback);
     return () => { this.receiveFriendshipBlockedCallbacks.delete(callback); };
+  }
+
+  onReceiveFriendshipUnblocked(callback: ReceiveFriendshipUnblockedCallback): () => void {
+    this.receiveFriendshipUnblockedCallbacks.add(callback);
+    return () => { this.receiveFriendshipUnblockedCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {

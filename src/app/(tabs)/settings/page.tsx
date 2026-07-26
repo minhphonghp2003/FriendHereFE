@@ -6,8 +6,8 @@ import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
-import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser } from "@/services/friendship";
-import { isPending, isAccepted, isRemoved } from "@/types/friendship";
+import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
+import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,10 +90,15 @@ export default function SettingsPage() {
       });
     });
 
+    const unsubUnblocked = appHub.onReceiveFriendshipUnblocked((dto) => {
+      setFriendships((prev) => prev.map((f) => (f.id === dto.id ? dto : f)));
+    });
+
     return () => {
       unsubCreated();
       unsubAccepted();
       unsubBlocked();
+      unsubUnblocked();
     };
   }, [showFriendRequests, showFriendsList]);
 
@@ -141,6 +146,7 @@ export default function SettingsPage() {
   const pendingReceived = friendships.filter((f) => isPending(f) && f.requestedById !== user?.id);
   const pendingSent = friendships.filter((f) => isPending(f) && f.requestedById === user?.id);
   const friends = friendships.filter((f) => isAccepted(f));
+  const blocked = friendships.filter((f) => isBlocked(f) && f.blockedById === user?.id);
 
   const handleAccept = async (id: number) => {
     setActionLoading(id);
@@ -161,6 +167,10 @@ export default function SettingsPage() {
   const handleBlock = async (id: number) => {
     setActionLoading(id);
     try { const res = await blockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
+  };
+  const handleUnblock = async (id: number) => {
+    setActionLoading(id);
+    try { const res = await unblockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
   };
 
   return (
@@ -312,7 +322,7 @@ export default function SettingsPage() {
             <DialogTitle>Danh sách bạn bè</DialogTitle>
           </DialogHeader>
           <div className="max-h-80 overflow-y-auto">
-            {friends.length === 0 ? (
+            {friends.length === 0 && blocked.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Chưa có bạn bè</p>
             ) : (
               <div className="flex flex-col gap-3">
@@ -338,6 +348,28 @@ export default function SettingsPage() {
                       </div>
                     </div>
                 ))}
+                {blocked.length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-muted-foreground uppercase mt-2">Đã chặn</p>
+                    {blocked.map((f) => (
+                      <div key={f.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        {f.otherUserImage?.thumbUrl ? (
+                          <img src={f.otherUserImage.thumbUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                            {f.otherUserName?.charAt(0)?.toUpperCase() ?? "?"}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{f.otherUserName}</p>
+                        </div>
+                        <Button size="sm" variant="outline" disabled={actionLoading === f.id} onClick={() => handleUnblock(f.id)}>
+                          Bỏ chặn
+                        </Button>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </div>

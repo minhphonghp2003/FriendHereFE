@@ -48,11 +48,17 @@ export default function HomePage() {
         refetchUserDetail();
       }
     });
+    const unsubUnblocked = appHub.onReceiveFriendshipUnblocked((dto) => {
+      if (getOpponentId(dto) === selectedUserId) {
+        refetchUserDetail();
+      }
+    });
 
     return () => {
       unsubCreated();
       unsubAccepted();
       unsubBlocked();
+      unsubUnblocked();
     };
   }, [selectedUserId, user, refetchUserDetail]);
 

@@ -90,6 +90,19 @@ export default function ChatScreenPage() {
   }, [opponentId, user]);
 
   useEffect(() => {
+    if (!opponentId || !user) return;
+
+    const unsub = appHub.onReceiveFriendshipUnblocked((dto) => {
+      const otherId = dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
+      if (otherId === opponentId) {
+        setIsBlocked(false);
+      }
+    });
+
+    return unsub;
+  }, [opponentId, user]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
