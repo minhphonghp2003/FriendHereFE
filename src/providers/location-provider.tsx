@@ -145,12 +145,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           toast.success(`${dto.otherUserName} đã chấp nhận lời mời kết bạn`);
         });
 
-        appHub.onReceiveChatBlocked((_data) => {
-          toast.warning("Bạn đã bị chặn trong một cuộc trò chuyện");
-        });
-
-
-
         appHub.onReceiveMessage((message) => {
           if (message.senderId === user.id) return;
           if (message.conversationId === activeConversationIdRef.current) return;

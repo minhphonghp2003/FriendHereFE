@@ -22,6 +22,7 @@ export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
 class AppHub {
   private connection: signalR.HubConnection | null = null;
   private epoch = 0;
+  private connectionReady: Promise<void> | null = null;
   private kickedCallback: KickedCallback | null = null;
   private receiveMessageCallbacks: Set<ReceiveMessageCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
@@ -119,9 +120,12 @@ class AppHub {
     });
 
     try {
-      await this.connection.start();
-      console.log("[AppHub] Connected");
+      this.connectionReady = this.connection.start().then(() => {
+        console.log("[AppHub] Connected");
+      });
+      await this.connectionReady;
     } catch (err) {
+      this.connectionReady = null;
       if (myEpoch === this.epoch) {
         this.connection = null;
         throw err;
@@ -131,6 +135,7 @@ class AppHub {
 
   async stop(): Promise<void> {
     ++this.epoch;
+    this.connectionReady = null;
     this.joinedConversations.clear();
     this.receiveFriendshipCreatedCallbacks.clear();
     this.receiveFriendshipAcceptedCallbacks.clear();
@@ -154,6 +159,7 @@ class AppHub {
   }
 
   async joinConversation(id: number): Promise<void> {
+    if (this.connectionReady) await this.connectionReady;
     if (!this.connection) throw new Error("AppHub not connected");
     await this.connection.invoke("JoinConversation", id);
     this.joinedConversations.add(id);
