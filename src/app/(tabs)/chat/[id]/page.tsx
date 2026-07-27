@@ -1,13 +1,12 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount } from "@/store/slices/chat-slice";
-import { getMessages, getConversation } from "@/services/chat";
+import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { isBlockedStatus } from "@/types/friendship";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff } from "lucide-react";
 import type { MessageDto } from "@/types/chat";
 
 export default function ChatScreenPage() {
@@ -22,6 +21,9 @@ export default function ChatScreenPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [blockedById, setBlockedById] = useState<number | null>(null);
+  const [opponentId, setOpponentId] = useState<number | null>(null);
+  const [blocking, setBlocking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -49,6 +51,8 @@ export default function ChatScreenPage() {
         if (res.data) {
           setConvName(res.data.name);
           setConvOnline(res.data.isOnline);
+          setIsBlocked(res.data.isBlocked);
+          setBlockedById(res.data.blockedById);
         }
       }).catch(() => {}),
       fetchMessages(0),
@@ -69,38 +73,29 @@ export default function ChatScreenPage() {
     return appHub.onReceiveMessage(cb);
   }, [conversationId, dispatch]);
 
-  const opponentId = useMemo(() => {
-    if (!user) return null;
-    const otherMessages = messages.filter((m) => m.senderId !== user.id);
-    if (otherMessages.length > 0) return otherMessages[0].senderId;
-    return null;
+  useEffect(() => {
+    if (!user || messages.length === 0) return;
+    const otherMsg = messages.find((m) => m.senderId !== user.id);
+    if (otherMsg) setOpponentId(otherMsg.senderId);
   }, [messages, user]);
 
   useEffect(() => {
-    if (!opponentId || !user) return;
-
-    const unsub = appHub.onReceiveFriendshipBlocked((dto) => {
-      const otherId = dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
-      if (otherId === opponentId && isBlockedStatus(dto)) {
+    const unsubBlocked = appHub.onReceiveChatBlocked((data) => {
+      if (data.targetUserId === user?.id) {
         setIsBlocked(true);
+        if (opponentId) setBlockedById(opponentId);
+        dispatch(setConversationBlocked({ conversationId, blockedById: opponentId ?? 0 }));
       }
     });
-
-    return unsub;
-  }, [opponentId, user]);
-
-  useEffect(() => {
-    if (!opponentId || !user) return;
-
-    const unsub = appHub.onReceiveFriendshipUnblocked((dto) => {
-      const otherId = dto.user1Id === user.id ? dto.user2Id : dto.user1Id;
-      if (otherId === opponentId) {
+    const unsubUnblocked = appHub.onReceiveChatUnblocked((data) => {
+      if (data.targetUserId === user?.id) {
         setIsBlocked(false);
+        setBlockedById(null);
+        dispatch(setConversationUnblocked(conversationId));
       }
     });
-
-    return unsub;
-  }, [opponentId, user]);
+    return () => { unsubBlocked(); unsubUnblocked(); };
+  }, [conversationId, user, opponentId, dispatch]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,6 +128,36 @@ export default function ChatScreenPage() {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
   };
 
+  const handleBlock = useCallback(async () => {
+    if (!opponentId || blocking) return;
+    setBlocking(true);
+    try {
+      await blockChatUser(opponentId);
+      setIsBlocked(true);
+      setBlockedById(user?.id ?? null);
+      dispatch(setConversationBlocked({ conversationId, blockedById: user?.id ?? 0 }));
+    } catch (err) {
+      console.error("Failed to block user", err);
+    } finally {
+      setBlocking(false);
+    }
+  }, [opponentId, blocking, user, conversationId, dispatch]);
+
+  const handleUnblock = useCallback(async () => {
+    if (!opponentId || blocking) return;
+    setBlocking(true);
+    try {
+      await unblockChatUser(opponentId);
+      setIsBlocked(false);
+      setBlockedById(null);
+      dispatch(setConversationUnblocked(conversationId));
+    } catch (err) {
+      console.error("Failed to unblock user", err);
+    } finally {
+      setBlocking(false);
+    }
+  }, [opponentId, blocking, conversationId, dispatch]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
@@ -153,6 +178,15 @@ export default function ChatScreenPage() {
             {convOnline ? "Online" : "Offline"}
           </p>
         </div>
+        {isBlocked ? (
+          <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
+            <ShieldOff className="w-5 h-5" />
+          </button>
+        ) : (
+          <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
+            <Ban className="w-5 h-5" />
+          </button>
+        )}
       </div>
       <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-2">
         {messages.length === 0 && (
@@ -189,7 +223,11 @@ export default function ChatScreenPage() {
       </div>
       {isBlocked ? (
         <div className="flex items-center justify-center p-3 border-t border-border bg-muted/50">
-          <p className="text-sm text-muted-foreground">Không thể gửi tin nhắn. Cuộc trò chuyện đã bị chặn.</p>
+          {blockedById === user?.id ? (
+            <p className="text-sm text-muted-foreground">Bạn đã chặn người này. Nhấn nút bỏ chặn để gửi tin nhắn.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Bạn đã bị chặn. Không thể gửi tin nhắn.</p>
+          )}
         </div>
       ) : (
         <div className="flex items-center gap-2 p-3 border-t border-border">

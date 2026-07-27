@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setConversations, addConversations } from "@/store/slices/chat-slice";
 import { getConversations } from "@/services/chat";
-import { MessageCircle, ChevronRight } from "lucide-react";
+import { appHub } from "@/lib/signalr/app-hub";
+import { useAuth } from "@/providers/auth-provider";
+import { MessageCircle, ChevronRight, Ban } from "lucide-react";
 import type { ConversationDto } from "@/types/chat";
 
 export default function ChatListPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { user } = useAuth();
   const { conversations, conversationsTotalCount } = useAppSelector((s) => s.chat);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -32,6 +35,17 @@ export default function ChatListPage() {
     setLoading(true);
     fetchConversations(0).finally(() => setLoading(false));
   }, [fetchConversations]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubBlocked = appHub.onReceiveChatBlocked(() => {
+      fetchConversations(0);
+    });
+    const unsubUnblocked = appHub.onReceiveChatUnblocked(() => {
+      fetchConversations(0);
+    });
+    return () => { unsubBlocked(); unsubUnblocked(); };
+  }, [user, fetchConversations]);
 
   const handleScroll = useCallback(() => {
     if (!listRef.current || loadingMore) return;
@@ -96,12 +110,17 @@ export default function ChatListPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="font-semibold truncate">{conv.name}</p>
-                {(conv.unreadCount ?? 0) > 0 && (
-                  <span className="text-xs bg-blue-600 text-white rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">{conv.unreadCount}</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {conv.isBlocked && (
+                    <Ban className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  )}
+                  {(conv.unreadCount ?? 0) > 0 && (
+                    <span className="text-xs bg-blue-600 text-white rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">{conv.unreadCount}</span>
+                  )}
+                </div>
               </div>
               <p className="text-xs text-muted-foreground truncate mt-0.5">
-                {conv.lastMessage?.content ?? "Chưa có tin nhắn"}
+                {conv.isBlocked ? "Đã chặn" : (conv.lastMessage?.content ?? "Chưa có tin nhắn")}
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
