@@ -6,7 +6,7 @@ import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
-import { getFriendshipsByUserId, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
+import { getMyFriendships, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
 import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
@@ -51,12 +51,11 @@ export default function SettingsPage() {
   }, [user]);
 
   const fetchFriendships = useCallback(async () => {
-    if (!user) return;
     try {
-      const list = await getFriendshipsByUserId(user.id);
+      const list = await getMyFriendships();
       setFriendships(list.filter((f) => !isRemoved(f)));
     } catch {}
-  }, [user]);
+  }, []);
 
   useEffect(() => { fetchUserDetail(); }, [fetchUserDetail]);
 

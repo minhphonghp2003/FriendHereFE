@@ -137,13 +137,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           }
         });
 
-        appHub.onReceiveFriendshipCreated((dto) => {
-          toast.info(`${dto.otherUserName} đã gửi lời mời kết bạn`);
-        });
+        appHub.onReceiveFriendshipCreated(() => {});
 
-        appHub.onReceiveFriendshipAccepted((dto) => {
-          toast.success(`${dto.otherUserName} đã chấp nhận lời mời kết bạn`);
-        });
+        appHub.onReceiveFriendshipAccepted(() => {});
 
         appHub.onReceiveMessage((message) => {
           if (message.senderId === user.id) return;
