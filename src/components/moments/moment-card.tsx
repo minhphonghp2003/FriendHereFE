@@ -123,39 +123,19 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
       )}
 
       {!isOwner && (
-        <div className="flex items-center gap-1 border-t border-border px-3 py-2">
-          {EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => handleReact(emoji)}
-              disabled={reactingEmoji === emoji}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {groupedReactions.length > 0 && (
-        <button
-          onClick={() => setShowReactions(true)}
-          className="flex w-full flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-left hover:bg-muted/50"
-        >
-          {groupedReactions.map((g) => (
-            <span
-              key={g.emoji}
-              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
-            >
-              <span>{g.emoji}</span>
-              <span className="font-medium tabular-nums text-muted-foreground">{g.count}</span>
-            </span>
-          ))}
-        </button>
-      )}
-
-      {!isOwner && (
-        <div className="flex items-center justify-end border-t border-border px-3 py-2">
+        <div className="flex items-center border-t border-border px-3 py-2">
+          <div className="flex flex-1 items-center gap-1">
+            {EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleReact(emoji)}
+                disabled={reactingEmoji === emoji}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => {}}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -164,6 +144,26 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
             <span>Nhắn tin</span>
           </button>
         </div>
+      )}
+
+      {isOwner && (
+        <button
+          onClick={() => setShowReactions(true)}
+          className="flex w-full flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-left hover:bg-muted/50"
+        >
+          {EMOJIS.map((emoji) => {
+            const g = groupedReactions.find((r) => r.emoji === emoji);
+            return (
+              <span
+                key={emoji}
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+              >
+                <span>{emoji}</span>
+                <span className="font-medium tabular-nums text-muted-foreground">{g?.count ?? 0}</span>
+              </span>
+            );
+          })}
+        </button>
       )}
 
       <ReactionBottomSheet
