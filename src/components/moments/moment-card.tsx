@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
+import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
@@ -27,7 +28,18 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const [showMenu, setShowMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
+  const [showReactions, setShowReactions] = useState(false);
   const isOwner = currentUserId === moment.userId;
+
+  const groupedReactions = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (const r of moment.reactions) {
+      const list = map.get(r.emoji) ?? [];
+      list.push(r.userId);
+      map.set(r.emoji, list);
+    }
+    return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds, count: userIds.length }));
+  }, [moment.reactions]);
 
   const handleReact = (emoji: string) => {
     setReactingEmoji(emoji);
@@ -123,19 +135,29 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
         ))}
       </div>
 
-      {moment.reactions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-3 py-2">
-          {moment.reactions.map((reaction, i) => (
+      {groupedReactions.length > 0 && (
+        <button
+          onClick={() => setShowReactions(true)}
+          className="flex w-full flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-left hover:bg-muted/50"
+        >
+          {groupedReactions.map((g) => (
             <span
-              key={i}
+              key={g.emoji}
               className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
             >
-              <span>{reaction.emoji}</span>
-              <span className="text-muted-foreground">#{reaction.userId}</span>
+              <span>{g.emoji}</span>
+              <span className="font-medium tabular-nums text-muted-foreground">{g.count}</span>
             </span>
           ))}
-        </div>
+          
+        </button>
       )}
+
+      <ReactionBottomSheet
+        momentId={moment.id}
+        open={showReactions}
+        onClose={() => setShowReactions(false)}
+      />
     </div>
   );
 };

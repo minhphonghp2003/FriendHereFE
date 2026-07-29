@@ -7,6 +7,7 @@ export type {
   MomentLocationDto,
   MomentImage,
   MomentReactionDto,
+  GroupedReactionDto,
   MomentDto,
   CreateMomentInput,
   UpdateMomentInput,
