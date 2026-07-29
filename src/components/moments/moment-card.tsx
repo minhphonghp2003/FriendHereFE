@@ -1,16 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2, EyeOff, Users, Heart, Globe, MoreHorizontal } from "lucide-react";
+import { EyeOff, Users, Heart, Globe, MapPin } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
-import { Button } from "@/components/ui/button";
-import { useDeleteMoment } from "@/hooks/moments";
 import type { MomentDto, MomentVisibility } from "@/types/moment";
 
 interface MomentCardProps {
   moment: MomentDto;
   currentUserId?: number;
-  onDelete?: (id: number) => void;
 }
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
@@ -20,30 +16,29 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
-export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
-  const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
-  const [showMenu, setShowMenu] = useState(false);
+export const MomentCard = ({ moment, currentUserId }: MomentCardProps) => {
   const isOwner = currentUserId === moment.userId;
-
-  const handleDelete = async () => {
-    try {
-      await deleteMoment(moment.id);
-      onDelete?.(moment.id);
-    } catch {}
-    setShowMenu(false);
-  };
 
   const visConfig = visibilityConfig[moment.visibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
+  const displayName = isOwner ? "Bạn" : moment.userName;
 
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 p-3">
         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
-          {moment.userId ? moment.userId.toString().charAt(0) : "?"}
+          {moment.userImage ? (
+            <img
+              src={moment.userImage.thumbUrl}
+              alt={displayName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            displayName.charAt(0)
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Bạn</p>
+          <p className="text-sm font-medium">{displayName}</p>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <VisIcon className="h-3 w-3" />
             <span>{visConfig.label}</span>
@@ -51,30 +46,6 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
             <span>{new Date(moment.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
-        {isOwner && (
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setShowMenu(!showMenu)}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-            {showMenu && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {deleting ? "Đang xóa..." : "Xóa"}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {moment.caption && (
@@ -85,10 +56,24 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
         <MomentImageCarousel images={moment.images} />
       )}
 
-      {moment.location?.isShowed && moment.location.placeName && (
+      {moment.location?.isShowed && (
         <div className="flex items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground">
-          <span>📍</span>
-          <span>{moment.location.placeName}</span>
+          <MapPin className="h-3 w-3" />
+          <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
+        </div>
+      )}
+
+      {moment.reactions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-3 py-2">
+          {moment.reactions.map((reaction, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+            >
+              <span>{reaction.emoji}</span>
+              <span className="text-muted-foreground">#{reaction.userId}</span>
+            </span>
+          ))}
         </div>
       )}
     </div>
