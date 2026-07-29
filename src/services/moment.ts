@@ -46,3 +46,7 @@ export async function updateMoment(id: number, input: {
 export async function deleteMoment(id: number): Promise<void> {
   await httpClient.delete(`/Moment/${id}`);
 }
+
+export async function addMomentReaction(id: number, emoji: string): Promise<void> {
+  await httpClient.post(`/Moment/${id}/reactions`, { emoji });
+}

@@ -5,7 +5,10 @@ import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal } from "luc
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment } from "@/hooks/moments";
+import { addMomentReaction } from "@/services/moment";
 import type { MomentDto, MomentVisibility } from "@/types/moment";
+
+const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
 interface MomentCardProps {
   moment: MomentDto;
@@ -23,7 +26,13 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
 export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const [showMenu, setShowMenu] = useState(false);
+  const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const isOwner = currentUserId === moment.userId;
+
+  const handleReact = (emoji: string) => {
+    setReactingEmoji(emoji);
+    addMomentReaction(moment.id, emoji).finally(() => setReactingEmoji(null));
+  };
 
   const handleDelete = async () => {
     try {
@@ -100,6 +109,19 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
           <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
         </div>
       )}
+
+      <div className="flex items-center gap-1 border-t border-border px-3 py-2">
+        {EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            onClick={() => handleReact(emoji)}
+            disabled={reactingEmoji === emoji}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
 
       {moment.reactions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-3 py-2">

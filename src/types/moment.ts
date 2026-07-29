@@ -19,6 +19,13 @@ export interface MomentReactionDto {
   emoji: string;
 }
 
+export interface GroupedReactionDto {
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  emojis: string[];
+}
+
 export interface MomentDto {
   id: number;
   userId: number;
