@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal } from "lucide-react";
+import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -122,18 +122,20 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
         </div>
       )}
 
-      <div className="flex items-center gap-1 border-t border-border px-3 py-2">
-        {EMOJIS.map((emoji) => (
-          <button
-            key={emoji}
-            onClick={() => handleReact(emoji)}
-            disabled={reactingEmoji === emoji}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
-          >
-            {emoji}
-          </button>
-        ))}
-      </div>
+      {!isOwner && (
+        <div className="flex items-center gap-1 border-t border-border px-3 py-2">
+          {EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => handleReact(emoji)}
+              disabled={reactingEmoji === emoji}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
 
       {groupedReactions.length > 0 && (
         <button
@@ -149,8 +151,19 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
               <span className="font-medium tabular-nums text-muted-foreground">{g.count}</span>
             </span>
           ))}
-          
         </button>
+      )}
+
+      {!isOwner && (
+        <div className="flex items-center justify-end border-t border-border px-3 py-2">
+          <button
+            onClick={() => {}}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>Nhắn tin</span>
+          </button>
+        </div>
       )}
 
       <ReactionBottomSheet
