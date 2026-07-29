@@ -25,6 +25,7 @@ export default function MomentsPage() {
       <MomentFeed
         key={refreshKey}
         currentUserId={user?.id}
+        onMomentDeleted={() => setRefreshKey((k) => k + 1)}
       />
 
       <CreateMomentDialog

@@ -1,12 +1,16 @@
 "use client";
 
-import { EyeOff, Users, Heart, Globe, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
+import { Button } from "@/components/ui/button";
+import { useDeleteMoment } from "@/hooks/moments";
 import type { MomentDto, MomentVisibility } from "@/types/moment";
 
 interface MomentCardProps {
   moment: MomentDto;
   currentUserId?: number;
+  onDelete?: (id: number) => void;
 }
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
@@ -16,8 +20,18 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
-export const MomentCard = ({ moment, currentUserId }: MomentCardProps) => {
+export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
+  const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
+  const [showMenu, setShowMenu] = useState(false);
   const isOwner = currentUserId === moment.userId;
+
+  const handleDelete = async () => {
+    try {
+      await deleteMoment(moment.id);
+      onDelete?.(moment.id);
+    } catch {}
+    setShowMenu(false);
+  };
 
   const visConfig = visibilityConfig[moment.visibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
@@ -46,6 +60,30 @@ export const MomentCard = ({ moment, currentUserId }: MomentCardProps) => {
             <span>{new Date(moment.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
+        {isOwner && (
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+            {showMenu && (
+              <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? "Đang xóa..." : "Xóa"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {moment.caption && (
