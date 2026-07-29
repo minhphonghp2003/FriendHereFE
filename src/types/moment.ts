@@ -28,8 +28,10 @@ export interface CreateMomentInput {
   caption?: string;
   visibility?: MomentVisibility;
   allowComment?: boolean;
+  isShowLocation?: boolean;
   excludedUserIds?: string;
   images?: File[];
+}e[];
 }
 
 export interface UpdateMomentInput {
