@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
-import type { MomentDto } from "@/types/moment";
+import type { MomentDto, GroupedReactionDto } from "@/types/moment";
 
 export async function getFeedMoments(skip = 0, take = 10): Promise<{
   data: MomentDto[];
@@ -45,4 +45,18 @@ export async function updateMoment(id: number, input: {
 
 export async function deleteMoment(id: number): Promise<void> {
   await httpClient.delete(`/Moment/${id}`);
+}
+
+export async function addMomentReaction(id: number, emoji: string): Promise<void> {
+  await httpClient.post(`/Moment/${id}/reactions`, { emoji });
+}
+
+export async function getMomentReactions(id: number, skip = 0, take = 10): Promise<{
+  data: GroupedReactionDto[];
+  totalCount: number;
+}> {
+  const { data } = await httpClient.get(`/Moment/${id}/reactions`, {
+    params: { skip, take },
+  });
+  return data;
 }

@@ -14,6 +14,7 @@ export const useCreateMoment = () => {
       if (input.caption) formData.append("caption", input.caption);
       if (input.visibility) formData.append("visibility", input.visibility);
       if (input.allowComment !== undefined) formData.append("allowComment", String(input.allowComment));
+      if (input.isShowLocation !== undefined) formData.append("isShowLocation", String(input.isShowLocation));
       if (input.excludedUserIds) formData.append("excludedUserIds", input.excludedUserIds);
       if (input.images) {
         input.images.forEach((file) => formData.append("images", file));
