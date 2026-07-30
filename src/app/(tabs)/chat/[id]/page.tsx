@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
+import { getMomentById } from "@/services/moment";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { ArrowLeft, Send, Ban, ShieldOff } from "lucide-react";
-import type { MessageDto } from "@/types/chat";
+import { ArrowLeft, Send, Ban, ShieldOff, X } from "lucide-react";
+import type { MessageDto, ImageDto } from "@/types/chat";
 
 export default function ChatScreenPage() {
   const router = useRouter();
@@ -24,6 +25,10 @@ export default function ChatScreenPage() {
   const [blockedById, setBlockedById] = useState<number | null>(null);
   const [opponentId, setOpponentId] = useState<number | null>(null);
   const [blocking, setBlocking] = useState(false);
+  const searchParams = useSearchParams();
+  const momentIdParam = searchParams.get("momentId") ? Number(searchParams.get("momentId")) : null;
+  const [pendingMoment, setPendingMoment] = useState<ImageDto | null>(null);
+  const [pendingMomentLoading, setPendingMomentLoading] = useState(!!momentIdParam);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -41,6 +46,19 @@ export default function ChatScreenPage() {
       console.error("Failed to fetch messages", err);
     }
   }, [conversationId, dispatch]);
+
+  useEffect(() => {
+    if (momentIdParam) {
+      getMomentById(momentIdParam)
+        .then((res) => {
+          if (res.success && res.data) {
+            setPendingMoment(res.data.firstImage);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setPendingMomentLoading(false));
+    }
+  }, [momentIdParam]);
 
   useEffect(() => {
     dispatch(setActiveConversation(conversationId));
@@ -111,18 +129,19 @@ export default function ChatScreenPage() {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || sending || isBlocked) return;
+    if ((!text && !pendingMoment) || sending || isBlocked) return;
     setSending(true);
     setInput("");
     try {
-      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
+      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+      setPendingMoment(null);
     } catch (err) {
       console.error("Failed to send message", err);
       setInput(text);
     } finally {
       setSending(false);
     }
-  }, [input, sending, conversationId, isBlocked]);
+  }, [input, sending, conversationId, isBlocked, pendingMoment, momentIdParam]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
@@ -210,7 +229,18 @@ export default function ChatScreenPage() {
               <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
                 {!isMe && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
                 <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  {msg.momentThumbnail ? (
+                    <div className="mb-1.5">
+                      <img
+                        src={msg.momentThumbnail.thumbUrl}
+                        alt=""
+                        className="h-20 w-20 rounded-lg object-cover"
+                      />
+                    </div>
+                  ) : null}
+                  {msg.content ? (
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  ) : null}
                   <p className="text-[10px] mt-1 opacity-70 text-right">
                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </p>
@@ -230,13 +260,33 @@ export default function ChatScreenPage() {
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 p-3 border-t border-border">
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
-          <button onClick={handleSend} disabled={!input.trim() || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-            <Send className="w-4 h-4" />
-          </button>
+        <div className="border-t border-border">
+          {pendingMomentLoading ? (
+            <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
+          ) : pendingMoment ? (
+            <div className="relative mx-3 mt-3 inline-block">
+              <img
+                src={pendingMoment.thumbUrl}
+                alt=""
+                className="h-20 w-20 rounded-lg object-cover"
+              />
+              <button
+                onClick={() => setPendingMoment(null)}
+                className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+          <div className="flex items-center gap-2 p-3">
+            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
+            <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
+

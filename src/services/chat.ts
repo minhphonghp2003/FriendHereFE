@@ -52,13 +52,14 @@ export async function getMessages(
 export async function createConversation(
   receiverId: number,
   content: string,
-  messageType: number
+  messageType: number,
+  momentId?: number | null
 ): Promise<{
   data: number;
   success: boolean;
   message?: string;
 }> {
-  const res = await httpClient.post("/chat", { receiverId, content, messageType });
+  const res = await httpClient.post("/chat", { receiverId, content, messageType, momentId });
   return res.data;
 }
 

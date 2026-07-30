@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
-import type { MomentDto, MomentVisibility } from "@/types/moment";
+import { getOpponentConversation } from "@/services/chat";
+import { appHub } from "@/lib/signalr/app-hub";
+import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/moment";
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -25,25 +28,62 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
 };
 
 export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
+  const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const [showMenu, setShowMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
   const isOwner = currentUserId === moment.userId;
+
+  useEffect(() => {
+    setLocalReactions(moment.reactions);
+  }, [moment.reactions]);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const unsub = appHub.onReceiveMomentReacted((data) => {
+      if (data.momentId !== moment.id) return;
+      setLocalReactions((prev) => {
+        const exists = prev.some((r) => r.userId === data.userId && r.emoji === data.emoji);
+        if (exists) return prev;
+        return [...prev, { userId: data.userId, emoji: data.emoji }];
+      });
+    });
+    return unsub;
+  }, [isOwner, moment.id]);
 
   const groupedReactions = useMemo(() => {
     const map = new Map<string, number[]>();
-    for (const r of moment.reactions) {
+    for (const r of localReactions) {
       const list = map.get(r.emoji) ?? [];
       list.push(r.userId);
       map.set(r.emoji, list);
     }
     return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds, count: userIds.length }));
-  }, [moment.reactions]);
+  }, [localReactions]);
 
   const handleReact = (emoji: string) => {
     setReactingEmoji(emoji);
     addMomentReaction(moment.id, emoji).finally(() => setReactingEmoji(null));
+  };
+
+  const handleSendMessage = async () => {
+    if (sendingMessage) return;
+    setSendingMessage(true);
+    try {
+      const res = await getOpponentConversation(moment.userId);
+      if (res.data) {
+        router.push(`/chat/${res.data}?momentId=${moment.id}`);
+      } else {
+        router.push(`/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`);
+      }
+    } catch {
+      router.push(`/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`);
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -137,11 +177,12 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
             ))}
           </div>
           <button
-            onClick={() => {}}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            onClick={handleSendMessage}
+            disabled={sendingMessage}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
             <MessageCircle className="h-4 w-4" />
-            <span>Nhắn tin</span>
+            <span>{sendingMessage ? "Đang gửi..." : "Nhắn tin"}</span>
           </button>
         </div>
       )}
