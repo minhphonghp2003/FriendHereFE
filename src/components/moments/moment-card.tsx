@@ -6,6 +6,7 @@ import { SmilePlus, Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal,
 import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
+import { MomentVideoPlayer } from "./moment-video-player";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment, useHideMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
@@ -173,14 +174,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
       )}
 
       {moment.video && (
-        <video
-          src={moment.video.originalUrl}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full bg-muted"
-        />
+        <MomentVideoPlayer src={moment.video.originalUrl} />
       )}
       {!moment.video && moment.images.length > 0 && (
         <MomentImageCarousel images={moment.images} />
