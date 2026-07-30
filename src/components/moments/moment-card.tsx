@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
@@ -25,6 +26,7 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
 };
 
 export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
+  const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const [showMenu, setShowMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
@@ -137,7 +139,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
             ))}
           </div>
           <button
-            onClick={() => {}}
+            onClick={() => router.push(`/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`)}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
             <MessageCircle className="h-4 w-4" />

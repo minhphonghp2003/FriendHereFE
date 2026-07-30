@@ -10,6 +10,7 @@ export default function NewChatPage() {
   const searchParams = useSearchParams();
   const receiverId = Number(searchParams.get("receiverId"));
   const name = searchParams.get("name") ?? "";
+  const momentId = searchParams.get("momentId") ? Number(searchParams.get("momentId")) : null;
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -24,13 +25,13 @@ export default function NewChatPage() {
     setSending(true);
     setError("");
     try {
-      const res = await createConversation(receiverId, text, 0);
+      const res = await createConversation(receiverId, text, 0, momentId);
       if (!res.success || !res.data) {
         setError("Không thể tạo cuộc trò chuyện");
         return;
       }
       const conversationId = res.data;
-      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID() });
+      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId });
       router.replace(`/chat/${conversationId}`);
     } catch (err) {
       setError("Không thể gửi tin nhắn");

@@ -40,4 +40,5 @@ export interface SendMessageRequest {
   messageType: number;
   replyToId: number | null;
   idempotencyKey: string;
+  momentId?: number | null;
 }
