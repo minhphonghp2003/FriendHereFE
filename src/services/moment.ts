@@ -35,6 +35,7 @@ export async function getUserMoments(userId: number, skip = 0, take = 10): Promi
 export async function createMoment(formData: FormData): Promise<MomentDto> {
   const { data } = await httpClient.post<ApiResponse<MomentDto>>("/Moment", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60000,
   });
   return data.data;
 }

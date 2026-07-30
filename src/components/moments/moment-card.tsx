@@ -172,7 +172,17 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
         <p className="px-3 pb-2 text-sm">{moment.caption}</p>
       )}
 
-      {moment.images.length > 0 && (
+      {moment.video && (
+        <video
+          src={moment.video.originalUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full bg-muted"
+        />
+      )}
+      {!moment.video && moment.images.length > 0 && (
         <MomentImageCarousel images={moment.images} />
       )}
 
