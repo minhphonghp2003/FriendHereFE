@@ -16,6 +16,7 @@ export interface MessageDto {
   attachments: ImageDto[];
   createdAt: string;
   isDeleted: boolean;
+  momentId?: number | null;
 }
 
 export interface ConversationDto {

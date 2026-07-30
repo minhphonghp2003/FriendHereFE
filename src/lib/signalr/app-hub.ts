@@ -3,6 +3,7 @@ import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
 import type { MessageDto, ConversationDto, SendMessageRequest } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
+import type { MomentReactionNotification } from "@/types/moment";
 
 export type KickedCallback = () => void;
 export type ReceiveMessageCallback = (message: MessageDto) => void;
@@ -18,6 +19,7 @@ export interface ChatBlockedData {
 
 export type ReceiveChatBlockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
+export type ReceiveMomentReactedCallback = (data: MomentReactionNotification) => void;
 
 class AppHub {
   private connection: signalR.HubConnection | null = null;
@@ -32,6 +34,7 @@ class AppHub {
   private receiveFriendshipUnblockedCallbacks: Set<ReceiveFriendshipUnblockedCallback> = new Set();
   private receiveChatBlockedCallbacks: Set<ReceiveChatBlockedCallback> = new Set();
   private receiveChatUnblockedCallbacks: Set<ReceiveChatUnblockedCallback> = new Set();
+  private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -102,6 +105,10 @@ class AppHub {
       this.receiveChatUnblockedCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveMomentReacted", (data: MomentReactionNotification) => {
+      this.receiveMomentReactedCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -143,6 +150,7 @@ class AppHub {
     this.receiveFriendshipUnblockedCallbacks.clear();
     this.receiveChatBlockedCallbacks.clear();
     this.receiveChatUnblockedCallbacks.clear();
+    this.receiveMomentReactedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -212,6 +220,11 @@ class AppHub {
   onReceiveChatUnblocked(callback: ReceiveChatUnblockedCallback): () => void {
     this.receiveChatUnblockedCallbacks.add(callback);
     return () => { this.receiveChatUnblockedCallbacks.delete(callback); };
+  }
+
+  onReceiveMomentReacted(callback: ReceiveMomentReactedCallback): () => void {
+    this.receiveMomentReactedCallbacks.add(callback);
+    return () => { this.receiveMomentReactedCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {

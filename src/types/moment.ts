@@ -56,3 +56,11 @@ export interface UpdateMomentInput {
   allowComment?: boolean;
   excludedUserIds?: number[] | null;
 }
+
+export interface MomentReactionNotification {
+  momentId: number;
+  userId: number;
+  userName: string;
+  userImage: { originalUrl: string; thumbUrl: string } | null;
+  emoji: string;
+}

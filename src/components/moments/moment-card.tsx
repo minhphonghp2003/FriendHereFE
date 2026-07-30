@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
@@ -8,7 +8,8 @@ import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
-import type { MomentDto, MomentVisibility } from "@/types/moment";
+import { appHub } from "@/lib/signalr/app-hub";
+import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/moment";
 
 const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -31,17 +32,35 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
   const [showMenu, setShowMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
   const isOwner = currentUserId === moment.userId;
+
+  useEffect(() => {
+    setLocalReactions(moment.reactions);
+  }, [moment.reactions]);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const unsub = appHub.onReceiveMomentReacted((data) => {
+      if (data.momentId !== moment.id) return;
+      setLocalReactions((prev) => {
+        const exists = prev.some((r) => r.userId === data.userId && r.emoji === data.emoji);
+        if (exists) return prev;
+        return [...prev, { userId: data.userId, emoji: data.emoji }];
+      });
+    });
+    return unsub;
+  }, [isOwner, moment.id]);
 
   const groupedReactions = useMemo(() => {
     const map = new Map<string, number[]>();
-    for (const r of moment.reactions) {
+    for (const r of localReactions) {
       const list = map.get(r.emoji) ?? [];
       list.push(r.userId);
       map.set(r.emoji, list);
     }
     return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds, count: userIds.length }));
-  }, [moment.reactions]);
+  }, [localReactions]);
 
   const handleReact = (emoji: string) => {
     setReactingEmoji(emoji);
