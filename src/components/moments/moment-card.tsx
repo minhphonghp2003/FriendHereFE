@@ -13,6 +13,8 @@ import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/moment";
 
+const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+
 interface MomentCardProps {
   moment: MomentDto;
   currentUserId?: number;
@@ -183,28 +185,40 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
 
       {!isOwner && (
         <div className="flex items-center border-t border-border px-3 py-2">
-          <div className="relative flex flex-1 items-center gap-1">
-            <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              disabled={reactingEmoji !== null}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-50"
-            >
-              <SmilePlus className="h-5 w-5" />
-            </button>
-            {showEmojiPicker && (
-              <div className="absolute bottom-full left-0 z-50 mb-2">
-                <div className="rounded-lg border border-border bg-background shadow-lg">
-                  <EmojiPicker
-                    onEmojiClick={(emojiData) => {
-                      handleReact(emojiData.emoji);
-                      setShowEmojiPicker(false);
-                    }}
-                    width={280}
-                    height={320}
-                  />
+          <div className="flex flex-1 items-center gap-1">
+            {COMMON_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleReact(emoji)}
+                disabled={reactingEmoji === emoji}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
+              >
+                {emoji}
+              </button>
+            ))}
+            <div className="relative">
+              <button
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                disabled={reactingEmoji !== null}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                <SmilePlus className="h-4 w-4" />
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 z-50 mb-2">
+                  <div className="rounded-lg border border-border bg-background shadow-lg">
+                    <EmojiPicker
+                      onEmojiClick={(emojiData) => {
+                        handleReact(emojiData.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                      width={280}
+                      height={320}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <button
             onClick={handleSendMessage}
