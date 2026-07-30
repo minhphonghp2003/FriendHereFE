@@ -14,6 +14,11 @@ export interface MomentImage {
   thumbUrl: string;
 }
 
+export interface VideoDto {
+  originalUrl: string;
+  thumbUrl: string;
+}
+
 export interface MomentReactionDto {
   userId: number;
   emoji: string;
@@ -36,6 +41,7 @@ export interface MomentDto {
   allowComment: boolean;
   location: MomentLocationDto | null;
   images: MomentImage[];
+  video: VideoDto | null;
   reactions: MomentReactionDto[];
   createdAt: string;
   updatedAt: string | null;
@@ -48,6 +54,7 @@ export interface CreateMomentInput {
   isShowLocation?: boolean;
   excludedUserIds?: string;
   images?: File[];
+  video?: File;
 }
 
 export interface UpdateMomentInput {

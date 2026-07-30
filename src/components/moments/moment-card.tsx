@@ -2,22 +2,25 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
+import { SmilePlus, Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
+import { MomentVideoPlayer } from "./moment-video-player";
 import { Button } from "@/components/ui/button";
-import { useDeleteMoment } from "@/hooks/moments";
+import { useDeleteMoment, useHideMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/moment";
 
-const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
 interface MomentCardProps {
   moment: MomentDto;
   currentUserId?: number;
   onDelete?: (id: number) => void;
+  onHide?: (id: number) => void;
 }
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
@@ -27,12 +30,14 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
-export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps) => {
+export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCardProps) => {
   const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
+  const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
   const [showMenu, setShowMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
   const isOwner = currentUserId === moment.userId;
@@ -94,6 +99,14 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
     setShowMenu(false);
   };
 
+  const handleHide = async () => {
+    try {
+      await hideMoment(moment.id);
+      onHide?.(moment.id);
+    } catch {}
+    setShowMenu(false);
+  };
+
   const visConfig = visibilityConfig[moment.visibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
   const displayName = isOwner ? "Bạn" : moment.userName;
@@ -121,18 +134,18 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
             <span>{new Date(moment.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
-        {isOwner && (
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setShowMenu(!showMenu)}
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-            {showMenu && (
-              <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowMenu(!showMenu)}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          {showMenu && (
+            <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
+              {isOwner ? (
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
@@ -141,17 +154,29 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
                   <Trash2 className="h-4 w-4" />
                   {deleting ? "Đang xóa..." : "Xóa"}
                 </button>
-              </div>
-            )}
-          </div>
-        )}
+              ) : (
+                <button
+                  onClick={handleHide}
+                  disabled={hiding}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                >
+                  <EyeOff className="h-4 w-4" />
+                  {hiding ? "Đang ẩn..." : "Ẩn"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {moment.caption && (
         <p className="px-3 pb-2 text-sm">{moment.caption}</p>
       )}
 
-      {moment.images.length > 0 && (
+      {moment.video && (
+        <MomentVideoPlayer src={moment.video.originalUrl} />
+      )}
+      {!moment.video && moment.images.length > 0 && (
         <MomentImageCarousel images={moment.images} />
       )}
 
@@ -165,7 +190,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
       {!isOwner && (
         <div className="flex items-center border-t border-border px-3 py-2">
           <div className="flex flex-1 items-center gap-1">
-            {EMOJIS.map((emoji) => (
+            {COMMON_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 onClick={() => handleReact(emoji)}
@@ -175,6 +200,29 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
                 {emoji}
               </button>
             ))}
+            <div className="relative">
+              <button
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                disabled={reactingEmoji !== null}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                <SmilePlus className="h-4 w-4" />
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-full left-0 z-50 mb-2">
+                  <div className="rounded-lg border border-border bg-background shadow-lg">
+                    <EmojiPicker
+                      onEmojiClick={(emojiData) => {
+                        handleReact(emojiData.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                      width={280}
+                      height={320}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleSendMessage}
@@ -192,18 +240,19 @@ export const MomentCard = ({ moment, currentUserId, onDelete }: MomentCardProps)
           onClick={() => setShowReactions(true)}
           className="flex w-full flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-left hover:bg-muted/50"
         >
-          {EMOJIS.map((emoji) => {
-            const g = groupedReactions.find((r) => r.emoji === emoji);
-            return (
+          {groupedReactions.length > 0 ? (
+            groupedReactions.map((g) => (
               <span
-                key={emoji}
+                key={g.emoji}
                 className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
               >
-                <span>{emoji}</span>
-                <span className="font-medium tabular-nums text-muted-foreground">{g?.count ?? 0}</span>
+                <span>{g.emoji}</span>
+                <span className="font-medium tabular-nums text-muted-foreground">{g.count}</span>
               </span>
-            );
-          })}
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">Chưa có cảm xúc</span>
+          )}
         </button>
       )}
 

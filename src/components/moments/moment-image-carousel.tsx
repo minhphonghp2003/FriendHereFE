@@ -1,69 +1,104 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { ImageLightbox } from "@/components/common/image-lightbox";
+import { useState, useRef } from "react";
 import type { MomentImage } from "@/types/moment";
 
 interface MomentImageCarouselProps {
   images: MomentImage[];
 }
 
+const SWIPE_THRESHOLD = 50;
+
 export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
+  const draggedRef = useRef(false);
 
   if (!images.length) return null;
 
-  const handlePrev = () => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const handleNext = () => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+  const goNext = () => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+  const goPrev = () => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+
+  const handleDragStart = (clientX: number) => {
+    startXRef.current = clientX;
+    setIsDragging(true);
+    draggedRef.current = false;
+  };
+
+  const handleDragMove = (clientX: number) => {
+    if (!isDragging) return;
+    const diff = clientX - startXRef.current;
+    if (Math.abs(diff) > 5) draggedRef.current = true;
+    setOffsetX(diff);
+  };
+
+  const handleDragEnd = (clientX: number) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const diff = clientX - startXRef.current;
+    if (Math.abs(diff) >= SWIPE_THRESHOLD) {
+      if (diff > 0) {
+        goPrev();
+      } else {
+        goNext();
+      }
+    }
+    setOffsetX(0);
+  };
+
+  const handleClick = () => {
+    if (draggedRef.current) return;
+    if (images.length < 2) return;
+  };
+
+  const translateX = isDragging
+    ? ((offsetX / (containerRef.current?.offsetWidth || 1)) - currentIndex) * (100 / images.length)
+    : -currentIndex * (100 / images.length);
 
   return (
-    <>
-      <div className="relative aspect-square w-full overflow-hidden bg-muted">
-        <button
-          className="h-full w-full cursor-pointer"
-          onClick={() => setLightboxOpen(true)}
-        >
-          <img
-            src={images[currentIndex].originalUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        </button>
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
-              {images.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    i === currentIndex ? "bg-white" : "bg-white/50"
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
+    <div ref={containerRef} className="relative aspect-square w-full overflow-hidden bg-muted">
+      <div
+        className="flex h-full"
+        style={{
+          width: `${images.length * 100}%`,
+          transform: `translateX(${translateX}%)`,
+          transition: isDragging ? "none" : "transform 0.3s ease-out",
+        }}
+        onClick={handleClick}
+        onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
+        onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
+        onTouchEnd={(e) => handleDragEnd(e.changedTouches[0].clientX)}
+        onMouseDown={(e) => handleDragStart(e.clientX)}
+        onMouseMove={(e) => e.buttons === 1 && handleDragMove(e.clientX)}
+        onMouseUp={(e) => handleDragEnd(e.clientX)}
+        onMouseLeave={(e) => isDragging && handleDragEnd(e.clientX)}
+      >
+        {images.map((img, i) => (
+          <div key={i} className="relative h-full" style={{ width: `${100 / images.length}%` }}>
+            <img
+              src={img.originalUrl}
+              alt=""
+              className="h-full w-full object-cover select-none"
+              draggable={false}
+            />
+          </div>
+        ))}
       </div>
-      <ImageLightbox
-        images={images}
-        initialIndex={currentIndex}
-        open={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
-    </>
+      {images.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+          {images.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 w-1.5 rounded-full ${
+                i === currentIndex ? "bg-white" : "bg-white/50"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };

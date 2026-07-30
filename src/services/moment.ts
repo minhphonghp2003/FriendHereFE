@@ -75,3 +75,7 @@ export async function getMomentById(id: number): Promise<{
   const res = await httpClient.get(`/Moment/${id}`);
   return res.data;
 }
+
+export async function hideMoment(id: number): Promise<void> {
+  await httpClient.post(`/Moment/${id}/hide`);
+}

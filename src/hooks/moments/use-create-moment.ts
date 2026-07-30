@@ -19,6 +19,7 @@ export const useCreateMoment = () => {
       if (input.images) {
         input.images.forEach((file) => formData.append("images", file));
       }
+      if (input.video) formData.append("video", input.video);
       const data = await createMoment(formData);
       return data;
     } catch (err) {
