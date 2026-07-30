@@ -26,6 +26,7 @@ export default function MomentsPage() {
         key={refreshKey}
         currentUserId={user?.id}
         onMomentDeleted={() => setRefreshKey((k) => k + 1)}
+        onMomentHidden={() => setRefreshKey((k) => k + 1)}
       />
 
       <CreateMomentDialog

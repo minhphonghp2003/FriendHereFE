@@ -9,9 +9,10 @@ import { useFeedMoments } from "@/hooks/moments";
 interface MomentFeedProps {
   currentUserId?: number;
   onMomentDeleted?: (id: number) => void;
+  onMomentHidden?: (id: number) => void;
 }
 
-export const MomentFeed = ({ currentUserId, onMomentDeleted }: MomentFeedProps) => {
+export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: MomentFeedProps) => {
   const { data: moments, isLoading, error, totalCount, refetch } = useFeedMoments(0, 10);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const skipRef = useRef(0);
@@ -65,6 +66,7 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted }: MomentFeedProps) 
           moment={moment}
           currentUserId={currentUserId}
           onDelete={onMomentDeleted}
+          onHide={onMomentHidden}
         />
       ))}
       <div ref={loadMoreRef} className="flex justify-center py-4">
