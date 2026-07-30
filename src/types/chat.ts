@@ -17,6 +17,7 @@ export interface MessageDto {
   createdAt: string;
   isDeleted: boolean;
   momentId?: number | null;
+  momentThumbnail: ImageDto | null;
 }
 
 export interface ConversationDto {

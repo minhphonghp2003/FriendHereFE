@@ -4,11 +4,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
-import { getMomentById } from "@/services/moment";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send, Ban, ShieldOff } from "lucide-react";
-import type { MessageDto, ImageDto } from "@/types/chat";
+import type { MessageDto } from "@/types/chat";
 
 export default function ChatScreenPage() {
   const router = useRouter();
@@ -211,7 +210,15 @@ export default function ChatScreenPage() {
               <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
                 {!isMe && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
                 <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
-                  {msg.momentId ? <MomentPreviewImage momentId={msg.momentId} /> : null}
+                  {msg.momentThumbnail ? (
+                    <div className="mb-1.5">
+                      <img
+                        src={msg.momentThumbnail.thumbUrl}
+                        alt=""
+                        className="h-20 w-20 rounded-lg object-cover"
+                      />
+                    </div>
+                  ) : null}
                   {msg.content ? (
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                   ) : null}
@@ -245,32 +252,3 @@ export default function ChatScreenPage() {
   );
 }
 
-function MomentPreviewImage({ momentId }: { momentId: number }) {
-  const [preview, setPreview] = useState<ImageDto | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    getMomentById(momentId)
-      .then((res) => {
-        if (res.success && res.data) {
-          setPreview(res.data.firstImage);
-        } else {
-          setError(true);
-        }
-      })
-      .catch(() => setError(true));
-  }, [momentId]);
-
-  if (error) return null;
-  if (!preview) return <div className="h-20 w-20 animate-pulse rounded-lg bg-muted" />;
-
-  return (
-    <div className="mb-1.5">
-      <img
-        src={preview.thumbUrl}
-        alt=""
-        className="h-20 w-20 rounded-lg object-cover"
-      />
-    </div>
-  );
-}
