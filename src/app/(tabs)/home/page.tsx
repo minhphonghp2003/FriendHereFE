@@ -10,14 +10,11 @@ import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useAppSelector } from "@/store/hooks";
 import type { LocationDto } from "@/lib/signalr/types";
 import { appHub } from "@/lib/signalr/app-hub";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const locations = useAppSelector((s) => s.location.locations);
-  const kicked = useAppSelector((s) => s.location.kicked);
   const locationDenied = useAppSelector((s) => s.location.locationDenied);
   const movingUserIds = useAppSelector((s) => s.location.movingUserIds);
   const latitude = useAppSelector((s) => s.location.latitude);
@@ -78,31 +75,12 @@ export default function HomePage() {
     setSelectedUserId(null);
   }, []);
 
-  const kickedDialog = (
-    <Dialog open={kicked} onOpenChange={() => {}}>
-      <DialogContent showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle>Disconnected</DialogTitle>
-          <DialogDescription>
-            You were disconnected because you opened the app in another tab.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button onClick={logout} className="w-full">
-            Logout
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
   if (!apiKey) {
     return (
       <>
         <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
           <p className="text-sm text-red-500">Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</p>
         </div>
-        {kickedDialog}
       </>
     );
   }
@@ -113,7 +91,6 @@ export default function HomePage() {
         <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
         </div>
-        {kickedDialog}
       </>
     );
   }
@@ -139,7 +116,6 @@ export default function HomePage() {
             />
           )}
         </div>
-        {kickedDialog}
       </>
     );
   }
@@ -191,7 +167,6 @@ export default function HomePage() {
           />
         )}
       </div>
-      {kickedDialog}
     </>
   );
 }

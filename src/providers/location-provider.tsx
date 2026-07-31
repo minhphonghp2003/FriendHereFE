@@ -7,7 +7,7 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
-import { addConversation, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { addConversation, appendMessage, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -130,8 +130,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           );
         });
 
-        appHub.onReceiveNewConversation((conversation) => {
-          dispatch(addConversation(conversation));
+        appHub.onReceiveNewConversation((conversation, initialMessage) => {
+          const conv = conversation.lastMessage
+            ? conversation
+            : { ...conversation, lastMessage: initialMessage };
+          dispatch(addConversation(conv));
+          if (conversation.id && initialMessage) {
+            dispatch(appendMessage({ conversationId: conversation.id, message: initialMessage }));
+          }
           if (conversation.name) {
             toast.info(`Cuộc trò chuyện mới: ${conversation.name}`);
           }
