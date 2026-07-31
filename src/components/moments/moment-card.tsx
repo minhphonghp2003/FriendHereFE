@@ -176,7 +176,17 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
       {moment.video && (
         <MomentVideoPlayer src={moment.video.originalUrl} />
       )}
-      {!moment.video && moment.images.length > 0 && (
+      {!moment.video && moment.images.length === 1 && (
+        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+          <img
+            src={moment.images[0].originalUrl}
+            alt=""
+            className="h-full w-full object-cover select-none"
+            draggable={false}
+          />
+        </div>
+      )}
+      {!moment.video && moment.images.length > 1 && (
         <MomentImageCarousel images={moment.images} />
       )}
 
@@ -224,14 +234,16 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
               )}
             </div>
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={sendingMessage}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span>{sendingMessage ? "Đang gửi..." : "Nhắn tin"}</span>
-          </button>
+          {moment.allowComment && (
+            <button
+              onClick={handleSendMessage}
+              disabled={sendingMessage}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>{sendingMessage ? "Đang gửi..." : "Nhắn tin"}</span>
+            </button>
+          )}
         </div>
       )}
 

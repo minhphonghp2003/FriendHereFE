@@ -49,9 +49,17 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
     setOffsetX(0);
   };
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (draggedRef.current) return;
     if (images.length < 2) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    if (x < rect.width / 2) {
+      goPrev();
+    } else {
+      goNext();
+    }
   };
 
   const translateX = isDragging
