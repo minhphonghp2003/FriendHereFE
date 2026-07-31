@@ -176,7 +176,17 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
       {moment.video && (
         <MomentVideoPlayer src={moment.video.originalUrl} />
       )}
-      {!moment.video && moment.images.length > 0 && (
+      {!moment.video && moment.images.length === 1 && (
+        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+          <img
+            src={moment.images[0].originalUrl}
+            alt=""
+            className="h-full w-full object-cover select-none"
+            draggable={false}
+          />
+        </div>
+      )}
+      {!moment.video && moment.images.length > 1 && (
         <MomentImageCarousel images={moment.images} />
       )}
 
