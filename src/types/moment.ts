@@ -2,6 +2,30 @@ import type { ImageDto } from "./user";
 
 export type MomentVisibility = "OnlyMe" | "Friends" | "BestFriend" | "Lover" | "Public";
 
+export const MOMENT_VISIBILITY_VALUES: Record<MomentVisibility, number> = {
+  OnlyMe: 0,
+  Friends: 1,
+  BestFriend: 2,
+  Lover: 3,
+  Public: 4,
+};
+
+const MOMENT_VISIBILITY_BY_VALUE: Record<number, MomentVisibility> = {
+  0: "OnlyMe",
+  1: "Friends",
+  2: "BestFriend",
+  3: "Lover",
+  4: "Public",
+};
+
+export const toMomentVisibility = (value: number | string | undefined): MomentVisibility => {
+  if (typeof value === "string" && value in MOMENT_VISIBILITY_VALUES) {
+    return value as MomentVisibility;
+  }
+  const numeric = typeof value === "number" ? value : Number(value);
+  return MOMENT_VISIBILITY_BY_VALUE[numeric] ?? "Friends";
+};
+
 export interface MomentLocationDto {
   latitude: number;
   longitude: number;
@@ -59,7 +83,7 @@ export interface CreateMomentInput {
 
 export interface CreateMomentRequest {
   caption?: string;
-  visibility?: MomentVisibility;
+  visibility?: number;
   allowComment?: boolean;
   isShowLocation?: boolean;
   excludedUserIds?: string | null;

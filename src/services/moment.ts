@@ -1,7 +1,13 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
 import type { MomentDto, GroupedReactionDto, CreateMomentRequest } from "@/types/moment";
+import { toMomentVisibility } from "@/types/moment";
 import type { ImageDto } from "@/types/chat";
+
+const normalizeMomentDto = (moment: MomentDto): MomentDto => ({
+  ...moment,
+  visibility: toMomentVisibility(moment.visibility),
+});
 
 export interface MomentPreview {
   id: number;
@@ -17,6 +23,7 @@ export async function getFeedMoments(skip = 0, take = 10): Promise<{
   const res = await httpClient.get("/Moment/feed", {
     params: { skip, take },
   });
+  res.data.data = res.data.data.map(normalizeMomentDto);
   return res.data;
 }
 
@@ -29,12 +36,13 @@ export async function getUserMoments(userId: number, skip = 0, take = 10): Promi
   const res = await httpClient.get(`/Moment/user/${userId}`, {
     params: { skip, take },
   });
+  res.data.data = res.data.data.map(normalizeMomentDto);
   return res.data;
 }
 
 export async function createMoment(input: CreateMomentRequest): Promise<MomentDto> {
   const { data } = await httpClient.post<ApiResponse<MomentDto>>("/Moment", input);
-  return data.data;
+  return normalizeMomentDto(data.data);
 }
 
 export async function updateMoment(id: number, input: {

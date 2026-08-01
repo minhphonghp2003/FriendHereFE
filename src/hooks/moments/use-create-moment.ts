@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createMoment } from "@/services/moment";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import type { MomentDto, CreateMomentInput } from "@/types/moment";
+import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 
 const MOMENT_BUCKET = "Moment";
 
@@ -37,7 +38,7 @@ export const useCreateMoment = () => {
       const isVideo = input.video != null;
       const data = await createMoment({
         caption: input.caption,
-        visibility: input.visibility,
+        visibility: input.visibility ? MOMENT_VISIBILITY_VALUES[input.visibility] : undefined,
         allowComment: input.allowComment,
         isShowLocation: input.isShowLocation,
         excludedUserIds: input.excludedUserIds ?? null,
