@@ -57,6 +57,16 @@ export interface CreateMomentInput {
   video?: File;
 }
 
+export interface CreateMomentRequest {
+  caption?: string;
+  visibility?: MomentVisibility;
+  allowComment?: boolean;
+  isShowLocation?: boolean;
+  excludedUserIds?: string | null;
+  imageFileIds: string[] | null;
+  videoFileId: string | null;
+}
+
 export interface UpdateMomentInput {
   caption?: string;
   visibility?: MomentVisibility | null;
