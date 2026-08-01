@@ -7,9 +7,18 @@ export async function getFriendshipById(id: number): Promise<FriendshipDto | nul
   return data.data ?? null;
 }
 
-export async function getMyFriendships(): Promise<FriendshipDto[]> {
-  const { data } = await httpClient.get<ApiResponse<FriendshipDto[]>>(`/Friendship/me`);
-  return data.data ?? [];
+export async function getMyFriendships(params?: {
+  skip?: number;
+  take?: number;
+  type?: number;
+}): Promise<{
+  data: FriendshipDto[];
+  success: boolean;
+  message?: string;
+  totalCount: number;
+}> {
+  const { data } = await httpClient.get(`/Friendship/me`, { params });
+  return data;
 }
 
 export async function sendFriendRequest(targetUserId: number): Promise<FriendshipDto> {

@@ -53,8 +53,8 @@ export default function SettingsPage() {
 
   const fetchFriendships = useCallback(async () => {
     try {
-      const list = await getMyFriendships();
-      setFriendships(list.filter((f) => !isRemoved(f)));
+      const list = await getMyFriendships({ skip: 0, take: 100 });
+      setFriendships(list.data.filter((f) => !isRemoved(f)));
     } catch {}
   }, []);
 

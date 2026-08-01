@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SmilePlus, Trash2, EyeOff, Users, Heart, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
+import { SmilePlus, Trash2, EyeOff, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
@@ -26,6 +26,7 @@ interface MomentCardProps {
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
   OnlyMe: { icon: EyeOff, label: "Chỉ tôi" },
   Friends: { icon: Users, label: "Bạn bè" },
+  BestFriend: { icon: Star, label: "Bạn thân" },
   Lover: { icon: Heart, label: "Người yêu" },
   Public: { icon: Globe, label: "Công khai" },
 };
