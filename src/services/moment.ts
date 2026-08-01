@@ -1,12 +1,13 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
 import type { MomentDto, GroupedReactionDto, CreateMomentRequest } from "@/types/moment";
-import { toMomentVisibility } from "@/types/moment";
+import { toMomentVisibility, toMomentStatus } from "@/types/moment";
 import type { ImageDto } from "@/types/chat";
 
 const normalizeMomentDto = (moment: MomentDto): MomentDto => ({
   ...moment,
   visibility: toMomentVisibility(moment.visibility),
+  status: toMomentStatus(moment.status),
 });
 
 export interface MomentPreview {

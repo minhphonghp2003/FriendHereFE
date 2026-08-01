@@ -5,6 +5,7 @@ export type { User, CreateUserInput, UpdateUserInput, ImageDto } from "./user";
 export type { LocationDto, UserDto } from "@/lib/signalr/types";
 export type {
   MomentVisibility,
+  MomentStatus,
   MomentLocationDto,
   MomentImage,
   MomentReactionDto,

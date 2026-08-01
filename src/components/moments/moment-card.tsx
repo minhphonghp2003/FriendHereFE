@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SmilePlus, Trash2, EyeOff, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle } from "lucide-react";
+import { SmilePlus, Trash2, EyeOff, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
@@ -174,22 +174,30 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide }: MomentCa
         <p className="px-3 pb-2 text-sm">{moment.caption}</p>
       )}
 
-      {moment.video && (
-        <MomentVideoPlayer src={moment.video.originalUrl} />
-      )}
-      {!moment.video && moment.images.length === 1 && (
-        <div className="relative aspect-square w-full overflow-hidden bg-muted">
-          <img
-            src={moment.images[0].originalUrl}
-            alt=""
-            className="h-full w-full object-cover select-none"
-            draggable={false}
-          />
-        </div>
-      )}
-      {!moment.video && moment.images.length > 1 && (
-        <MomentImageCarousel images={moment.images} />
-      )}
+      <div className="relative">
+        {moment.video && (
+          <MomentVideoPlayer src={moment.video.originalUrl} />
+        )}
+        {!moment.video && moment.images.length === 1 && (
+          <div className="relative aspect-square w-full overflow-hidden bg-muted">
+            <img
+              src={moment.images[0].originalUrl}
+              alt=""
+              className="h-full w-full object-cover select-none"
+              draggable={false}
+            />
+          </div>
+        )}
+        {!moment.video && moment.images.length > 1 && (
+          <MomentImageCarousel images={moment.images} />
+        )}
+        {moment.status === "Processing" && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-black/40">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+            <span className="text-sm font-medium text-white">Đang xử lý...</span>
+          </div>
+        )}
+      </div>
 
       {moment.location?.isShowed && (
         <div className="flex items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground">
