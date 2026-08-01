@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getOpponentConversation } from "@/services/chat";
-import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
+import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship, blockUser, unblockUser, changeFriendshipType, getFriendshipById } from "@/services/friendship";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
-import { isPendingStatus, isAcceptedStatus, isBlockedStatus } from "@/types/friendship";
+import { isPendingStatus, isAcceptedStatus, isBlockedStatus, getMyFriendshipType, FRIENDSHIP_TYPE_VALUES, FRIENDSHIP_TYPE_LABELS } from "@/types/friendship";
+import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -53,7 +54,19 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
 
   const friendship = userDetail?.friendship ?? null;
 
-  const handleChat = useCallback(async () => {
+  const [friendshipDetail, setFriendshipDetail] = useState<FriendshipDto | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isCurrentUser || !friendship || !isAcceptedStatus(friendship)) {
+      Promise.resolve(null).then((v) => { if (!cancelled) setFriendshipDetail(v); });
+      return;
+    }
+    getFriendshipById(friendship.friendshipId)
+      .then((dto) => { if (!cancelled) setFriendshipDetail(dto); })
+      .catch(() => { if (!cancelled) setFriendshipDetail(null); });
+    return () => { cancelled = true; };
+  }, [friendship, isCurrentUser]);  const handleChat = useCallback(async () => {
     if (isCurrentUser || !userDetail) return;
     try {
       const res = await getOpponentConversation(userDetail.id);
@@ -145,6 +158,19 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     }
   }, [friendship, actionLoading, onFriendshipChange]);
 
+  const handleChangeType = useCallback(async (type: FriendshipTypeValue) => {
+    if (!friendship || actionLoading) return;
+    setActionLoading(true);
+    try {
+      await changeFriendshipType(friendship.friendshipId, type);
+      onFriendshipChange?.();
+    } catch (err) {
+      console.error("Failed to change friendship type", err);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [friendship, actionLoading, onFriendshipChange]);
+
   if (loading) {
     return (
       <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
@@ -231,14 +257,29 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
     }
 
     if (isAcceptedStatus(friendship)) {
+      const myType = friendshipDetail ? getMyFriendshipType(friendshipDetail, currentUser?.id) : FRIENDSHIP_TYPE_VALUES.Friend;
       return (
-        <button
-          onClick={handleRemove}
-          disabled={actionLoading}
-          className="flex-1 rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
-        >
-          {actionLoading ? "..." : "Bạn bè ✓"}
-        </button>
+        <div className="flex flex-1 flex-col gap-1.5">
+          <button
+            onClick={handleRemove}
+            disabled={actionLoading}
+            className="rounded-lg bg-zinc-200 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
+          >
+            {actionLoading ? "..." : "Bạn bè ✓"}
+          </button>
+          <select
+            value={String(myType)}
+            disabled={actionLoading || !friendshipDetail}
+            onChange={(e) => handleChangeType(Number(e.target.value) as FriendshipTypeValue)}
+            className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+          >
+            {Object.entries(FRIENDSHIP_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
       );
     }
 

@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/providers/auth-provider";
 import { useCreateMoment } from "@/hooks/moments";
 import { getMyFriendships } from "@/services/friendship";
-import { isAccepted } from "@/types/friendship";
+import { isAccepted, FRIENDSHIP_TYPE_VALUES } from "@/types/friendship";
 import type { MomentVisibility } from "@/types/moment";
 import type { FriendshipDto } from "@/types/friendship";
 
@@ -26,6 +26,12 @@ interface CreateMomentDialogProps {
 }
 
 type MediaType = "images" | "video";
+
+const VISIBILITY_TO_FRIEND_TYPE: Partial<Record<MomentVisibility, number>> = {
+  Friends: FRIENDSHIP_TYPE_VALUES.Friend,
+  BestFriend: FRIENDSHIP_TYPE_VALUES.BestFriend,
+  Lover: FRIENDSHIP_TYPE_VALUES.Lover,
+};
 
 const getNameDisplay = (name: string) => {
   const cleaned = name.trim();
@@ -52,10 +58,21 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
 
   useEffect(() => {
     if (!open) return;
-    getMyFriendships().then((data) => {
-      setFriends(data.filter(isAccepted));
+    const type = VISIBILITY_TO_FRIEND_TYPE[visibility];
+    if (type === undefined) {
+      setFriends([]);
+      setExcludedIds([]);
+      return;
+    }
+    getMyFriendships({ type }).then((res) => {
+      setFriends(res.data.filter(isAccepted));
     });
-  }, [open]);
+  }, [open, visibility]);
+
+  const handleVisibilityChange = (value: MomentVisibility) => {
+    setVisibility(value);
+    setExcludedIds([]);
+  };
 
   const toggleExcluded = (friendUserId: number) => {
     setExcludedIds((prev) =>
@@ -163,10 +180,11 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
               id="moment-visibility"
               className="rounded-md border border-border bg-background px-3 py-2 text-sm"
               value={visibility}
-              onChange={(e) => setVisibility(e.target.value as MomentVisibility)}
+              onChange={(e) => handleVisibilityChange(e.target.value as MomentVisibility)}
             >
               <option value="OnlyMe">Chỉ tôi</option>
               <option value="Friends">Bạn bè</option>
+              <option value="BestFriend">Bạn thân</option>
               <option value="Lover">Người yêu</option>
               <option value="Public">Công khai</option>
             </select>

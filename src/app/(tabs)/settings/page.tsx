@@ -6,8 +6,9 @@ import { useLogout } from "@/hooks/auth";
 import { useUpdateCurrentUser } from "@/hooks/users/use-update-user";
 import { useUploadAvatar } from "@/hooks/users/use-upload-avatar";
 import { getUserById } from "@/services/user";
-import { getMyFriendships, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser } from "@/services/friendship";
-import { isPending, isAccepted, isRemoved, isBlocked } from "@/types/friendship";
+import { getMyFriendships, acceptFriendRequest, rejectFriendRequest, revokeFriendRequest, removeFriendship, blockUser, unblockUser, changeFriendshipType } from "@/services/friendship";
+import { isPending, isAccepted, isRemoved, isBlocked, getMyFriendshipType, FRIENDSHIP_TYPE_LABELS } from "@/types/friendship";
+import type { FriendshipTypeValue } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,8 +53,8 @@ export default function SettingsPage() {
 
   const fetchFriendships = useCallback(async () => {
     try {
-      const list = await getMyFriendships();
-      setFriendships(list.filter((f) => !isRemoved(f)));
+      const list = await getMyFriendships({ skip: 0, take: 100 });
+      setFriendships(list.data.filter((f) => !isRemoved(f)));
     } catch {}
   }, []);
 
@@ -169,6 +170,10 @@ export default function SettingsPage() {
   const handleUnblock = async (id: number) => {
     setActionLoading(id);
     try { const res = await unblockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
+  };
+  const handleChangeType = async (id: number, type: FriendshipTypeValue) => {
+    setActionLoading(id);
+    try { const res = await changeFriendshipType(id, type); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
   };
 
   return (
@@ -337,6 +342,20 @@ export default function SettingsPage() {
                         <p className="text-sm font-medium truncate">{f.otherUserName}</p>
                         {isBlocked(f) && (
                           <p className="text-xs text-destructive">Đã chặn</p>
+                        )}
+                        {isAccepted(f) && !isBlocked(f) && (
+                          <select
+                            value={String(getMyFriendshipType(f, user?.id))}
+                            disabled={actionLoading === f.id}
+                            onChange={(e) => handleChangeType(f.id, Number(e.target.value) as FriendshipTypeValue)}
+                            className="mt-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs"
+                          >
+                            {Object.entries(FRIENDSHIP_TYPE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
                         )}
                       </div>
                       <div className="flex gap-2">

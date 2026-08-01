@@ -1,6 +1,6 @@
 import type { ImageDto } from "./user";
 
-export type MomentVisibility = "OnlyMe" | "Friends" | "Lover" | "Public";
+export type MomentVisibility = "OnlyMe" | "Friends" | "BestFriend" | "Lover" | "Public";
 
 export interface MomentLocationDto {
   latitude: number;
