@@ -345,7 +345,7 @@ export default function SettingsPage() {
                         )}
                         {isAccepted(f) && !isBlocked(f) && (
                           <select
-                            value={getMyFriendshipType(f, user?.id)}
+                            value={String(getMyFriendshipType(f, user?.id))}
                             disabled={actionLoading === f.id}
                             onChange={(e) => handleChangeType(f.id, Number(e.target.value) as FriendshipTypeValue)}
                             className="mt-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs"

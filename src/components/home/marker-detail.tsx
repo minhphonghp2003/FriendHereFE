@@ -268,7 +268,7 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
             {actionLoading ? "..." : "Bạn bè ✓"}
           </button>
           <select
-            value={myType}
+            value={String(myType)}
             disabled={actionLoading || !friendshipDetail}
             onChange={(e) => handleChangeType(Number(e.target.value) as FriendshipTypeValue)}
             className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
