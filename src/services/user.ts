@@ -17,11 +17,7 @@ export const updateCurrentUser = async (input: UpdateUserInput): Promise<User> =
   return data.data;
 };
 
-export const uploadAvatar = async (file: File): Promise<User> => {
-  const formData = new FormData();
-  formData.append("file", file);
-  const { data } = await httpClient.post<ApiResponse<User>>("/User/me/avatar", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+export const setAvatar = async (fileId: string): Promise<User> => {
+  const { data } = await httpClient.post<ApiResponse<User>>("/User/me/avatar", { fileId });
   return data.data;
 };
