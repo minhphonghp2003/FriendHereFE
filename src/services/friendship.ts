@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse } from "@/types/api";
-import type { FriendshipDto } from "@/types/friendship";
+import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
 
 export async function getFriendshipById(id: number): Promise<FriendshipDto | null> {
   const { data } = await httpClient.get<ApiResponse<FriendshipDto>>(`/Friendship/${id}`);
@@ -44,4 +44,9 @@ export async function unblockUser(id: number): Promise<FriendshipDto> {
 
 export async function removeFriendship(id: number): Promise<void> {
   await httpClient.delete(`/Friendship/${id}`);
+}
+
+export async function changeFriendshipType(id: number, type: FriendshipTypeValue): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/type`, { type });
+  return data.data;
 }

@@ -2,17 +2,49 @@ export type FriendshipStatus = "Pending" | "Accepted" | "Rejected" | "Blocked" |
 
 export type FriendshipType = "Friend" | "BestFriend" | "Lover";
 
+export const FRIENDSHIP_TYPE_VALUES = {
+  Friend: 0,
+  BestFriend: 1,
+  Lover: 2,
+} as const;
+
+export type FriendshipTypeValue = (typeof FRIENDSHIP_TYPE_VALUES)[keyof typeof FRIENDSHIP_TYPE_VALUES];
+
+export const FRIENDSHIP_TYPE_LABELS: Record<FriendshipTypeValue, string> = {
+  [FRIENDSHIP_TYPE_VALUES.Friend]: "Bạn thường",
+  [FRIENDSHIP_TYPE_VALUES.BestFriend]: "Bạn thân",
+  [FRIENDSHIP_TYPE_VALUES.Lover]: "Người yêu",
+};
+
 export interface FriendshipDto {
   id: number;
   user1Id: number;
   user2Id: number;
   status: FriendshipStatus | number;
-  type: FriendshipType | number;
+  type1: FriendshipType | number;
+  type2: FriendshipType | number;
   requestedById: number;
   blockedById: number | null;
   createdAt: string;
   otherUserName: string;
   otherUserImage: { originalUrl: string; thumbUrl: string } | null;
+}
+
+export function normalizeFriendshipType(type: FriendshipType | number): FriendshipTypeValue {
+  if (type === "BestFriend") return FRIENDSHIP_TYPE_VALUES.BestFriend;
+  if (type === "Lover") return FRIENDSHIP_TYPE_VALUES.Lover;
+  if (typeof type === "number" && (type === 1 || type === 2)) return type;
+  return FRIENDSHIP_TYPE_VALUES.Friend;
+}
+
+export function getMyFriendshipType(
+  f: Pick<FriendshipDto, "user1Id" | "user2Id" | "type1" | "type2">,
+  myUserId: number | undefined
+): FriendshipTypeValue {
+  if (!myUserId) return FRIENDSHIP_TYPE_VALUES.Friend;
+  return f.user1Id === myUserId
+    ? normalizeFriendshipType(f.type1)
+    : normalizeFriendshipType(f.type2);
 }
 
 export function isPendingStatus(f: { status: string | number }): boolean {
