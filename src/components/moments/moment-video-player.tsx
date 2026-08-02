@@ -1,21 +1,24 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from "lucide-react";
 
 interface MomentVideoPlayerProps {
   src: string;
 }
 
 export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef<{ time: number; side: "left" | "right" } | null>(null);
   const toggleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [seekIndicator, setSeekIndicator] = useState<"forward" | "backward" | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -39,14 +42,50 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
     };
   }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === container);
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      container.requestFullscreen();
+    }
+  };
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
+      setMuted(false);
+      video.muted = false;
       video.play();
     } else {
       video.pause();
     }
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    setMuted((prev) => {
+      const next = !prev;
+      video.muted = next;
+      return next;
+    });
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,16 +129,19 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
   };
 
   return (
-    <div className="relative w-full bg-muted">
+    <div
+      ref={containerRef}
+      className={`relative w-full bg-muted ${isFullscreen ? "h-full" : ""}`}
+    >
       <div className="w-full" onClick={handleVideoClick}>
         <video
           ref={videoRef}
           src={src}
           autoPlay
-          muted
+          muted={muted}
           loop
           playsInline
-          className="pointer-events-none w-full"
+          className={`pointer-events-none w-full ${isFullscreen ? "h-full object-contain" : ""}`}
         />
       </div>
       {seekIndicator && (
@@ -118,6 +160,13 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
             {isPlaying ? <Pause className="h-6 w-6 fill-white" /> : <Play className="h-6 w-6 fill-white pl-0.5" />}
           </button>
           <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
+            <button
+              onClick={toggleMute}
+              className="text-white hover:opacity-80"
+              aria-label={muted ? "Bật tiếng" : "Tắt tiếng"}
+            >
+              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
             <span className="text-xs text-white tabular-nums">{formatTime(currentTime)}</span>
           <div className="relative flex h-1 flex-1 items-center">
             <div className="absolute inset-y-0 left-0 right-0 rounded-full bg-white/30" />
@@ -143,6 +192,13 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
             />
           </div>
             <span className="text-xs text-white tabular-nums">{formatTime(duration)}</span>
+            <button
+              onClick={toggleFullscreen}
+              className="text-white hover:opacity-80"
+              aria-label={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </button>
           </div>
         </>
       )}
