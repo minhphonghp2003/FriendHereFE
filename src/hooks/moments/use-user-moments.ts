@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserMoments } from "@/services/moment";
-import { appHub } from "@/lib/signalr/app-hub";
-import { applyFileMarkedSuccess } from "@/lib/moments";
 import type { MomentDto } from "@/types/moment";
 
 export const useUserMoments = (userId: number, skip = 0, take = 10) => {
@@ -40,12 +38,6 @@ export const useUserMoments = (userId: number, skip = 0, take = 10) => {
 
     fetchMoments();
   }, [userId, skip, take, refreshKey]);
-
-  useEffect(() => {
-    return appHub.onReceiveFileMarkedSuccess((file) => {
-      setData((prev) => applyFileMarkedSuccess(prev, file));
-    });
-  }, []);
 
   return { data, isLoading, error, totalCount, refetch };
 };

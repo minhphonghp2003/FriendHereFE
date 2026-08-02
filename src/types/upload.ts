@@ -12,10 +12,3 @@ export interface PresignedUploadItem {
   publicUrl: string;
   expiresAt: string;
 }
-
-export interface FileDto {
-  originalKey: string | null;
-  thumbKey: string | null;
-  originalUrl: string;
-  thumbUrl: string;
-}
