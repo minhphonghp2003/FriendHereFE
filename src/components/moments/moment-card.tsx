@@ -126,7 +126,13 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               <span className="text-sm font-medium text-white">Đang xử lý...</span>
             </div>
           ) : moment.video ? (
-            <MomentVideoPlayer src={moment.video.originalUrl} active={active} onToggleInfo={onToggleInfo} />
+            <MomentVideoPlayer
+              src={moment.video.originalUrl}
+              active={active}
+              fullscreen
+              showInfo={showInfo}
+              onToggleInfo={onToggleInfo}
+            />
           ) : moment.images.length === 1 ? (
             <img
               src={moment.images[0].originalUrl}
@@ -136,7 +142,12 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               draggable={false}
             />
           ) : (
-            <MomentImageCarousel fullscreen images={moment.images} onToggleInfo={onToggleInfo} />
+            <MomentImageCarousel
+              fullscreen
+              images={moment.images}
+              showInfo={showInfo}
+              onToggleInfo={onToggleInfo}
+            />
           )}
         </div>
 
@@ -244,7 +255,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         )}
 
         {showInfo && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-6 pt-16 pr-20">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-24 pt-16 pr-20">
             {moment.caption && (
               <p className="mb-2 text-sm font-medium text-white drop-shadow">{moment.caption}</p>
             )}

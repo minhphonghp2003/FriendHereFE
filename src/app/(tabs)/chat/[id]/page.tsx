@@ -33,6 +33,7 @@ export default function ChatScreenPage() {
   const [viewMomentId, setViewMomentId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const prevIdRef = useRef<number | null>(null);
@@ -144,6 +145,7 @@ export default function ChatScreenPage() {
       setInput(text);
     } finally {
       setSending(false);
+      inputRef.current?.focus();
     }
   }, [input, sending, conversationId, isBlocked, pendingMoment, momentIdParam]);
 
@@ -190,7 +192,7 @@ export default function ChatScreenPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)]">
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden pb-16">
       <div className="flex items-center gap-3 p-3 border-b border-border">
         <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded">
           <ArrowLeft className="w-5 h-5" />
@@ -284,7 +286,7 @@ export default function ChatScreenPage() {
             </div>
           ) : null}
           <div className="flex items-center gap-2 p-3">
-            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
+            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>

@@ -6,12 +6,18 @@ import type { MomentImage } from "@/types/moment";
 interface MomentImageCarouselProps {
   images: MomentImage[];
   fullscreen?: boolean;
+  showInfo?: boolean;
   onToggleInfo?: () => void;
 }
 
 const SWIPE_THRESHOLD = 50;
 
-export const MomentImageCarousel = ({ images, fullscreen = false, onToggleInfo }: MomentImageCarouselProps) => {
+export const MomentImageCarousel = ({
+  images,
+  fullscreen = false,
+  showInfo = true,
+  onToggleInfo,
+}: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -105,8 +111,8 @@ export const MomentImageCarousel = ({ images, fullscreen = false, onToggleInfo }
           </div>
         ))}
       </div>
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+      {images.length > 1 && showInfo && (
+        <div className={`absolute left-1/2 flex -translate-x-1/2 gap-1 ${fullscreen ? "bottom-20" : "bottom-2"}`}>
           {images.map((_, i) => (
             <div
               key={i}

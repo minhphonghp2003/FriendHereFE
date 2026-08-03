@@ -13,7 +13,7 @@ export default function MomentsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col">
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h1 className="text-2xl font-bold">Khoảnh khắc</h1>
         <Button size="sm" onClick={() => setShowCreate(true)}>
