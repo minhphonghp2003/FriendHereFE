@@ -4,7 +4,8 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
-import { getMomentById } from "@/services/moment";
+import { getMomentById, getMomentThumbnail } from "@/services/moment";
+import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send, Ban, ShieldOff, X } from "lucide-react";
@@ -29,6 +30,7 @@ export default function ChatScreenPage() {
   const momentIdParam = searchParams.get("momentId") ? Number(searchParams.get("momentId")) : null;
   const [pendingMoment, setPendingMoment] = useState<ImageDto | null>(null);
   const [pendingMomentLoading, setPendingMomentLoading] = useState(!!momentIdParam);
+  const [viewMomentId, setViewMomentId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -54,7 +56,7 @@ export default function ChatScreenPage() {
       getMomentById(momentIdParam)
         .then((res) => {
           if (res.success && res.data) {
-            setPendingMoment(res.data.firstImage);
+            setPendingMoment(getMomentThumbnail(res.data));
           }
         })
         .catch(() => {})
@@ -236,7 +238,8 @@ export default function ChatScreenPage() {
                       <img
                         src={msg.momentThumbnail.thumbUrl}
                         alt=""
-                        className="h-20 w-20 rounded-lg object-cover"
+                        onClick={() => msg.momentId && setViewMomentId(msg.momentId)}
+                        className="h-20 w-20 rounded-lg object-cover cursor-pointer"
                       />
                     </div>
                   ) : null}
@@ -288,6 +291,11 @@ export default function ChatScreenPage() {
           </div>
         </div>
       )}
+      <MomentDetailOverlay
+        momentId={viewMomentId}
+        currentUserId={user?.id}
+        onClose={() => setViewMomentId(null)}
+      />
     </div>
   );
 }

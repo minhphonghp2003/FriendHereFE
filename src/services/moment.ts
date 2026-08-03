@@ -10,10 +10,10 @@ const normalizeMomentDto = (moment: MomentDto): MomentDto => ({
   status: toMomentStatus(moment.status),
 });
 
-export interface MomentPreview {
-  id: number;
-  firstImage: ImageDto;
-}
+export const getMomentThumbnail = (moment: MomentDto): ImageDto | null =>
+  moment.images[0] ?? (moment.video
+    ? { originalUrl: moment.video.originalUrl, thumbUrl: moment.video.thumbUrl }
+    : null);
 
 export async function getFeedMoments(prevId?: number | null, take = 10): Promise<
   CursorPageResponse<MomentDto>
@@ -67,12 +67,11 @@ export async function getMomentReactions(id: number, prevId?: number | null, tak
   return data;
 }
 
-export async function getMomentById(id: number): Promise<{
-  success: boolean;
-  data?: MomentPreview;
-  message?: string;
-}> {
-  const res = await httpClient.get(`/Moment/${id}`);
+export async function getMomentById(id: number): Promise<ApiResponse<MomentDto>> {
+  const res = await httpClient.get<ApiResponse<MomentDto>>(`/Moment/${id}`);
+  if (res.data.data) {
+    return { ...res.data, data: normalizeMomentDto(res.data.data) };
+  }
   return res.data;
 }
 

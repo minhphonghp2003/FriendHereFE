@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { appHub } from "@/lib/signalr/app-hub";
 import { createConversation } from "@/services/chat";
-import { getMomentById } from "@/services/moment";
+import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { ArrowLeft, X } from "lucide-react";
 import type { ImageDto } from "@/types/chat";
 
@@ -24,7 +24,7 @@ export default function NewChatPage() {
     getMomentById(momentId)
       .then((res) => {
         if (res.success && res.data) {
-          setPendingMoment(res.data.firstImage);
+          setPendingMoment(getMomentThumbnail(res.data));
         }
       })
       .catch(() => {})
