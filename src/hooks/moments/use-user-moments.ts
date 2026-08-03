@@ -2,42 +2,64 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserMoments } from "@/services/moment";
 import type { MomentDto } from "@/types/moment";
 
-export const useUserMoments = (userId: number, skip = 0, take = 10) => {
+export const useUserMoments = (userId: number, take = 10) => {
   const [data, setData] = useState<MomentDto[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-  const prevUserIdRef = useRef(userId);
+  const prevIdRef = useRef<number | null>(null);
 
   const refetch = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  useEffect(() => {
-    const userIdChanged = prevUserIdRef.current !== userId;
-    prevUserIdRef.current = userId;
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || !hasMore || !userId) return;
+    setIsLoadingMore(true);
+    setError(null);
+    try {
+      const result = await getUserMoments(userId, prevIdRef.current, take);
+      setData((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        return [...prev, ...result.data.filter((m) => !existingIds.has(m.id))];
+      });
+      setHasMore(result.hasMore);
+      prevIdRef.current = result.prevId;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error("Failed to fetch user moments"));
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoading, isLoadingMore, hasMore, take, userId]);
 
-    if (userIdChanged) {
+  useEffect(() => {
+    if (!userId) {
       setData([]);
+      setIsLoading(false);
+      return;
     }
 
-    if (!userId) return;
-
-    const fetchMoments = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await getUserMoments(userId, skip, take);
-        setData((prev) => (userIdChanged ? result.data : [...prev, ...result.data]));
-        setTotalCount(result.totalCount);
-      } catch (err) {
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+    getUserMoments(userId, null, take)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result.data);
+        setHasMore(result.hasMore);
+        prevIdRef.current = result.prevId;
+      })
+      .catch((err) => {
+        if (cancelled) return;
         setError(err instanceof Error ? err : new Error("Failed to fetch user moments"));
-      } finally {
-        setIsLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
+  }, [userId, take, refreshKey]);
 
-    fetchMoments();
-  }, [userId, skip, take, refreshKey]);
-
-  return { data, isLoading, error, totalCount, refetch };
+  return { data, isLoading, isLoadingMore, error, hasMore, refetch, loadMore };
 };

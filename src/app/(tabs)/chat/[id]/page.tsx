@@ -32,16 +32,18 @@ export default function ChatScreenPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
-  const totalCount = useAppSelector((s) => s.chat.messageTotalCount[conversationId] ?? 0);
+  const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
+  const prevIdRef = useRef<number | null>(null);
 
-  const fetchMessages = useCallback(async (skip = 0) => {
+  const fetchMessages = useCallback(async (prevId: number | null = null) => {
     try {
-      const res = await getMessages(conversationId, skip, 20);
-      if (skip === 0) {
-        dispatch(setMessages({ conversationId, messages: res.data.reverse(), totalCount: res.totalCount }));
+      const res = await getMessages(conversationId, prevId, 20);
+      if (prevId === null) {
+        dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       } else {
-        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), totalCount: res.totalCount }));
+        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       }
+      prevIdRef.current = res.prevId;
     } catch (err) {
       console.error("Failed to fetch messages", err);
     }
@@ -73,7 +75,7 @@ export default function ChatScreenPage() {
           setBlockedById(res.data.blockedById);
         }
       }).catch(() => {}),
-      fetchMessages(0),
+      fetchMessages(),
     ]).finally(() => setLoading(false));
     appHub.joinConversation(conversationId).catch(console.error);
     return () => {
@@ -122,10 +124,10 @@ export default function ChatScreenPage() {
   const handleScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el || el.scrollTop > 0) return;
-    if (messages.length < totalCount) {
-      fetchMessages(messages.length);
+    if (hasMore) {
+      fetchMessages(prevIdRef.current);
     }
-  }, [messages.length, totalCount, fetchMessages]);
+  }, [hasMore, fetchMessages]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();

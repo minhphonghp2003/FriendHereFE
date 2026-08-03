@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ApiResponse } from "@/types/api";
+import type { ApiResponse, CursorPageResponse } from "@/types/api";
 import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
 
 export async function getFriendshipById(id: number): Promise<FriendshipDto | null> {
@@ -8,15 +8,10 @@ export async function getFriendshipById(id: number): Promise<FriendshipDto | nul
 }
 
 export async function getMyFriendships(params?: {
-  skip?: number;
+  prevId?: number;
   take?: number;
   type?: number;
-}): Promise<{
-  data: FriendshipDto[];
-  success: boolean;
-  message?: string;
-  totalCount: number;
-}> {
+}): Promise<CursorPageResponse<FriendshipDto>> {
   const { data } = await httpClient.get(`/Friendship/me`, { params });
   return data;
 }

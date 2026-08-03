@@ -13,8 +13,8 @@ export default function MomentsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
+    <div className="flex h-[calc(100dvh-4rem)] flex-col">
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h1 className="text-2xl font-bold">Khoảnh khắc</h1>
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="mr-1 h-4 w-4" />
@@ -22,12 +22,14 @@ export default function MomentsPage() {
         </Button>
       </div>
 
-      <MomentFeed
-        key={refreshKey}
-        currentUserId={user?.id}
-        onMomentDeleted={() => setRefreshKey((k) => k + 1)}
-        onMomentHidden={() => setRefreshKey((k) => k + 1)}
-      />
+      <div className="min-h-0 flex-1">
+        <MomentFeed
+          key={refreshKey}
+          currentUserId={user?.id}
+          onMomentDeleted={() => setRefreshKey((k) => k + 1)}
+          onMomentHidden={() => setRefreshKey((k) => k + 1)}
+        />
+      </div>
 
       <CreateMomentDialog
         open={showCreate}

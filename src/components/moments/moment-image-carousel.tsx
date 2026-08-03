@@ -5,11 +5,12 @@ import type { MomentImage } from "@/types/moment";
 
 interface MomentImageCarouselProps {
   images: MomentImage[];
+  fullscreen?: boolean;
 }
 
 const SWIPE_THRESHOLD = 50;
 
-export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
+export const MomentImageCarousel = ({ images, fullscreen = false }: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -67,7 +68,7 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
     : -currentIndex * (100 / images.length);
 
   return (
-    <div ref={containerRef} className="relative aspect-square w-full overflow-hidden bg-muted">
+    <div ref={containerRef} className={`relative overflow-hidden bg-black ${fullscreen ? "h-full w-full" : "aspect-square w-full"}`}>
       <div
         className="flex h-full"
         style={{
@@ -89,7 +90,7 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
             <img
               src={img.originalUrl}
               alt=""
-              className="h-full w-full object-cover select-none"
+              className={`h-full w-full select-none ${fullscreen ? "object-contain" : "object-cover"}`}
               draggable={false}
             />
           </div>
