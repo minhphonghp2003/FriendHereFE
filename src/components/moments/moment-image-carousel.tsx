@@ -6,11 +6,12 @@ import type { MomentImage } from "@/types/moment";
 interface MomentImageCarouselProps {
   images: MomentImage[];
   fullscreen?: boolean;
+  onToggleInfo?: () => void;
 }
 
 const SWIPE_THRESHOLD = 50;
 
-export const MomentImageCarousel = ({ images, fullscreen = false }: MomentImageCarouselProps) => {
+export const MomentImageCarousel = ({ images, fullscreen = false, onToggleInfo }: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,14 +53,22 @@ export const MomentImageCarousel = ({ images, fullscreen = false }: MomentImageC
 
   const handleClick = (e: React.MouseEvent) => {
     if (draggedRef.current) return;
-    if (images.length < 2) return;
+    if (images.length < 2) {
+      onToggleInfo?.();
+      return;
+    }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = e.clientX - rect.left;
-    if (x < rect.width / 2) {
-      goPrev();
+    const third = rect.width / 3;
+    if (x < third || x > rect.width - third) {
+      if (x < third) {
+        goPrev();
+      } else {
+        goNext();
+      }
     } else {
-      goNext();
+      onToggleInfo?.();
     }
   };
 

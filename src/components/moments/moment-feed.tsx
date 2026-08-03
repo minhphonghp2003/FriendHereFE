@@ -21,6 +21,9 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
   const containerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef(loadMore);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showInfo, setShowInfo] = useState(true);
+
+  const handleToggleInfo = useCallback(() => setShowInfo((v) => !v), []);
 
   useEffect(() => {
     loadMoreRef.current = loadMore;
@@ -71,7 +74,7 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
       onScroll={handleScroll}
       className="h-full snap-y snap-mandatory overflow-y-scroll"
     >
-      {moments.map((moment) => (
+      {moments.map((moment, index) => (
         <div key={moment.id} className="h-full w-full shrink-0 snap-start snap-always">
           <MomentCard
             fullscreen
@@ -79,6 +82,9 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
             currentUserId={currentUserId}
             onDelete={onMomentDeleted}
             onHide={onMomentHidden}
+            active={index === currentIndex}
+            showInfo={showInfo}
+            onToggleInfo={handleToggleInfo}
           />
         </div>
       ))}

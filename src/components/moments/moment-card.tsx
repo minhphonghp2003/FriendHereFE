@@ -22,6 +22,9 @@ interface MomentCardProps {
   onDelete?: (id: number) => void;
   onHide?: (id: number) => void;
   fullscreen?: boolean;
+  active?: boolean;
+  showInfo?: boolean;
+  onToggleInfo?: () => void;
 }
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
@@ -32,7 +35,7 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
-export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false }: MomentCardProps) => {
+export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false, active = true, showInfo = true, onToggleInfo }: MomentCardProps) => {
   const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
@@ -123,20 +126,22 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               <span className="text-sm font-medium text-white">Đang xử lý...</span>
             </div>
           ) : moment.video ? (
-            <MomentVideoPlayer src={moment.video.originalUrl} />
+            <MomentVideoPlayer src={moment.video.originalUrl} active={active} onToggleInfo={onToggleInfo} />
           ) : moment.images.length === 1 ? (
             <img
               src={moment.images[0].originalUrl}
               alt=""
+              onClick={onToggleInfo}
               className="h-full w-full object-contain select-none"
               draggable={false}
             />
           ) : (
-            <MomentImageCarousel fullscreen images={moment.images} />
+            <MomentImageCarousel fullscreen images={moment.images} onToggleInfo={onToggleInfo} />
           )}
         </div>
 
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
+        {showInfo && (
+          <div className="absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
               {moment.userImage ? (
@@ -191,67 +196,66 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             )}
           </div>
         </div>
+        )}
 
-        <div className="absolute bottom-24 right-2 z-10 flex flex-col items-center gap-5">
-          {!isOwner &&
-            COMMON_EMOJIS.map((emoji) => (
+        {showInfo && (
+          <div className="absolute bottom-24 right-2 z-10 flex flex-col items-center gap-5">
+            {!isOwner &&
+              COMMON_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReact(emoji)}
+                  disabled={reactingEmoji === emoji}
+                  className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110 disabled:opacity-50"
+                >
+                  {emoji}
+                </button>
+              ))}
+            {!isOwner && (
               <button
-                key={emoji}
-                onClick={() => handleReact(emoji)}
-                disabled={reactingEmoji === emoji}
-                className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110 disabled:opacity-50"
+                onClick={() => setShowEmojiPicker(true)}
+                disabled={reactingEmoji !== null}
+                className="text-white/90 hover:text-white disabled:opacity-50"
               >
-                {emoji}
+                <SmilePlus className="h-8 w-8 drop-shadow-lg" />
               </button>
-            ))}
-          {!isOwner && (
-            <button
-              onClick={() => setShowEmojiPicker(true)}
-              disabled={reactingEmoji !== null}
-              className="text-white/90 hover:text-white disabled:opacity-50"
-            >
-              <SmilePlus className="h-8 w-8 drop-shadow-lg" />
-            </button>
-          )}
-          {!isOwner && moment.allowComment && (
-            <button
-              onClick={handleSendMessage}
-              disabled={sendingMessage}
-              className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white disabled:opacity-50"
-            >
-              <MessageCircle className="h-8 w-8 drop-shadow-lg" />
-              <span className="text-[11px] font-medium">{sendingMessage ? "..." : "Nhắn tin"}</span>
-            </button>
-          )}
-          {isOwner && (
-            <button
-              onClick={() => setShowReactions(true)}
-              className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white"
-            >
-              <div className="flex flex-col-reverse items-center">
+            )}
+            {!isOwner && moment.allowComment && (
+              <button
+                onClick={handleSendMessage}
+                disabled={sendingMessage}
+                className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white disabled:opacity-50"
+              >
+                <MessageCircle className="h-8 w-8 drop-shadow-lg" />
+                <span className="text-[11px] font-medium">{sendingMessage ? "..." : "Nhắn tin"}</span>
+              </button>
+            )}
+            {isOwner && groupedReactions.length > 0 && (
+              <button
+                onClick={() => setShowReactions(true)}
+                className="flex flex-col-reverse items-center text-white/90 hover:text-white"
+              >
                 {groupedReactions.slice(0, 3).map((g) => (
-                  <span key={g.emoji} className="text-2xl drop-shadow-lg">{g.emoji}</span>
+                  <span key={g.emoji} className="text-3xl drop-shadow-lg">{g.emoji}</span>
                 ))}
-              </div>
-              <span className="text-[11px] font-medium">Cảm xúc</span>
-            </button>
-          )}
-        </div>
+              </button>
+            )}
+          </div>
+        )}
 
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-6 pt-16 pr-20">
-          {moment.caption && (
-            <p className="mb-2 text-sm font-medium text-white drop-shadow">{moment.caption}</p>
-          )}
-          {moment.location?.isShowed && (
-            <div className="mb-2 flex items-center gap-1.5 text-xs text-white/80">
-              <MapPin className="h-3 w-3" />
-              <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
-            </div>
-          )}
-          {isOwner && groupedReactions.length === 0 && (
-            <p className="text-xs text-white/70">Chưa có cảm xúc</p>
-          )}
-        </div>
+        {showInfo && (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-6 pt-16 pr-20">
+            {moment.caption && (
+              <p className="mb-2 text-sm font-medium text-white drop-shadow">{moment.caption}</p>
+            )}
+            {moment.location?.isShowed && (
+              <div className="mb-2 flex items-center gap-1.5 text-xs text-white/80">
+                <MapPin className="h-3 w-3" />
+                <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {showEmojiPicker && (
           <div

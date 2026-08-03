@@ -5,15 +5,17 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
 
 interface MomentVideoPlayerProps {
   src: string;
+  active?: boolean;
+  onToggleInfo?: () => void;
 }
 
-export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
+export const MomentVideoPlayer = ({ src, active = true, onToggleInfo }: MomentVideoPlayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef<{ time: number; side: "left" | "right" } | null>(null);
   const toggleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
@@ -27,7 +29,10 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
     const onTimeUpdate = () => setCurrentTime(video.currentTime);
     const onLoadedMetadata = () => setDuration(video.duration);
     const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      setIsPlaying(false);
+      if (onToggleInfo) setShowControls(true);
+    };
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -40,7 +45,18 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
     };
-  }, []);
+  }, [onToggleInfo]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (active) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+      setShowControls(false);
+    }
+  }, [active]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -122,7 +138,11 @@ export const MomentVideoPlayer = ({ src }: MomentVideoPlayerProps) => {
     } else {
       lastTapRef.current = { time: now, side };
       toggleTimeoutRef.current = setTimeout(() => {
-        setShowControls((v) => !v);
+        if (onToggleInfo) {
+          onToggleInfo();
+        } else {
+          setShowControls((v) => !v);
+        }
         toggleTimeoutRef.current = null;
       }, 300);
     }
