@@ -4,7 +4,8 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
-import { getMomentById } from "@/services/moment";
+import { getMomentById, getMomentThumbnail } from "@/services/moment";
+import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { ArrowLeft, Send, Ban, ShieldOff, X } from "lucide-react";
@@ -29,19 +30,23 @@ export default function ChatScreenPage() {
   const momentIdParam = searchParams.get("momentId") ? Number(searchParams.get("momentId")) : null;
   const [pendingMoment, setPendingMoment] = useState<ImageDto | null>(null);
   const [pendingMomentLoading, setPendingMomentLoading] = useState(!!momentIdParam);
+  const [viewMomentId, setViewMomentId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
-  const totalCount = useAppSelector((s) => s.chat.messageTotalCount[conversationId] ?? 0);
+  const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
+  const prevIdRef = useRef<number | null>(null);
 
-  const fetchMessages = useCallback(async (skip = 0) => {
+  const fetchMessages = useCallback(async (prevId: number | null = null) => {
     try {
-      const res = await getMessages(conversationId, skip, 20);
-      if (skip === 0) {
-        dispatch(setMessages({ conversationId, messages: res.data.reverse(), totalCount: res.totalCount }));
+      const res = await getMessages(conversationId, prevId, 20);
+      if (prevId === null) {
+        dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       } else {
-        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), totalCount: res.totalCount }));
+        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       }
+      prevIdRef.current = res.prevId;
     } catch (err) {
       console.error("Failed to fetch messages", err);
     }
@@ -52,7 +57,7 @@ export default function ChatScreenPage() {
       getMomentById(momentIdParam)
         .then((res) => {
           if (res.success && res.data) {
-            setPendingMoment(res.data.firstImage);
+            setPendingMoment(getMomentThumbnail(res.data));
           }
         })
         .catch(() => {})
@@ -73,7 +78,7 @@ export default function ChatScreenPage() {
           setBlockedById(res.data.blockedById);
         }
       }).catch(() => {}),
-      fetchMessages(0),
+      fetchMessages(),
     ]).finally(() => setLoading(false));
     appHub.joinConversation(conversationId).catch(console.error);
     return () => {
@@ -122,10 +127,10 @@ export default function ChatScreenPage() {
   const handleScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el || el.scrollTop > 0) return;
-    if (messages.length < totalCount) {
-      fetchMessages(messages.length);
+    if (hasMore) {
+      fetchMessages(prevIdRef.current);
     }
-  }, [messages.length, totalCount, fetchMessages]);
+  }, [hasMore, fetchMessages]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -140,6 +145,7 @@ export default function ChatScreenPage() {
       setInput(text);
     } finally {
       setSending(false);
+      inputRef.current?.focus();
     }
   }, [input, sending, conversationId, isBlocked, pendingMoment, momentIdParam]);
 
@@ -186,7 +192,7 @@ export default function ChatScreenPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)]">
+    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden pb-16">
       <div className="flex items-center gap-3 p-3 border-b border-border">
         <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded">
           <ArrowLeft className="w-5 h-5" />
@@ -234,7 +240,8 @@ export default function ChatScreenPage() {
                       <img
                         src={msg.momentThumbnail.thumbUrl}
                         alt=""
-                        className="h-20 w-20 rounded-lg object-cover"
+                        onClick={() => msg.momentId && setViewMomentId(msg.momentId)}
+                        className="h-20 w-20 rounded-lg object-cover cursor-pointer"
                       />
                     </div>
                   ) : null}
@@ -279,13 +286,18 @@ export default function ChatScreenPage() {
             </div>
           ) : null}
           <div className="flex items-center gap-2 p-3">
-            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
+            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
+      <MomentDetailOverlay
+        momentId={viewMomentId}
+        currentUserId={user?.id}
+        onClose={() => setViewMomentId(null)}
+      />
     </div>
   );
 }

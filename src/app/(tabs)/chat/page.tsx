@@ -13,19 +13,21 @@ export default function ChatListPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAuth();
-  const { conversations, conversationsTotalCount } = useAppSelector((s) => s.chat);
+  const { conversations, conversationsHasMore } = useAppSelector((s) => s.chat);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const prevIdRef = useRef<number | null>(null);
 
-  const fetchConversations = useCallback(async (skip = 0) => {
+  const fetchConversations = useCallback(async (prevId: number | null = null) => {
     try {
-      const res = await getConversations(skip, 20);
-      if (skip === 0) {
-        dispatch(setConversations({ data: res.data, totalCount: res.totalCount }));
+      const res = await getConversations(prevId, 20);
+      if (prevId === null) {
+        dispatch(setConversations({ data: res.data, hasMore: res.hasMore }));
       } else {
-        dispatch(addConversations({ data: res.data, totalCount: res.totalCount }));
+        dispatch(addConversations({ data: res.data, hasMore: res.hasMore }));
       }
+      prevIdRef.current = res.prevId;
     } catch (err) {
       console.error("Failed to fetch conversations", err);
     }
@@ -33,16 +35,16 @@ export default function ChatListPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetchConversations(0).finally(() => setLoading(false));
+    fetchConversations().finally(() => setLoading(false));
   }, [fetchConversations]);
 
   useEffect(() => {
     if (!user) return;
     const unsubBlocked = appHub.onReceiveChatBlocked(() => {
-      fetchConversations(0);
+      fetchConversations();
     });
     const unsubUnblocked = appHub.onReceiveChatUnblocked(() => {
-      fetchConversations(0);
+      fetchConversations();
     });
     return () => { unsubBlocked(); unsubUnblocked(); };
   }, [user, fetchConversations]);
@@ -51,12 +53,12 @@ export default function ChatListPage() {
     if (!listRef.current || loadingMore) return;
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 100) {
-      if (conversations.length < conversationsTotalCount) {
+      if (conversationsHasMore) {
         setLoadingMore(true);
-        fetchConversations(conversations.length).finally(() => setLoadingMore(false));
+        fetchConversations(prevIdRef.current).finally(() => setLoadingMore(false));
       }
     }
-  }, [conversations.length, conversationsTotalCount, fetchConversations, loadingMore]);
+  }, [conversationsHasMore, fetchConversations, loadingMore]);
 
   const handleChatClick = useCallback((conv: ConversationDto) => {
     if (conv.id) {

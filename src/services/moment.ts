@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ApiResponse } from "@/types/api";
+import type { ApiResponse, CursorPageResponse } from "@/types/api";
 import type { MomentDto, GroupedReactionDto, CreateMomentRequest } from "@/types/moment";
 import { toMomentVisibility, toMomentStatus } from "@/types/moment";
 import type { ImageDto } from "@/types/chat";
@@ -10,32 +10,26 @@ const normalizeMomentDto = (moment: MomentDto): MomentDto => ({
   status: toMomentStatus(moment.status),
 });
 
-export interface MomentPreview {
-  id: number;
-  firstImage: ImageDto;
-}
+export const getMomentThumbnail = (moment: MomentDto): ImageDto | null =>
+  moment.images[0] ?? (moment.video
+    ? { originalUrl: moment.video.originalUrl, thumbUrl: moment.video.thumbUrl }
+    : null);
 
-export async function getFeedMoments(skip = 0, take = 10): Promise<{
-  data: MomentDto[];
-  success: boolean;
-  message?: string;
-  totalCount: number;
-}> {
+export async function getFeedMoments(prevId?: number | null, take = 10): Promise<
+  CursorPageResponse<MomentDto>
+> {
   const res = await httpClient.get("/Moment/feed", {
-    params: { skip, take },
+    params: { prevId: prevId ?? undefined, take },
   });
   res.data.data = res.data.data.map(normalizeMomentDto);
   return res.data;
 }
 
-export async function getUserMoments(userId: number, skip = 0, take = 10): Promise<{
-  data: MomentDto[];
-  success: boolean;
-  message?: string;
-  totalCount: number;
-}> {
+export async function getUserMoments(userId: number, prevId?: number | null, take = 10): Promise<
+  CursorPageResponse<MomentDto>
+> {
   const res = await httpClient.get(`/Moment/user/${userId}`, {
-    params: { skip, take },
+    params: { prevId: prevId ?? undefined, take },
   });
   res.data.data = res.data.data.map(normalizeMomentDto);
   return res.data;
@@ -64,22 +58,20 @@ export async function addMomentReaction(id: number, emoji: string): Promise<void
   await httpClient.post(`/Moment/${id}/reactions`, { emoji });
 }
 
-export async function getMomentReactions(id: number, skip = 0, take = 10): Promise<{
-  data: GroupedReactionDto[];
-  totalCount: number;
-}> {
+export async function getMomentReactions(id: number, prevId?: number | null, take = 10): Promise<
+  CursorPageResponse<GroupedReactionDto>
+> {
   const { data } = await httpClient.get(`/Moment/${id}/reactions`, {
-    params: { skip, take },
+    params: { prevId: prevId ?? undefined, take },
   });
   return data;
 }
 
-export async function getMomentById(id: number): Promise<{
-  success: boolean;
-  data?: MomentPreview;
-  message?: string;
-}> {
-  const res = await httpClient.get(`/Moment/${id}`);
+export async function getMomentById(id: number): Promise<ApiResponse<MomentDto>> {
+  const res = await httpClient.get<ApiResponse<MomentDto>>(`/Moment/${id}`);
+  if (res.data.data) {
+    return { ...res.data, data: normalizeMomentDto(res.data.data) };
+  }
   return res.data;
 }
 

@@ -1,14 +1,12 @@
 import { httpClient } from "@/lib/axios";
 import type { ConversationDto, MessageDto } from "@/types/chat";
+import type { CursorPageResponse } from "@/types/api";
 
-export async function getConversations(skip = 0, take = 20): Promise<{
-  data: ConversationDto[];
-  success: boolean;
-  message?: string;
-  totalCount: number;
-}> {
+export async function getConversations(prevId?: number | null, take = 20): Promise<
+  CursorPageResponse<ConversationDto>
+> {
   const res = await httpClient.get("/chat", {
-    params: { skip, take },
+    params: { prevId: prevId ?? undefined, take },
   });
   return res.data;
 }
@@ -35,16 +33,11 @@ export async function getConversation(
 
 export async function getMessages(
   conversationId: number,
-  skip = 0,
+  prevId?: number | null,
   take = 20
-): Promise<{
-  data: MessageDto[];
-  success: boolean;
-  message?: string;
-  totalCount: number;
-}> {
+): Promise<CursorPageResponse<MessageDto>> {
   const res = await httpClient.get(`/chat/${conversationId}/messages`, {
-    params: { skip, take },
+    params: { prevId: prevId ?? undefined, take },
   });
   return res.data;
 }

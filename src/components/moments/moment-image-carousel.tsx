@@ -5,11 +5,19 @@ import type { MomentImage } from "@/types/moment";
 
 interface MomentImageCarouselProps {
   images: MomentImage[];
+  fullscreen?: boolean;
+  showInfo?: boolean;
+  onToggleInfo?: () => void;
 }
 
 const SWIPE_THRESHOLD = 50;
 
-export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
+export const MomentImageCarousel = ({
+  images,
+  fullscreen = false,
+  showInfo = true,
+  onToggleInfo,
+}: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -51,14 +59,22 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
 
   const handleClick = (e: React.MouseEvent) => {
     if (draggedRef.current) return;
-    if (images.length < 2) return;
+    if (images.length < 2) {
+      onToggleInfo?.();
+      return;
+    }
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const x = e.clientX - rect.left;
-    if (x < rect.width / 2) {
-      goPrev();
+    const third = rect.width / 3;
+    if (x < third || x > rect.width - third) {
+      if (x < third) {
+        goPrev();
+      } else {
+        goNext();
+      }
     } else {
-      goNext();
+      onToggleInfo?.();
     }
   };
 
@@ -67,7 +83,7 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
     : -currentIndex * (100 / images.length);
 
   return (
-    <div ref={containerRef} className="relative aspect-square w-full overflow-hidden bg-muted">
+    <div ref={containerRef} className={`relative overflow-hidden bg-black ${fullscreen ? "h-full w-full" : "aspect-square w-full"}`}>
       <div
         className="flex h-full"
         style={{
@@ -89,14 +105,14 @@ export const MomentImageCarousel = ({ images }: MomentImageCarouselProps) => {
             <img
               src={img.originalUrl}
               alt=""
-              className="h-full w-full object-cover select-none"
+              className={`h-full w-full select-none ${fullscreen ? "object-contain" : "object-cover"}`}
               draggable={false}
             />
           </div>
         ))}
       </div>
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+      {images.length > 1 && showInfo && (
+        <div className={`absolute left-1/2 flex -translate-x-1/2 gap-1 ${fullscreen ? "bottom-20" : "bottom-2"}`}>
           {images.map((_, i) => (
             <div
               key={i}

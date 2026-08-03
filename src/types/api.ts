@@ -4,6 +4,14 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface CursorPageResponse<T> {
+  data: T[];
+  success: boolean;
+  message?: string | null;
+  prevId: number | null;
+  hasMore: boolean;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {

@@ -3,33 +3,33 @@ import type { ConversationDto, MessageDto } from "@/types/chat";
 
 interface ChatState {
   conversations: ConversationDto[];
-  conversationsTotalCount: number;
+  conversationsHasMore: boolean;
   activeConversationId: number | null;
   messages: Record<number, MessageDto[]>;
-  messageTotalCount: Record<number, number>;
+  messageHasMore: Record<number, boolean>;
 }
 
 const initialState: ChatState = {
   conversations: [],
-  conversationsTotalCount: 0,
+  conversationsHasMore: true,
   activeConversationId: null,
   messages: {},
-  messageTotalCount: {},
+  messageHasMore: {},
 };
 
 const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
-    setConversations: (state, action: PayloadAction<{ data: ConversationDto[]; totalCount: number }>) => {
+    setConversations: (state, action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>) => {
       state.conversations = action.payload.data;
-      state.conversationsTotalCount = action.payload.totalCount;
+      state.conversationsHasMore = action.payload.hasMore;
     },
-    addConversations: (state, action: PayloadAction<{ data: ConversationDto[]; totalCount: number }>) => {
+    addConversations: (state, action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>) => {
       const existingIds = new Set(state.conversations.map((c) => c.id));
       const newOnes = action.payload.data.filter((c) => !existingIds.has(c.id));
       state.conversations.push(...newOnes);
-      state.conversationsTotalCount = action.payload.totalCount;
+      state.conversationsHasMore = action.payload.hasMore;
     },
     addConversation: (state, action: PayloadAction<ConversationDto>) => {
       const idx = state.conversations.findIndex((c) => c.id === action.payload.id);
@@ -76,16 +76,16 @@ const chatSlice = createSlice({
         conv.blockedById = null;
       }
     },
-    setMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; totalCount: number }>) => {
+    setMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>) => {
       state.messages[action.payload.conversationId] = action.payload.messages;
-      state.messageTotalCount[action.payload.conversationId] = action.payload.totalCount;
+      state.messageHasMore[action.payload.conversationId] = action.payload.hasMore;
     },
-    prependMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; totalCount: number }>) => {
+    prependMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>) => {
       const existing = state.messages[action.payload.conversationId] ?? [];
       const existingIds = new Set(existing.map((m) => m.id));
       const newOnes = action.payload.messages.filter((m) => !existingIds.has(m.id));
       state.messages[action.payload.conversationId] = [...newOnes, ...existing];
-      state.messageTotalCount[action.payload.conversationId] = action.payload.totalCount;
+      state.messageHasMore[action.payload.conversationId] = action.payload.hasMore;
     },
     appendMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
       const { conversationId, message } = action.payload;
