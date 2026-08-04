@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SmilePlus, Trash2, EyeOff, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2 } from "lucide-react";
@@ -134,12 +135,15 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               onToggleInfo={onToggleInfo}
             />
           ) : moment.images.length === 1 ? (
-            <img
+            <Image
               src={moment.images[0].originalUrl}
               alt=""
+              fill
+              sizes="(max-width: 640px) 412px, 625px"
               onClick={onToggleInfo}
               className="h-full w-full object-contain select-none"
               draggable={false}
+              fetchPriority="high"
             />
           ) : (
             <MomentImageCarousel
@@ -179,6 +183,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
+              aria-label="Tùy chọn"
             >
               <MoreHorizontal className="h-5 w-5" />
             </button>
@@ -363,9 +368,11 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         )}
         {!moment.video && moment.images.length === 1 && (
           <div className="relative aspect-square w-full overflow-hidden bg-muted">
-            <img
+            <Image
               src={moment.images[0].originalUrl}
               alt=""
+              fill
+              sizes="(max-width: 640px) 412px, 745px"
               className="h-full w-full object-cover select-none"
               draggable={false}
             />
