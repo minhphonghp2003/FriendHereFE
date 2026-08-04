@@ -140,6 +140,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               onClick={onToggleInfo}
               className="h-full w-full object-contain select-none"
               draggable={false}
+              fetchPriority="high"
             />
           ) : (
             <MomentImageCarousel

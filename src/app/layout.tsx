@@ -21,6 +21,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="http://phongpc.local:9000" />
+      </head>
       <body>
         <ThemeProvider
           attribute="class"
