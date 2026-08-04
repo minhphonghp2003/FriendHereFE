@@ -179,6 +179,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
+              aria-label="Tùy chọn"
             >
               <MoreHorizontal className="h-5 w-5" />
             </button>

@@ -163,6 +163,7 @@ export const MomentVideoPlayer = ({
                 step={0.1}
                 value={currentTime}
                 onChange={handleSeek}
+                aria-label="Thanh tiến độ video"
                 className="absolute inset-0 z-20 w-full cursor-pointer opacity-0"
               />
             </div>
