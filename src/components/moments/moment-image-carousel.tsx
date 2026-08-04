@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef } from "react";
 import type { MomentImage } from "@/types/moment";
 
@@ -102,9 +103,11 @@ export const MomentImageCarousel = ({
       >
         {images.map((img, i) => (
           <div key={i} className="relative h-full" style={{ width: `${100 / images.length}%` }}>
-            <img
+            <Image
               src={img.originalUrl}
               alt=""
+              fill
+              sizes="(max-width: 640px) 412px, 745px"
               className={`h-full w-full select-none ${fullscreen ? "object-contain" : "object-cover"}`}
               draggable={false}
             />
