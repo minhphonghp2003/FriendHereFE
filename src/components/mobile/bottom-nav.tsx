@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Settings, MessageCircle, Image } from "lucide-react";
+import { Home, Settings, MessageCircle, Image, Route } from "lucide-react";
 
 const tabs = [
   { href: "/home", label: "Trang chủ", icon: Home },
   { href: "/moments", label: "Khoảnh khắc", icon: Image },
+  { href: "/timelines", label: "Hành trình", icon: Route },
   { href: "/chat", label: "Tin nhắn", icon: MessageCircle },
   { href: "/settings", label: "Cài đặt", icon: Settings },
 ];

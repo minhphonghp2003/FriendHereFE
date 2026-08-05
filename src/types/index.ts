@@ -14,3 +14,4 @@ export type {
   CreateMomentInput,
   UpdateMomentInput,
 } from "./moment";
+export type { TimelinePartnerDto, TimelineDto, CreateTimelineInput } from "./timeline";
