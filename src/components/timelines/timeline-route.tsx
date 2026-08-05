@@ -2,7 +2,6 @@
 
 import { Fragment, useMemo } from "react";
 import { MapPin, PlaneTakeoff, PlaneLanding, Play, Loader2, ImageIcon } from "lucide-react";
-import { getMomentThumbnail } from "@/services/moment";
 import { cn } from "@/lib/utils";
 import type { MomentDto } from "@/types/moment";
 
@@ -27,7 +26,7 @@ const RouteConnector = ({ fromLeft }: { fromLeft: boolean }) => (
     <svg
       viewBox="0 0 100 40"
       preserveAspectRatio="none"
-      className="h-10 w-full text-primary/50"
+      className="text-primary/50 h-10 w-full"
       fill="none"
     >
       <path
@@ -41,17 +40,19 @@ const RouteConnector = ({ fromLeft }: { fromLeft: boolean }) => (
   </div>
 );
 
-const ConnectionMarker = ({ side, plane }: { side: "left" | "right"; plane?: boolean }) => (
-  <div
-    className={cn(
-      "absolute top-0 z-10 flex -translate-y-1/2 items-center justify-center rounded-full",
-      plane ? "bg-primary text-primary-foreground h-5 w-5 shadow" : "bg-primary h-2 w-2",
-      side === "left" ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2",
-    )}
-  >
-    {plane && <PlaneTakeoff className="h-3 w-3" />}
-  </div>
-);
+const ConnectionMarker = ({ side, plane }: { side: "left" | "right"; plane?: boolean }) => {
+  if (!plane) return null;
+  return (
+    <div
+      className={cn(
+        "bg-primary text-primary-foreground absolute top-0 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full shadow",
+        side === "left" ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2",
+      )}
+    >
+      <PlaneTakeoff className="h-3 w-3" />
+    </div>
+  );
+};
 
 const EndMarker = ({ side }: { side: "left" | "right" }) => (
   <div
@@ -65,15 +66,20 @@ const EndMarker = ({ side }: { side: "left" | "right" }) => (
 );
 
 const RouteCard = ({ moment, onClick }: { moment: MomentDto; onClick: () => void }) => {
-  const thumb = getMomentThumbnail(moment);
+  const mediaUrl =
+    moment.images.length > 0
+      ? moment.images[0].originalUrl
+      : moment.video
+        ? moment.video.thumbUrl
+        : null;
 
   return (
     <button
       onClick={onClick}
       className="border-border bg-muted relative aspect-[4/5] w-full overflow-hidden rounded-xl border text-left shadow-sm transition-transform hover:scale-[1.02]"
     >
-      {thumb ? (
-        <img src={thumb.thumbUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {mediaUrl ? (
+        <img src={mediaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="text-muted-foreground absolute inset-0 flex items-center justify-center">
           <ImageIcon className="h-6 w-6" />
@@ -151,12 +157,6 @@ export const TimelineRoute = ({ moments, onMomentClick }: TimelineRouteProps) =>
             {index > 0 && <RouteConnector fromLeft={(index - 1) % 2 === 0} />}
             <div className="relative flex">
               <div className="relative w-full">
-                <div
-                  className={cn(
-                    "border-primary/40 absolute top-0 bottom-0 border-l-2 border-dotted",
-                    isLeft ? "right-0" : "left-0",
-                  )}
-                />
                 <ConnectionMarker side={side} plane={index === 0} />
                 {isLast && <EndMarker side={side} />}
                 <RouteCard moment={moment} onClick={() => onMomentClick?.(moment.id)} />
