@@ -10,9 +10,15 @@ interface MomentDetailOverlayProps {
   momentId: number | null;
   currentUserId?: number;
   onClose: () => void;
+  hideTimelineChip?: boolean;
 }
 
-export const MomentDetailOverlay = ({ momentId, currentUserId, onClose }: MomentDetailOverlayProps) => {
+export const MomentDetailOverlay = ({
+  momentId,
+  currentUserId,
+  onClose,
+  hideTimelineChip,
+}: MomentDetailOverlayProps) => {
   const [moment, setMoment] = useState<MomentDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -60,7 +66,7 @@ export const MomentDetailOverlay = ({ momentId, currentUserId, onClose }: Moment
     <div className="fixed inset-0 z-[70] flex flex-col bg-black">
       <button
         onClick={onClose}
-        className="absolute right-3 top-3 z-20 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+        className="absolute top-3 right-3 z-20 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
         aria-label="Đóng"
       >
         <X className="h-5 w-5" />
@@ -81,6 +87,7 @@ export const MomentDetailOverlay = ({ momentId, currentUserId, onClose }: Moment
             currentUserId={currentUserId}
             showInfo={showInfo}
             onToggleInfo={() => setShowInfo((v) => !v)}
+            hideTimelineChip={hideTimelineChip}
             onDelete={onClose}
             onHide={onClose}
           />

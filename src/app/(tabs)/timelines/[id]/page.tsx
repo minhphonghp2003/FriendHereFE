@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Trash2, Route, Calendar } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, Route } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { useTimeline, useTimelineMoments, useDeleteTimeline } from "@/hooks/timelines";
-import { MomentCard } from "@/components/moments/moment-card";
+import { TimelineRoute } from "@/components/timelines/timeline-route";
+import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
 
-const PAGE_TAKE = 10;
-const LOAD_MORE_THRESHOLD = 8;
+const PAGE_TAKE = 20;
+
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
 
 export default function TimelineDetailPage() {
   const params = useParams();
@@ -25,32 +27,23 @@ export default function TimelineDetailPage() {
     isLoadingMore,
     hasMore,
     loadMore,
-    refetch: refetchMoments,
   } = useTimelineMoments(timelineId, PAGE_TAKE);
   const { mutate: deleteTimeline, isLoading: deleting } = useDeleteTimeline();
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const loadMoreRef = useRef(loadMore);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showInfo, setShowInfo] = useState(true);
-
-  const handleToggleInfo = useCallback(() => setShowInfo((v) => !v), []);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [viewMomentId, setViewMomentId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadMoreRef.current = loadMore;
-  }, [loadMore]);
-
-  const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (!el || el.clientHeight === 0) return;
-    setCurrentIndex(Math.round(el.scrollTop / el.clientHeight));
-  }, []);
-
-  useEffect(() => {
-    if (moments.length - currentIndex <= PAGE_TAKE - LOAD_MORE_THRESHOLD + 1 && hasMore) {
-      loadMoreRef.current();
-    }
-  }, [currentIndex, moments.length, hasMore]);
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    const handleScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 150 && hasMore && !isLoadingMore) {
+        loadMore();
+      }
+    };
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoadingMore, loadMore]);
 
   const isOwner = timeline?.ownerId === user?.id;
 
@@ -61,33 +54,38 @@ export default function TimelineDetailPage() {
     } catch {}
   };
 
+  const sortedMoments = [...moments].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  const firstMoment = sortedMoments[0];
+  const lastMoment = sortedMoments[sortedMoments.length - 1];
+
   return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-black">
-      <div className="flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-2 py-2">
-        <div className="flex min-w-0 items-center gap-1">
-          <button
-            onClick={() => router.back()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/10"
-            aria-label="Quay lại"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">
-              {timeline?.caption ?? "Dòng thời gian"}
-            </p>
-            <p className="flex items-center gap-1 text-xs text-white/70">
-              <Route className="h-3 w-3" />
-              <span>{timeline?.momentCount ?? moments.length} khoảnh khắc</span>
-              {timeline && (
-                <>
-                  <span>·</span>
-                  <Calendar className="h-3 w-3" />
-                  <span>{formatDate(timeline.createdAt)}</span>
-                </>
-              )}
-            </p>
-          </div>
+    <div className="bg-background flex h-full flex-col">
+      <div className="flex items-center gap-1 px-2 pt-3">
+        <button
+          onClick={() => router.back()}
+          className="hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          aria-label="Quay lại"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg leading-tight font-bold">
+            {timeline?.caption ?? "Hành trình"}
+          </h1>
+          <p className="text-muted-foreground flex items-center gap-1 text-xs">
+            <Route className="h-3 w-3 shrink-0" />
+            <span>{timeline?.momentCount ?? moments.length} khoảnh khắc</span>
+            {firstMoment && lastMoment && (
+              <>
+                <span>·</span>
+                <span>
+                  {shortDate(firstMoment.createdAt)} – {shortDate(lastMoment.createdAt)}
+                </span>
+              </>
+            )}
+          </p>
         </div>
         {isOwner && (
           <Button
@@ -95,7 +93,7 @@ export default function TimelineDetailPage() {
             size="icon-sm"
             onClick={handleDelete}
             disabled={deleting}
-            className="text-destructive hover:text-destructive hover:bg-white/10"
+            className="text-destructive hover:bg-muted hover:text-destructive"
             aria-label="Xóa dòng thời gian"
           >
             {deleting ? (
@@ -108,12 +106,12 @@ export default function TimelineDetailPage() {
       </div>
 
       {timeline && timeline.partners.length > 0 && (
-        <div className="flex items-center gap-1.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-2">
-          <div className="flex -space-x-2">
+        <div className="flex items-center gap-1.5 px-4 pt-1 pb-3">
+          <div className="flex -space-x-1.5">
             {timeline.partners.slice(0, 5).map((p) => (
               <div
                 key={p.userId}
-                className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-white/20 text-[10px] font-bold text-white ring-2 ring-black"
+                className="bg-muted text-muted-foreground ring-background flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold ring-2"
               >
                 {p.userImage ? (
                   <img
@@ -127,57 +125,42 @@ export default function TimelineDetailPage() {
               </div>
             ))}
           </div>
-          {timeline.partners.length > 0 && (
-            <span className="truncate text-xs text-white/80">
-              {timeline.partners.map((p) => p.userName).join(", ")}
-            </span>
-          )}
+          <span className="text-muted-foreground truncate text-xs">
+            Cùng: {timeline.partners.map((p) => p.userName).join(", ")}
+          </span>
         </div>
       )}
 
-      <div className="min-h-0 flex-1">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         {unavailable ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-sm text-white/70">Dòng thời gian không khả dụng</p>
+            <p className="text-muted-foreground text-sm">Dòng thời gian không khả dụng</p>
           </div>
         ) : momentsLoading ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
           </div>
         ) : moments.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <p className="text-sm text-white/70">Chưa có khoảnh khắc nào</p>
+            <p className="text-muted-foreground text-sm">Chưa có khoảnh khắc nào</p>
           </div>
         ) : (
-          <div
-            ref={containerRef}
-            onScroll={handleScroll}
-            className="h-full snap-y snap-mandatory overflow-y-scroll"
-          >
-            {moments.map((moment, index) => (
-              <div key={moment.id} className="h-full w-full shrink-0 snap-start snap-always">
-                <MomentCard
-                  fullscreen
-                  moment={moment}
-                  currentUserId={user?.id}
-                  active={index === currentIndex}
-                  showInfo={showInfo}
-                  onToggleInfo={handleToggleInfo}
-                  hideTimelineChip
-                  onDelete={() => refetchMoments()}
-                  onHide={() => refetchMoments()}
-                />
-              </div>
-            ))}
-            <div className="flex h-16 w-full shrink-0 items-center justify-center bg-black">
-              {isLoadingMore && <Loader2 className="h-5 w-5 animate-spin text-white/70" />}
-              {!hasMore && moments.length > 0 && (
-                <p className="text-xs text-white/50">Đã hiển thị tất cả</p>
-              )}
+          <>
+            <TimelineRoute moments={moments} onMomentClick={setViewMomentId} />
+            <div className="flex h-16 items-center justify-center">
+              {isLoadingMore && <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />}
+              {!hasMore && <p className="text-muted-foreground text-xs">Đã hiển thị tất cả</p>}
             </div>
-          </div>
+          </>
         )}
       </div>
+
+      <MomentDetailOverlay
+        momentId={viewMomentId}
+        currentUserId={user?.id}
+        onClose={() => setViewMomentId(null)}
+        hideTimelineChip
+      />
     </div>
   );
 }
