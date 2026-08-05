@@ -35,6 +35,29 @@ export async function getUserMoments(userId: number, prevId?: number | null, tak
   return res.data;
 }
 
+export async function getTimelineMoments(timelineId: number, prevId?: number | null, take = 10): Promise<
+  CursorPageResponse<MomentDto>
+> {
+  const res = await httpClient.get(`/Moment/timeline/${timelineId}`, {
+    params: { prevId: prevId ?? undefined, take },
+  });
+  res.data.data = res.data.data.map(normalizeMomentDto);
+  return res.data;
+}
+
+export async function getAvailableMoments(
+  fromDate: string,
+  toDate: string,
+  prevId?: number | null,
+  take = 10
+): Promise<CursorPageResponse<MomentDto>> {
+  const res = await httpClient.get("/Moment/available", {
+    params: { fromDate, toDate, prevId: prevId ?? undefined, take },
+  });
+  res.data.data = res.data.data.map(normalizeMomentDto);
+  return res.data;
+}
+
 export async function createMoment(input: CreateMomentRequest): Promise<MomentDto> {
   const { data } = await httpClient.post<ApiResponse<MomentDto>>("/Moment", input);
   return normalizeMomentDto(data.data);

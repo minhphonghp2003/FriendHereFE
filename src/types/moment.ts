@@ -1,4 +1,5 @@
 import type { ImageDto } from "./user";
+import type { TimelineDto } from "./timeline";
 
 export type MomentVisibility = "OnlyMe" | "Friends" | "BestFriend" | "Lover" | "Public";
 
@@ -81,6 +82,8 @@ export interface MomentDto {
   userName: string;
   userImage: ImageDto | null;
   caption: string | null;
+  timelineId: number | null;
+  timeline: TimelineDto | null;
   status: MomentStatus;
   visibility: MomentVisibility;
   allowComment: boolean;

@@ -8,6 +8,7 @@ import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { MomentVideoPlayer } from "./moment-video-player";
+import { TimelineChip } from "@/components/timelines/timeline-chip";
 import { Button } from "@/components/ui/button";
 import { useDeleteMoment, useHideMoment } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
@@ -26,6 +27,7 @@ interface MomentCardProps {
   active?: boolean;
   showInfo?: boolean;
   onToggleInfo?: () => void;
+  hideTimelineChip?: boolean;
 }
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
@@ -36,7 +38,7 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
-export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false, active = true, showInfo = true, onToggleInfo }: MomentCardProps) => {
+export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false, active = true, showInfo = true, onToggleInfo, hideTimelineChip = false }: MomentCardProps) => {
   const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
@@ -261,6 +263,11 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
 
         {showInfo && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-24 pt-16 pr-20">
+            {moment.timeline && !hideTimelineChip && (
+              <div className="mb-2 flex justify-start">
+                <TimelineChip timeline={moment.timeline} variant="dark" />
+              </div>
+            )}
             {moment.caption && (
               <p className="mb-2 text-sm font-medium text-white drop-shadow">{moment.caption}</p>
             )}
@@ -360,6 +367,12 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
 
       {moment.caption && (
         <p className="px-3 pb-2 text-sm">{moment.caption}</p>
+      )}
+
+      {moment.timeline && !hideTimelineChip && (
+        <div className="flex justify-start px-3 pb-2">
+          <TimelineChip timeline={moment.timeline} variant="light" />
+        </div>
       )}
 
       <div className="relative">
