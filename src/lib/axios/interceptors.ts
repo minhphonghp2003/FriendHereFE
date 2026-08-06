@@ -1,6 +1,7 @@
-import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
-import { env } from "@/config/env";
+import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import { toast } from "sonner";
 import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
+import { handleApiError } from "./error-handler";
 
 export const setupRequestInterceptor = (instance: AxiosInstance): void => {
   instance.interceptors.request.use(
@@ -20,9 +21,10 @@ export const setupRequestInterceptor = (instance: AxiosInstance): void => {
 export const setupResponseInterceptor = (instance: AxiosInstance): void => {
   instance.interceptors.response.use(
     (response: AxiosResponse) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retry) {
+    async (error: AxiosError) => {
+      const originalRequest = error.config as
+        (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+      if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
         if (typeof window !== "undefined") {
           const hadToken = !!localStorage.getItem(TOKEN_KEY);
@@ -34,6 +36,7 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
           }
         }
       }
+      toast.error(handleApiError(error).message);
       return Promise.reject(error);
     },
   );
