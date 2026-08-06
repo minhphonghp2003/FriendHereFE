@@ -3,6 +3,7 @@
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { Map as MapIcon, List } from "lucide-react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
@@ -20,6 +21,7 @@ type ViewMode = "map" | "list";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const locations = useAppSelector((s) => s.location.locations);
   const locationDenied = useAppSelector((s) => s.location.locationDenied);
@@ -30,6 +32,8 @@ export default function HomePage() {
   const myStatus = useAppSelector((s) => s.location.status);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
+
+  const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
   const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
   const {
@@ -160,10 +164,12 @@ export default function HomePage() {
         <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
           <APIProvider apiKey={apiKey}>
             <Map
+              key={mapColorScheme}
               defaultCenter={position}
               defaultZoom={15}
               gestureHandling="greedy"
               disableDefaultUI
+              colorScheme={mapColorScheme}
               mapId="friendhere-map"
             >
               {position && (

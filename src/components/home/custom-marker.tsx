@@ -139,7 +139,7 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
         </svg>
         {batteryInfo && (
           <div
-            className="pointer-events-none absolute -right-1.5 -top-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1 py-0.5 shadow-md"
+            className="pointer-events-none absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1 py-0.5 shadow-md"
             title={`Battery ${battery}%`}
           >
             <batteryInfo.Icon className="h-3 w-3" color={batteryInfo.color} strokeWidth={2.5} />
