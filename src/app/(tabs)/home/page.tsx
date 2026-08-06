@@ -82,7 +82,7 @@ export default function HomePage() {
     : undefined;
 
   const visibleLocations = useMemo(
-    () => locations.filter((loc) => loc.userId !== user?.id && loc.visibility !== 0),
+    () => locations.filter((loc) => loc.userId !== user?.id),
     [locations, user?.id],
   );
 

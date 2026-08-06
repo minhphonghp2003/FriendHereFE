@@ -66,6 +66,10 @@ const locationSlice = createSlice({
     },
     updateLocationVisibility: (state, action: PayloadAction<LocationDto>) => {
       const payload = action.payload;
+      if (payload.visibility === 0) {
+        state.locations = state.locations.filter((l) => l.userId !== payload.userId);
+        return;
+      }
       const idx = state.locations.findIndex((l) => l.userId === payload.userId);
       if (idx !== -1) {
         state.locations[idx] = { ...state.locations[idx], ...payload };
