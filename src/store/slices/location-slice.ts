@@ -10,6 +10,8 @@ interface LocationState {
   accuracy: number | null;
   speed: number | null;
   movingUserIds: number[];
+  visibility: number;
+  battery: number | null;
 }
 
 const initialState: LocationState = {
@@ -21,6 +23,8 @@ const initialState: LocationState = {
   accuracy: null,
   speed: null,
   movingUserIds: [],
+  visibility: 4,
+  battery: null,
 };
 
 const locationSlice = createSlice({
@@ -60,6 +64,32 @@ const locationSlice = createSlice({
         state.locations[idx] = action.payload;
       }
     },
+    updateLocationVisibility: (state, action: PayloadAction<LocationDto>) => {
+      const payload = action.payload;
+      const idx = state.locations.findIndex((l) => l.userId === payload.userId);
+      if (idx !== -1) {
+        state.locations[idx] = { ...state.locations[idx], ...payload };
+      } else {
+        state.locations.push(payload);
+      }
+    },
+    updateLocationBattery: (state, action: PayloadAction<LocationDto>) => {
+      const payload = action.payload;
+      const idx = state.locations.findIndex((l) => l.userId === payload.userId);
+      if (idx !== -1) {
+        state.locations[idx] = {
+          ...state.locations[idx],
+          battery: payload.battery,
+          updatedAt: payload.updatedAt,
+        };
+      }
+    },
+    setMyVisibility: (state, action: PayloadAction<number>) => {
+      state.visibility = action.payload;
+    },
+    setMyBattery: (state, action: PayloadAction<number>) => {
+      state.battery = action.payload;
+    },
     setMovingUser: (state, action: PayloadAction<number>) => {
       if (!state.movingUserIds.includes(action.payload)) {
         state.movingUserIds.push(action.payload);
@@ -72,5 +102,20 @@ const locationSlice = createSlice({
   },
 });
 
-export const { setLocations, addLocation, removeLocation, setKicked, setLocationDenied, setCurrentPosition, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } = locationSlice.actions;
+export const {
+  setLocations,
+  addLocation,
+  removeLocation,
+  setKicked,
+  setLocationDenied,
+  setCurrentPosition,
+  updateOtherLocation,
+  updateLocationVisibility,
+  updateLocationBattery,
+  setMyVisibility,
+  setMyBattery,
+  setMovingUser,
+  clearMovingUser,
+  resetLocation,
+} = locationSlice.actions;
 export const locationReducer = locationSlice.reducer;

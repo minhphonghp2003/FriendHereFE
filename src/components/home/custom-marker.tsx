@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useId } from "react";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
+import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -32,10 +33,17 @@ interface CustomMarkerProps {
   image?: string;
   isCurrentUser?: boolean;
   moving?: boolean;
+  battery?: number;
   onClick?: () => void;
 }
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onClick }: CustomMarkerProps) => {
+const getBatteryIcon = (level: number) => {
+  if (level <= 20) return { Icon: BatteryLow, color: "#ef4444" };
+  if (level <= 50) return { Icon: BatteryMedium, color: "#f59e0b" };
+  return { Icon: BatteryFull, color: "#22c55e" };
+};
+
+export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, onClick }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
   const clipId = useId();
 
@@ -43,6 +51,8 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
 
   const pinColor = isCurrentUser ? "#3b82f6" : color;
+
+  const batteryInfo = battery !== undefined ? getBatteryIcon(battery) : null;
 
   return (
     <AdvancedMarker
@@ -53,7 +63,7 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
       onClick={onClick}
     >
       <div
-        className={`transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
+        className={`relative transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
         style={{
           marginTop: -26,
           transform: hovered ? "scale(1.1)" : "scale(1)",
@@ -118,6 +128,17 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
             </>
           )}
         </svg>
+        {batteryInfo && (
+          <div
+            className="pointer-events-none absolute -right-1.5 -top-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1 py-0.5 shadow-md"
+            title={`Battery ${battery}%`}
+          >
+            <batteryInfo.Icon className="h-3 w-3" color={batteryInfo.color} strokeWidth={2.5} />
+            <span className="text-[9px] font-bold leading-none" style={{ color: batteryInfo.color }}>
+              {battery}%
+            </span>
+          </div>
+        )}
       </div>
     </AdvancedMarker>
   );

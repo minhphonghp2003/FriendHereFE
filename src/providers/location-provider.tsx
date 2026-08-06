@@ -1,13 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./auth-provider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
+import {
+  setCurrentPosition,
+  setLocationDenied,
+  setLocations,
+  addLocation,
+  removeLocation,
+  setKicked,
+  updateOtherLocation,
+  updateLocationVisibility,
+  updateLocationBattery,
+  setMyVisibility,
+  setMyBattery,
+  setMovingUser,
+  clearMovingUser,
+  resetLocation,
+} from "@/store/slices/location-slice";
 import { addConversation, appendMessage, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { useBattery } from "@/hooks/location/use-battery";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -36,6 +52,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
   const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
   const movingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const batteryLevelRef = useRef<number | null>(null);
+
+  const handleBatteryChange = useCallback((level: number) => {
+    batteryLevelRef.current = level;
+    dispatch(setMyBattery(level));
+    locationHub.updateBattery(level);
+  }, [dispatch]);
+
+  useBattery(handleBatteryChange);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,9 +101,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           accuracy: pos.accuracy,
           speed: pos.speed,
         }),
-      }).catch((err) =>
-        console.error("[LocationProvider] Join error:", err),
-      );
+      })
+        .then(() => {
+          if (batteryLevelRef.current !== null) {
+            locationHub.updateBattery(batteryLevelRef.current);
+          }
+        })
+        .catch((err) =>
+          console.error("[LocationProvider] Join error:", err),
+        );
     };
 
     const init = async () => {
@@ -128,6 +159,19 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               movingTimers.current.delete(location.userId);
             }, 2000),
           );
+        });
+
+        locationHub.onReceiveVisibilityUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} visibility changed to ${location.visibility}`);
+          if (location.userId === user.id) {
+            dispatch(setMyVisibility(location.visibility));
+          }
+          dispatch(updateLocationVisibility(location));
+        });
+
+        locationHub.onReceiveBatteryUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} battery changed to ${location.battery}`);
+          dispatch(updateLocationBattery(location));
         });
 
         appHub.onReceiveNewConversation((conversation, initialMessage) => {

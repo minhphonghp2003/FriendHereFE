@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { LocationDto } from "@/lib/signalr/types";
+import type { ActiveUserDto } from "@/lib/signalr/types";
+import { BatteryFull, BatteryMedium, BatteryLow, Loader2 } from "lucide-react";
 
 const BUBBLE_COLORS = [
   "#3b82f6",
@@ -26,13 +27,35 @@ const stringToColor = (str: string) => {
   return BUBBLE_COLORS[Math.abs(hash) % BUBBLE_COLORS.length];
 };
 
+const formatDistance = (meters: number | null | undefined): string => {
+  if (meters === null || meters === undefined) return "--";
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+};
+
+const getBatteryInfo = (level: number) => {
+  if (level <= 20) return { Icon: BatteryLow, color: "#ef4444" };
+  if (level <= 50) return { Icon: BatteryMedium, color: "#f59e0b" };
+  return { Icon: BatteryFull, color: "#22c55e" };
+};
+
 interface UserLocationListProps {
-  users: LocationDto[];
+  users: ActiveUserDto[];
   currentUser?: { id: number; name: string } | null;
   onUserClick: (userId: number) => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-export const UserLocationList = ({ users, currentUser, onUserClick }: UserLocationListProps) => {
+export const UserLocationList = ({
+  users,
+  currentUser,
+  onUserClick,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: UserLocationListProps) => {
   if (users.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-6">
@@ -54,9 +77,18 @@ export const UserLocationList = ({ users, currentUser, onUserClick }: UserLocati
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-3">
           {users.map((loc) => (
-            <UserBubble key={loc.id} location={loc} currentUser={currentUser} onClick={onUserClick} />
+            <UserBubble key={loc.userId} location={loc} currentUser={currentUser} onClick={onUserClick} />
           ))}
         </div>
+        {hasMore && (
+          <button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-100 bg-white py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {isLoadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Load more"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -68,14 +100,14 @@ export const UserBubbleOverlay = ({ users, currentUser, onUserClick }: UserLocat
   return (
     <div className="absolute right-2 top-4 z-30 flex flex-col gap-2">
       {users.map((loc) => (
-        <MiniBubble key={loc.id} location={loc} currentUser={currentUser} onClick={onUserClick} />
+        <MiniBubble key={loc.userId} location={loc} currentUser={currentUser} onClick={onUserClick} />
       ))}
     </div>
   );
 };
 
 interface MiniBubbleProps {
-  location: LocationDto;
+  location: ActiveUserDto;
   currentUser?: { id: number; name: string } | null;
   onClick: (userId: number) => void;
 }
@@ -102,7 +134,7 @@ const MiniBubble = ({ location, currentUser, onClick }: MiniBubbleProps) => {
 };
 
 interface UserBubbleProps {
-  location: LocationDto;
+  location: ActiveUserDto;
   currentUser?: { id: number; name: string } | null;
   onClick: (userId: number) => void;
 }
@@ -111,6 +143,7 @@ const UserBubble = ({ location, currentUser, onClick }: UserBubbleProps) => {
   const color = useMemo(() => stringToColor(location.name), [location.name]);
   const firstLetter = location.name?.charAt(0).toUpperCase() || "?";
   const isCurrentUser = location.userId === currentUser?.id;
+  const batteryInfo = getBatteryInfo(location.battery);
 
   return (
     <button
@@ -132,7 +165,17 @@ const UserBubble = ({ location, currentUser, onClick }: UserBubbleProps) => {
           {location.name}
           {isCurrentUser && <span className="ml-1 text-xs text-zinc-400">(You)</span>}
         </p>
-        <p className="mt-0.5 text-xs text-emerald-500">Online</p>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
+          <span className="text-emerald-500">Online</span>
+          <span>•</span>
+          <span>{formatDistance(location.distance)}</span>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1" title={`Battery ${location.battery}%`}>
+        <batteryInfo.Icon className="h-4 w-4" color={batteryInfo.color} strokeWidth={2.5} />
+        <span className="text-xs font-semibold" style={{ color: batteryInfo.color }}>
+          {location.battery}%
+        </span>
       </div>
     </button>
   );

@@ -37,11 +37,22 @@ interface MarkerDetailProps {
   currentUser?: AuthUser | null;
   userDetail?: User | null;
   loading?: boolean;
+  battery?: number;
+  distance?: number | null;
   onClose: () => void;
   onFriendshipChange?: () => void;
 }
 
-export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, onClose, onFriendshipChange }: MarkerDetailProps) => {
+export const MarkerDetail = ({
+  isCurrentUser,
+  currentUser,
+  userDetail,
+  loading,
+  battery,
+  distance,
+  onClose,
+  onFriendshipChange,
+}: MarkerDetailProps) => {
   const name = userDetail?.name ?? (isCurrentUser ? currentUser?.name : null) ?? "Unknown";
   const image = userDetail?.images?.[0]?.originalUrl ?? userDetail?.images?.[0]?.thumbUrl ?? undefined;
   const email = userDetail?.email ?? (isCurrentUser ? currentUser?.email : null);
@@ -313,7 +324,23 @@ export const MarkerDetail = ({ isCurrentUser, currentUser, userDetail, loading, 
           {age && (
             <p className="text-xs text-zinc-500">{age} years old</p>
           )}
-          <p className="mt-0.5 text-xs text-emerald-500">Online</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+            <span className="text-emerald-500">Online</span>
+            {battery !== undefined && (
+              <>
+                <span className="text-zinc-300">•</span>
+                <span className="text-zinc-500">Pin {battery}%</span>
+              </>
+            )}
+            {distance !== undefined && distance !== null && (
+              <>
+                <span className="text-zinc-300">•</span>
+                <span className="text-zinc-500">
+                  {distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`}
+                </span>
+              </>
+            )}
+          </div>
         </div>
         <button onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400">
           ✕
