@@ -7,6 +7,9 @@ export type ReceiveLocationsCallback = (locations: LocationDto[]) => void;
 export type NewJoinCallback = (user: UserDto, location: LocationDto) => void;
 export type UserDisconnectCallback = (userId: number) => void;
 export type ReceiveOtherMovementCallback = (location: LocationDto) => void;
+export type ReceiveVisibilityUpdatedCallback = (location: LocationDto) => void;
+export type ReceiveBatteryUpdatedCallback = (location: LocationDto) => void;
+export type ReceiveStatusUpdatedCallback = (location: LocationDto) => void;
 
 class LocationHub {
   private connection: signalR.HubConnection | null = null;
@@ -15,6 +18,9 @@ class LocationHub {
   private newJoinCallback: NewJoinCallback | null = null;
   private userDisconnectCallback: UserDisconnectCallback | null = null;
   private receiveOtherMovementCallback: ReceiveOtherMovementCallback | null = null;
+  private receiveVisibilityUpdatedCallback: ReceiveVisibilityUpdatedCallback | null = null;
+  private receiveBatteryUpdatedCallback: ReceiveBatteryUpdatedCallback | null = null;
+  private receiveStatusUpdatedCallback: ReceiveStatusUpdatedCallback | null = null;
 
   async start(): Promise<void> {
     const myEpoch = ++this.epoch;
@@ -63,6 +69,21 @@ class LocationHub {
 
     this.connection.on("ReceiveOtherMovement", (location: LocationDto) => {
       this.receiveOtherMovementCallback?.(location);
+    });
+
+    this.connection.on("ReceiveVisibilityUpdated", (location: LocationDto) => {
+      console.log("[SignalR] Visibility updated:", location);
+      this.receiveVisibilityUpdatedCallback?.(location);
+    });
+
+    this.connection.on("ReceiveBatteryUpdated", (location: LocationDto) => {
+      console.log("[SignalR] Battery updated:", location);
+      this.receiveBatteryUpdatedCallback?.(location);
+    });
+
+    this.connection.on("ReceiveStatusUpdated", (location: LocationDto) => {
+      console.log("[SignalR] Status updated:", location);
+      this.receiveStatusUpdatedCallback?.(location);
     });
 
     this.connection.onclose(() => {
@@ -116,12 +137,51 @@ class LocationHub {
     this.receiveOtherMovementCallback = callback;
   }
 
+  onReceiveVisibilityUpdated(callback: ReceiveVisibilityUpdatedCallback): void {
+    this.receiveVisibilityUpdatedCallback = callback;
+  }
+
+  onReceiveBatteryUpdated(callback: ReceiveBatteryUpdatedCallback): void {
+    this.receiveBatteryUpdatedCallback = callback;
+  }
+
+  onReceiveStatusUpdated(callback: ReceiveStatusUpdatedCallback): void {
+    this.receiveStatusUpdatedCallback = callback;
+  }
+
   async updateLocation(latitude: number, longitude: number, accuracy?: number, speed?: number): Promise<void> {
     if (!this.connection) return;
     try {
       await this.connection.invoke("UpdateLocation", latitude, longitude, accuracy, speed);
     } catch (err) {
       console.error("[LocationHub] UpdateLocation error:", err);
+    }
+  }
+
+  async updateVisibility(visibility: number): Promise<void> {
+    if (!this.connection) return;
+    try {
+      await this.connection.invoke("UpdateVisibility", visibility);
+    } catch (err) {
+      console.error("[LocationHub] UpdateVisibility error:", err);
+    }
+  }
+
+  async updateBattery(battery: number): Promise<void> {
+    if (!this.connection) return;
+    try {
+      await this.connection.invoke("UpdateBattery", battery);
+    } catch (err) {
+      console.error("[LocationHub] UpdateBattery error:", err);
+    }
+  }
+
+  async updateStatus(status: string): Promise<void> {
+    if (!this.connection) return;
+    try {
+      await this.connection.invoke("UpdateStatus", status);
+    } catch (err) {
+      console.error("[LocationHub] UpdateStatus error:", err);
     }
   }
 

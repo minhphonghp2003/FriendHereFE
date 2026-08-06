@@ -1,7 +1,7 @@
 import { httpClient } from "@/lib/axios";
 import type { ApiResponse, CursorPageResponse } from "@/types/api";
-import type { MomentDto, GroupedReactionDto, CreateMomentRequest } from "@/types/moment";
-import { toMomentVisibility, toMomentStatus } from "@/types/moment";
+import type { MomentDto, GroupedReactionDto, CreateMomentRequest, MomentVisibility } from "@/types/moment";
+import { toMomentVisibility, toMomentStatus, MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 import type { ImageDto } from "@/types/chat";
 
 const normalizeMomentDto = (moment: MomentDto): MomentDto => ({
@@ -75,6 +75,16 @@ export async function updateMoment(id: number, input: {
 
 export async function deleteMoment(id: number): Promise<void> {
   await httpClient.delete(`/Moment/${id}`);
+}
+
+export async function changeMomentVisibility(
+  id: number,
+  visibility: MomentVisibility
+): Promise<MomentDto> {
+  const { data } = await httpClient.put<ApiResponse<MomentDto>>(`/Moment/${id}/visibility`, {
+    visibility: MOMENT_VISIBILITY_VALUES[visibility],
+  });
+  return normalizeMomentDto(data.data);
 }
 
 export async function addMomentReaction(id: number, emoji: string): Promise<void> {

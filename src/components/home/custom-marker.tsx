@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useId } from "react";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
+import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -32,10 +33,18 @@ interface CustomMarkerProps {
   image?: string;
   isCurrentUser?: boolean;
   moving?: boolean;
+  battery?: number | null;
+  status?: string | null;
   onClick?: () => void;
 }
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onClick }: CustomMarkerProps) => {
+const getBatteryIcon = (level: number) => {
+  if (level <= 20) return { Icon: BatteryLow, color: "#ef4444" };
+  if (level <= 50) return { Icon: BatteryMedium, color: "#f59e0b" };
+  return { Icon: BatteryFull, color: "#22c55e" };
+};
+
+export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, status, onClick }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
   const clipId = useId();
 
@@ -43,6 +52,8 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
 
   const pinColor = isCurrentUser ? "#3b82f6" : color;
+
+  const batteryInfo = battery != null ? getBatteryIcon(battery) : null;
 
   return (
     <AdvancedMarker
@@ -53,7 +64,7 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
       onClick={onClick}
     >
       <div
-        className={`transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
+        className={`relative transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
         style={{
           marginTop: -26,
           transform: hovered ? "scale(1.1)" : "scale(1)",
@@ -63,6 +74,14 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
+        {status && (
+          <div
+            className="pointer-events-none absolute left-1/2 z-10 max-w-[140px] -translate-x-1/2 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-center text-[10px] font-semibold leading-tight text-zinc-700 shadow-md"
+            style={{ bottom: "calc(100% + 2px)" }}
+          >
+            <span className="block truncate">{status}</span>
+          </div>
+        )}
         <svg
           width="48"
           height="52"
@@ -118,6 +137,17 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, onC
             </>
           )}
         </svg>
+        {batteryInfo && (
+          <div
+            className="pointer-events-none absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1 py-0.5 shadow-md"
+            title={`Battery ${battery}%`}
+          >
+            <batteryInfo.Icon className="h-3 w-3" color={batteryInfo.color} strokeWidth={2.5} />
+            <span className="text-[9px] font-bold leading-none" style={{ color: batteryInfo.color }}>
+              {battery}%
+            </span>
+          </div>
+        )}
       </div>
     </AdvancedMarker>
   );

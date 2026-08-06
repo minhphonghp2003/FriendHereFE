@@ -3,18 +3,19 @@
 import Image from "next/image";
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SmilePlus, Trash2, EyeOff, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2 } from "lucide-react";
+import { SmilePlus, Trash2, EyeOff, Eye, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2, Check, ChevronLeft } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { MomentVideoPlayer } from "./moment-video-player";
 import { TimelineChip } from "@/components/timelines/timeline-chip";
 import { Button } from "@/components/ui/button";
-import { useDeleteMoment, useHideMoment } from "@/hooks/moments";
+import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/moment";
+import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 
 const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
@@ -38,21 +39,56 @@ const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: s
   Public: { icon: Globe, label: "Công khai" },
 };
 
+const VISIBILITY_OPTIONS = Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[];
+
+const VisibilityOption = ({
+  value,
+  active,
+  disabled,
+  onClick,
+}: {
+  value: MomentVisibility;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) => {
+  const cfg = visibilityConfig[value];
+  const Icon = cfg.icon;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
+    >
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="flex-1 text-left">{cfg.label}</span>
+      {active && <Check className="h-4 w-4 text-emerald-500" />}
+    </button>
+  );
+};
+
 export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false, active = true, showInfo = true, onToggleInfo, hideTimelineChip = false }: MomentCardProps) => {
   const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
+  const { mutate: changeVisibility, isLoading: changingVisibility } = useChangeMomentVisibility();
   const [showMenu, setShowMenu] = useState(false);
+  const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
+  const [localVisibility, setLocalVisibility] = useState<MomentVisibility>(moment.visibility);
   const isOwner = currentUserId === moment.userId;
 
   useEffect(() => {
     setLocalReactions(moment.reactions);
   }, [moment.reactions]);
+
+  useEffect(() => {
+    setLocalVisibility(moment.visibility);
+  }, [moment.visibility]);
 
   useEffect(() => {
     if (!isOwner) return;
@@ -115,7 +151,21 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
     setShowMenu(false);
   };
 
-  const visConfig = visibilityConfig[moment.visibility] || visibilityConfig.Friends;
+  const handleChangeVisibility = async (vis: MomentVisibility) => {
+    try {
+      const updated = await changeVisibility(moment.id, vis);
+      if (updated) setLocalVisibility(updated.visibility);
+    } catch {}
+    setShowVisibilityMenu(false);
+    setShowMenu(false);
+  };
+
+  const toggleMenu = () => {
+    setShowMenu((v) => !v);
+    setShowVisibilityMenu(false);
+  };
+
+  const visConfig = visibilityConfig[localVisibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
   const displayName = isOwner ? "Bạn" : moment.userName;
 
@@ -183,23 +233,51 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
           </div>
           <div className="relative shrink-0">
             <button
-              onClick={() => setShowMenu(!showMenu)}
+              onClick={toggleMenu}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
               aria-label="Tùy chọn"
             >
               <MoreHorizontal className="h-5 w-5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
-                {isOwner ? (
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {deleting ? "Đang xóa..." : "Xóa"}
-                  </button>
+              <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
+                {showVisibilityMenu ? (
+                  <>
+                    <button
+                      onClick={() => setShowVisibilityMenu(false)}
+                      className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Quyền riêng tư
+                    </button>
+                    {VISIBILITY_OPTIONS.map((vis) => (
+                      <VisibilityOption
+                        key={vis}
+                        value={vis}
+                        active={vis === localVisibility}
+                        disabled={changingVisibility}
+                        onClick={() => handleChangeVisibility(vis)}
+                      />
+                    ))}
+                  </>
+                ) : isOwner ? (
+                  <>
+                    <button
+                      onClick={() => setShowVisibilityMenu(true)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Đổi quyền riêng tư
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deleting ? "Đang xóa..." : "Xóa"}
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={handleHide}
@@ -335,21 +413,49 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={toggleMenu}
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
           {showMenu && (
-            <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-border bg-background shadow-md">
-              {isOwner ? (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {deleting ? "Đang xóa..." : "Xóa"}
-                </button>
+            <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
+              {showVisibilityMenu ? (
+                <>
+                  <button
+                    onClick={() => setShowVisibilityMenu(false)}
+                    className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Quyền riêng tư
+                  </button>
+                  {VISIBILITY_OPTIONS.map((vis) => (
+                    <VisibilityOption
+                      key={vis}
+                      value={vis}
+                      active={vis === localVisibility}
+                      disabled={changingVisibility}
+                      onClick={() => handleChangeVisibility(vis)}
+                    />
+                  ))}
+                </>
+              ) : isOwner ? (
+                <>
+                  <button
+                    onClick={() => setShowVisibilityMenu(true)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Đổi quyền riêng tư
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting ? "Đang xóa..." : "Xóa"}
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleHide}

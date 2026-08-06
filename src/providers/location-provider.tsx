@@ -1,13 +1,34 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./auth-provider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setCurrentPosition, setLocationDenied, setLocations, addLocation, removeLocation, setKicked, updateOtherLocation, setMovingUser, clearMovingUser, resetLocation } from "@/store/slices/location-slice";
+import {
+  setCurrentPosition,
+  setLocationDenied,
+  setLocations,
+  addLocation,
+  removeLocation,
+  setKicked,
+  updateOtherLocation,
+  updateLocationVisibility,
+  updateLocationBattery,
+  updateLocationStatus,
+  setMyVisibility,
+  setMyBattery,
+  setMyStatus,
+  setMovingUser,
+  clearMovingUser,
+  resetLocation,
+} from "@/store/slices/location-slice";
 import { addConversation, appendMessage, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { useBattery } from "@/hooks/location/use-battery";
+import { LOCATION_VISIBILITY_STORAGE_KEY } from "@/store/slices/location-slice";
+
+const UPDATE_BATCH_INTERVAL_MS = 5000;
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -27,6 +48,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+  const myVisibility = useAppSelector((s) => s.location.visibility);
   const activeConversationIdRef = useRef(activeConversationId);
   activeConversationIdRef.current = activeConversationId;
   const startedRef = useRef(false);
@@ -36,6 +58,51 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
   const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
   const movingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const batteryLevelRef = useRef<number | null>(null);
+  const pendingBatteryRef = useRef<number | null>(null);
+  const pendingPositionUpdateRef = useRef<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    speed?: number;
+  } | null>(null);
+
+  const flushUpdates = useCallback(() => {
+    const conn = locationHub.getConnection();
+    if (!conn || conn.state !== "Connected") return;
+    if (pendingBatteryRef.current !== null) {
+      locationHub.updateBattery(pendingBatteryRef.current);
+      pendingBatteryRef.current = null;
+    }
+    if (pendingPositionUpdateRef.current !== null) {
+      const pos = pendingPositionUpdateRef.current;
+      locationHub.updateLocation(pos.latitude, pos.longitude, pos.accuracy, pos.speed);
+      pendingPositionUpdateRef.current = null;
+    }
+  }, []);
+
+  const handleBatteryChange = useCallback((level: number) => {
+    batteryLevelRef.current = level;
+    pendingBatteryRef.current = level;
+    dispatch(setMyBattery(level));
+  }, [dispatch]);
+
+  useBattery(handleBatteryChange);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(LOCATION_VISIBILITY_STORAGE_KEY, String(myVisibility));
+    } catch {
+      // ignore storage errors
+    }
+  }, [myVisibility]);
+
+  useEffect(() => {
+    if (!user) return;
+    const intervalId = setInterval(flushUpdates, UPDATE_BATCH_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [user, flushUpdates]);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +116,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         geoReadyRef.current = false;
         canJoinRef.current = false;
         pendingPosition.current = null;
+        pendingBatteryRef.current = null;
+        pendingPositionUpdateRef.current = null;
         dispatch(resetLocation());
         appHub.stop();
         locationHub.stop();
@@ -76,9 +145,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           accuracy: pos.accuracy,
           speed: pos.speed,
         }),
-      }).catch((err) =>
-        console.error("[LocationProvider] Join error:", err),
-      );
+      })
+        .then(() => {
+          if (batteryLevelRef.current !== null) {
+            pendingBatteryRef.current = batteryLevelRef.current;
+          }
+        })
+        .catch((err) =>
+          console.error("[LocationProvider] Join error:", err),
+        );
     };
 
     const init = async () => {
@@ -103,6 +178,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         locationHub.onReceiveLocations((locList) => {
           console.log(`[LocationHub] Received ${locList.length} location(s)`);
           dispatch(setLocations(locList));
+          const me = locList.find((l) => l.userId === user.id);
+          if (me) {
+            dispatch(setMyBattery(me.battery));
+            dispatch(setMyStatus(me.status ?? null));
+            dispatch(setMyVisibility(me.visibility));
+          }
         });
 
         locationHub.onNewJoin((_user, _location) => {
@@ -128,6 +209,27 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               movingTimers.current.delete(location.userId);
             }, 2000),
           );
+        });
+
+        locationHub.onReceiveVisibilityUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} visibility changed to ${location.visibility}`);
+          if (location.userId === user.id) {
+            dispatch(setMyVisibility(location.visibility));
+          }
+          dispatch(updateLocationVisibility(location));
+        });
+
+        locationHub.onReceiveBatteryUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} battery changed to ${location.battery}`);
+          dispatch(updateLocationBattery(location));
+        });
+
+        locationHub.onReceiveStatusUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} status changed to "${location.status}"`);
+          if (location.userId === user.id) {
+            dispatch(setMyStatus(location.status ?? null));
+          }
+          dispatch(updateLocationStatus(location));
         });
 
         appHub.onReceiveNewConversation((conversation, initialMessage) => {
@@ -188,8 +290,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           if (prevPos) {
             const dist = getDistance(prevPos.latitude, prevPos.longitude, latitude, longitude);
             if (dist >= 5) {
-              console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, updating location`);
-              locationHub.updateLocation(latitude, longitude, accuracy, speed ?? undefined);
+              console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, queuing location update`);
+              pendingPositionUpdateRef.current = { latitude, longitude, accuracy, speed: speed ?? undefined };
             }
           }
           lastPosition.current = { latitude, longitude };
@@ -218,6 +320,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       canJoinRef.current = false;
       pendingPosition.current = null;
       lastPosition.current = null;
+      pendingBatteryRef.current = null;
+      pendingPositionUpdateRef.current = null;
       dispatch(resetLocation());
       appHub.stop();
       locationHub.stop();
