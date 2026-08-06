@@ -33,7 +33,7 @@ interface CustomMarkerProps {
   image?: string;
   isCurrentUser?: boolean;
   moving?: boolean;
-  battery?: number;
+  battery?: number | null;
   status?: string | null;
   onClick?: () => void;
 }
@@ -53,7 +53,7 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
 
   const pinColor = isCurrentUser ? "#3b82f6" : color;
 
-  const batteryInfo = battery !== undefined ? getBatteryIcon(battery) : null;
+  const batteryInfo = battery != null ? getBatteryIcon(battery) : null;
 
   return (
     <AdvancedMarker

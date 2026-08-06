@@ -1,5 +1,26 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { LocationDto } from "@/lib/signalr/types";
+import {
+  LOCATION_VISIBILITY_VALUES,
+  type LocationVisibilityValue,
+} from "@/lib/signalr/types";
+
+export const LOCATION_VISIBILITY_STORAGE_KEY = "location.visibility";
+
+const isVisibilityValue = (v: number): v is LocationVisibilityValue =>
+  Number.isInteger(v) && v >= 0 && v <= 4;
+
+const getInitialVisibility = (): number => {
+  if (typeof window === "undefined") return LOCATION_VISIBILITY_VALUES.Public;
+  try {
+    const raw = window.localStorage.getItem(LOCATION_VISIBILITY_STORAGE_KEY);
+    if (raw === null) return LOCATION_VISIBILITY_VALUES.Public;
+    const num = Number(raw);
+    return isVisibilityValue(num) ? num : LOCATION_VISIBILITY_VALUES.Public;
+  } catch {
+    return LOCATION_VISIBILITY_VALUES.Public;
+  }
+};
 
 interface LocationState {
   locations: LocationDto[];
@@ -24,7 +45,7 @@ const initialState: LocationState = {
   accuracy: null,
   speed: null,
   movingUserIds: [],
-  visibility: 4,
+  visibility: getInitialVisibility(),
   battery: null,
   status: null,
 };
@@ -104,7 +125,7 @@ const locationSlice = createSlice({
     setMyVisibility: (state, action: PayloadAction<number>) => {
       state.visibility = action.payload;
     },
-    setMyBattery: (state, action: PayloadAction<number>) => {
+    setMyBattery: (state, action: PayloadAction<number | null>) => {
       state.battery = action.payload;
     },
     setMyStatus: (state, action: PayloadAction<string | null>) => {

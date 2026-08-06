@@ -26,6 +26,7 @@ import {
 } from "@/store/slices/location-slice";
 import { addConversation, appendMessage, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { useBattery } from "@/hooks/location/use-battery";
+import { LOCATION_VISIBILITY_STORAGE_KEY } from "@/store/slices/location-slice";
 
 const UPDATE_BATCH_INTERVAL_MS = 5000;
 
@@ -47,6 +48,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+  const myVisibility = useAppSelector((s) => s.location.visibility);
   const activeConversationIdRef = useRef(activeConversationId);
   activeConversationIdRef.current = activeConversationId;
   const startedRef = useRef(false);
@@ -86,6 +88,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   useBattery(handleBatteryChange);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(LOCATION_VISIBILITY_STORAGE_KEY, String(myVisibility));
+    } catch {
+      // ignore storage errors
+    }
+  }, [myVisibility]);
 
   useEffect(() => {
     if (!user) return;

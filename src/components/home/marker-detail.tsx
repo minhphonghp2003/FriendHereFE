@@ -38,7 +38,7 @@ interface MarkerDetailProps {
   currentUser?: AuthUser | null;
   userDetail?: User | null;
   loading?: boolean;
-  battery?: number;
+  battery?: number | null;
   status?: string | null;
   distance?: number | null;
   onClose: () => void;
@@ -335,7 +335,7 @@ export const MarkerDetail = ({
           )}
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
             <span className="text-emerald-500">Online</span>
-            {battery !== undefined && (
+            {battery != null && (
               <>
                 <span className="text-zinc-300">•</span>
                 <span className="text-zinc-500">Pin {battery}%</span>

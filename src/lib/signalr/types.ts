@@ -29,10 +29,10 @@ export interface LocationDto {
   image: string | null;
   latitude: number;
   longitude: number;
-  accuracy: number;
-  speed: number;
-  battery: number;
-  status?: string | null;
+  accuracy: number | null;
+  speed: number | null;
+  battery: number | null;
+  status: string | null;
   visibility: number;
   updatedAt: string;
 }
@@ -43,10 +43,10 @@ export interface ActiveUserDto {
   image: string | null;
   latitude: number;
   longitude: number;
-  accuracy: number;
-  speed: number;
-  battery: number;
-  status?: string | null;
+  accuracy: number | null;
+  speed: number | null;
+  battery: number | null;
+  status: string | null;
   updatedAt: string;
   distance: number | null;
 }

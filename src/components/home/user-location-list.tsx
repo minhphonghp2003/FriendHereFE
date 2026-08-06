@@ -143,7 +143,7 @@ const UserBubble = ({ location, currentUser, onClick }: UserBubbleProps) => {
   const color = useMemo(() => stringToColor(location.name), [location.name]);
   const firstLetter = location.name?.charAt(0).toUpperCase() || "?";
   const isCurrentUser = location.userId === currentUser?.id;
-  const batteryInfo = getBatteryInfo(location.battery);
+  const batteryInfo = location.battery != null ? getBatteryInfo(location.battery) : null;
 
   return (
     <button
@@ -177,12 +177,14 @@ const UserBubble = ({ location, currentUser, onClick }: UserBubbleProps) => {
           </p>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-1" title={`Battery ${location.battery}%`}>
-        <batteryInfo.Icon className="h-4 w-4" color={batteryInfo.color} strokeWidth={2.5} />
-        <span className="text-xs font-semibold" style={{ color: batteryInfo.color }}>
-          {location.battery}%
-        </span>
-      </div>
+      {batteryInfo && (
+        <div className="flex shrink-0 items-center gap-1" title={`Battery ${location.battery}%`}>
+          <batteryInfo.Icon className="h-4 w-4" color={batteryInfo.color} strokeWidth={2.5} />
+          <span className="text-xs font-semibold" style={{ color: batteryInfo.color }}>
+            {location.battery}%
+          </span>
+        </div>
+      )}
     </button>
   );
 };
