@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { ActiveUserDto } from "@/lib/signalr/types";
-import { BatteryFull, BatteryMedium, BatteryLow, Loader2 } from "lucide-react";
+import { BatteryFull, BatteryMedium, BatteryLow, Loader2, MessageSquare } from "lucide-react";
 
 const BUBBLE_COLORS = [
   "#3b82f6",
@@ -170,6 +170,12 @@ const UserBubble = ({ location, currentUser, onClick }: UserBubbleProps) => {
           <span>•</span>
           <span>{formatDistance(location.distance)}</span>
         </div>
+        {location.status && (
+          <p className="mt-1 flex items-center gap-1 truncate text-xs font-medium text-blue-600">
+            <MessageSquare className="h-3 w-3 shrink-0" />
+            <span className="truncate">{location.status}</span>
+          </p>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-1" title={`Battery ${location.battery}%`}>
         <batteryInfo.Icon className="h-4 w-4" color={batteryInfo.color} strokeWidth={2.5} />

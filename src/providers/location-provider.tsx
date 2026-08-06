@@ -16,8 +16,10 @@ import {
   updateOtherLocation,
   updateLocationVisibility,
   updateLocationBattery,
+  updateLocationStatus,
   setMyVisibility,
   setMyBattery,
+  setMyStatus,
   setMovingUser,
   clearMovingUser,
   resetLocation,
@@ -165,6 +167,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         locationHub.onReceiveLocations((locList) => {
           console.log(`[LocationHub] Received ${locList.length} location(s)`);
           dispatch(setLocations(locList));
+          const me = locList.find((l) => l.userId === user.id);
+          if (me) {
+            dispatch(setMyBattery(me.battery));
+            dispatch(setMyStatus(me.status ?? null));
+            dispatch(setMyVisibility(me.visibility));
+          }
         });
 
         locationHub.onNewJoin((_user, _location) => {
@@ -203,6 +211,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         locationHub.onReceiveBatteryUpdated((location) => {
           console.log(`[LocationHub] ${location.name} battery changed to ${location.battery}`);
           dispatch(updateLocationBattery(location));
+        });
+
+        locationHub.onReceiveStatusUpdated((location) => {
+          console.log(`[LocationHub] ${location.name} status changed to "${location.status}"`);
+          if (location.userId === user.id) {
+            dispatch(setMyStatus(location.status ?? null));
+          }
+          dispatch(updateLocationStatus(location));
         });
 
         appHub.onReceiveNewConversation((conversation, initialMessage) => {

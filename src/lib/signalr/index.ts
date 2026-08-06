@@ -9,6 +9,7 @@ export type UserDisconnectCallback = (userId: number) => void;
 export type ReceiveOtherMovementCallback = (location: LocationDto) => void;
 export type ReceiveVisibilityUpdatedCallback = (location: LocationDto) => void;
 export type ReceiveBatteryUpdatedCallback = (location: LocationDto) => void;
+export type ReceiveStatusUpdatedCallback = (location: LocationDto) => void;
 
 class LocationHub {
   private connection: signalR.HubConnection | null = null;
@@ -19,6 +20,7 @@ class LocationHub {
   private receiveOtherMovementCallback: ReceiveOtherMovementCallback | null = null;
   private receiveVisibilityUpdatedCallback: ReceiveVisibilityUpdatedCallback | null = null;
   private receiveBatteryUpdatedCallback: ReceiveBatteryUpdatedCallback | null = null;
+  private receiveStatusUpdatedCallback: ReceiveStatusUpdatedCallback | null = null;
 
   async start(): Promise<void> {
     const myEpoch = ++this.epoch;
@@ -77,6 +79,11 @@ class LocationHub {
     this.connection.on("ReceiveBatteryUpdated", (location: LocationDto) => {
       console.log("[SignalR] Battery updated:", location);
       this.receiveBatteryUpdatedCallback?.(location);
+    });
+
+    this.connection.on("ReceiveStatusUpdated", (location: LocationDto) => {
+      console.log("[SignalR] Status updated:", location);
+      this.receiveStatusUpdatedCallback?.(location);
     });
 
     this.connection.onclose(() => {
@@ -138,6 +145,10 @@ class LocationHub {
     this.receiveBatteryUpdatedCallback = callback;
   }
 
+  onReceiveStatusUpdated(callback: ReceiveStatusUpdatedCallback): void {
+    this.receiveStatusUpdatedCallback = callback;
+  }
+
   async updateLocation(latitude: number, longitude: number, accuracy?: number, speed?: number): Promise<void> {
     if (!this.connection) return;
     try {
@@ -162,6 +173,15 @@ class LocationHub {
       await this.connection.invoke("UpdateBattery", battery);
     } catch (err) {
       console.error("[LocationHub] UpdateBattery error:", err);
+    }
+  }
+
+  async updateStatus(status: string): Promise<void> {
+    if (!this.connection) return;
+    try {
+      await this.connection.invoke("UpdateStatus", status);
+    } catch (err) {
+      console.error("[LocationHub] UpdateStatus error:", err);
     }
   }
 

@@ -8,6 +8,7 @@ import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { VisibilityPicker } from "@/components/home/visibility-picker";
+import { StatusEditor } from "@/components/home/status-editor";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT } from "@/services/location";
@@ -26,6 +27,7 @@ export default function HomePage() {
   const latitude = useAppSelector((s) => s.location.latitude);
   const longitude = useAppSelector((s) => s.location.longitude);
   const myBattery = useAppSelector((s) => s.location.battery);
+  const myStatus = useAppSelector((s) => s.location.status);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
@@ -90,6 +92,8 @@ export default function HomePage() {
   const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
   const selectedBattery =
     selectedActive?.battery ?? selectedLocation?.battery ?? (selectedUserId === user?.id ? myBattery ?? undefined : undefined);
+  const selectedStatus =
+    selectedLocation?.status ?? selectedActive?.status ?? (selectedUserId === user?.id ? myStatus ?? undefined : undefined);
   const selectedDistance = selectedActive?.distance ?? null;
 
   const handleCurrentUserClick = useCallback(() => {
@@ -123,6 +127,7 @@ export default function HomePage() {
       userDetail={userDetail ?? null}
       loading={loadingUserDetail}
       battery={isCurrentUser ? (myBattery ?? undefined) : selectedBattery}
+      status={isCurrentUser ? (myStatus ?? undefined) : selectedStatus}
       distance={isCurrentUser ? null : selectedDistance}
       onClose={handleCloseDetail}
       onFriendshipChange={refetchUserDetail}
@@ -168,6 +173,7 @@ export default function HomePage() {
                   image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
                   isCurrentUser
                   battery={myBattery ?? undefined}
+                  status={myStatus ?? undefined}
                   onClick={handleCurrentUserClick}
                 />
               )}
@@ -180,6 +186,7 @@ export default function HomePage() {
                   image={loc.image || undefined}
                   moving={movingUserIds.includes(loc.userId)}
                   battery={loc.battery}
+                  status={loc.status}
                   onClick={() => handleMarkerClick(loc)}
                 />
               ))}
@@ -188,6 +195,7 @@ export default function HomePage() {
 
           <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
             <VisibilityPicker />
+            <StatusEditor />
             <button
               onClick={handleToggleView}
               className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
@@ -208,6 +216,7 @@ export default function HomePage() {
       <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
         <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
           <VisibilityPicker />
+          <StatusEditor />
           {!locationDenied && (
             <button
               onClick={handleToggleView}

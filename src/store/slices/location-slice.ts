@@ -12,6 +12,7 @@ interface LocationState {
   movingUserIds: number[];
   visibility: number;
   battery: number | null;
+  status: string | null;
 }
 
 const initialState: LocationState = {
@@ -25,6 +26,7 @@ const initialState: LocationState = {
   movingUserIds: [],
   visibility: 4,
   battery: null,
+  status: null,
 };
 
 const locationSlice = createSlice({
@@ -88,11 +90,25 @@ const locationSlice = createSlice({
         };
       }
     },
+    updateLocationStatus: (state, action: PayloadAction<LocationDto>) => {
+      const payload = action.payload;
+      const idx = state.locations.findIndex((l) => l.userId === payload.userId);
+      if (idx !== -1) {
+        state.locations[idx] = {
+          ...state.locations[idx],
+          status: payload.status ?? null,
+          updatedAt: payload.updatedAt,
+        };
+      }
+    },
     setMyVisibility: (state, action: PayloadAction<number>) => {
       state.visibility = action.payload;
     },
     setMyBattery: (state, action: PayloadAction<number>) => {
       state.battery = action.payload;
+    },
+    setMyStatus: (state, action: PayloadAction<string | null>) => {
+      state.status = action.payload;
     },
     setMovingUser: (state, action: PayloadAction<number>) => {
       if (!state.movingUserIds.includes(action.payload)) {
@@ -116,8 +132,10 @@ export const {
   updateOtherLocation,
   updateLocationVisibility,
   updateLocationBattery,
+  updateLocationStatus,
   setMyVisibility,
   setMyBattery,
+  setMyStatus,
   setMovingUser,
   clearMovingUser,
   resetLocation,

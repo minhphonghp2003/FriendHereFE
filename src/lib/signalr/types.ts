@@ -32,6 +32,7 @@ export interface LocationDto {
   accuracy: number;
   speed: number;
   battery: number;
+  status?: string | null;
   visibility: number;
   updatedAt: string;
 }
@@ -45,6 +46,7 @@ export interface ActiveUserDto {
   accuracy: number;
   speed: number;
   battery: number;
+  status?: string | null;
   updatedAt: string;
   distance: number | null;
 }

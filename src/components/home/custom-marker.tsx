@@ -34,6 +34,7 @@ interface CustomMarkerProps {
   isCurrentUser?: boolean;
   moving?: boolean;
   battery?: number;
+  status?: string | null;
   onClick?: () => void;
 }
 
@@ -43,7 +44,7 @@ const getBatteryIcon = (level: number) => {
   return { Icon: BatteryFull, color: "#22c55e" };
 };
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, onClick }: CustomMarkerProps) => {
+export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, status, onClick }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
   const clipId = useId();
 
@@ -73,6 +74,14 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
+        {status && (
+          <div
+            className="pointer-events-none absolute left-1/2 z-10 max-w-[140px] -translate-x-1/2 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-center text-[10px] font-semibold leading-tight text-zinc-700 shadow-md"
+            style={{ bottom: "calc(100% + 2px)" }}
+          >
+            <span className="block truncate">{status}</span>
+          </div>
+        )}
         <svg
           width="48"
           height="52"

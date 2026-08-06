@@ -8,6 +8,7 @@ import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
 import { isPendingStatus, isAcceptedStatus, isBlockedStatus, getMyFriendshipType, FRIENDSHIP_TYPE_VALUES, FRIENDSHIP_TYPE_LABELS } from "@/types/friendship";
 import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
+import { MessageSquare } from "lucide-react";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -38,6 +39,7 @@ interface MarkerDetailProps {
   userDetail?: User | null;
   loading?: boolean;
   battery?: number;
+  status?: string | null;
   distance?: number | null;
   onClose: () => void;
   onFriendshipChange?: () => void;
@@ -49,6 +51,7 @@ export const MarkerDetail = ({
   userDetail,
   loading,
   battery,
+  status,
   distance,
   onClose,
   onFriendshipChange,
@@ -323,6 +326,12 @@ export const MarkerDetail = ({
           )}
           {age && (
             <p className="text-xs text-zinc-500">{age} years old</p>
+          )}
+          {status && (
+            <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-medium text-blue-600">
+              <MessageSquare className="h-3 w-3 shrink-0" />
+              <span className="truncate">{status}</span>
+            </p>
           )}
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
             <span className="text-emerald-500">Online</span>
