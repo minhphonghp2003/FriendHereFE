@@ -13,9 +13,20 @@ export const useBattery = (onChange?: (level: number) => void): number | null =>
   const [level, setLevel] = useState<number | null>(null);
 
   useEffect(() => {
-    if (typeof navigator === "undefined") return;
+    if (typeof navigator === "undefined" || typeof window === "undefined") return;
     const nav = navigator as Navigator & { getBattery?: () => Promise<BatteryManagerLike> };
-    if (!nav.getBattery) return;
+    if (!window.isSecureContext) {
+      console.warn(
+        "[useBattery] Battery Status API requires a secure context (HTTPS). Page is served over HTTP on this device, so battery is unavailable.",
+      );
+      return;
+    }
+    if (!nav.getBattery) {
+      console.warn(
+        "[useBattery] Battery Status API is not supported in this browser (iOS Safari and Firefox do not expose battery to web pages). Battery unavailable.",
+      );
+      return;
+    }
 
     let cancelled = false;
     let battery: BatteryManagerLike | null = null;
@@ -36,7 +47,9 @@ export const useBattery = (onChange?: (level: number) => void): number | null =>
         b.addEventListener("chargingchange", handler);
         handler();
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("[useBattery] navigator.getBattery() rejected:", err);
+      });
 
     return () => {
       cancelled = true;
