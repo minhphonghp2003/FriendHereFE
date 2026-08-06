@@ -3,7 +3,7 @@
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { Users, X, Loader2 } from "lucide-react";
+import { Map as MapIcon, List } from "lucide-react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
@@ -15,6 +15,8 @@ import { useAppSelector } from "@/store/hooks";
 import type { LocationDto } from "@/lib/signalr/types";
 import { appHub } from "@/lib/signalr/app-hub";
 
+type ViewMode = "map" | "list";
+
 export default function HomePage() {
   const { user } = useAuth();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -25,7 +27,7 @@ export default function HomePage() {
   const longitude = useAppSelector((s) => s.location.longitude);
   const myBattery = useAppSelector((s) => s.location.battery);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [showNearbyList, setShowNearbyList] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("map");
   const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
   const {
@@ -36,6 +38,8 @@ export default function HomePage() {
     refetch: refetchActiveUsers,
     loadMore,
   } = useActiveUsers(20, LOCATION_SORT.Distance);
+
+  const effectiveMode: ViewMode = locationDenied ? "list" : viewMode;
 
   useEffect(() => {
     if (selectedUserId === null || !user) return;
@@ -98,13 +102,12 @@ export default function HomePage() {
 
   const handleUserClick = useCallback((userId: number) => {
     setSelectedUserId(userId);
-    setShowNearbyList(false);
   }, []);
 
-  const handleToggleNearby = useCallback(() => {
-    setShowNearbyList((v) => {
-      const next = !v;
-      if (next) refetchActiveUsers();
+  const handleToggleView = useCallback(() => {
+    setViewMode((v) => {
+      const next = v === "map" ? "list" : "map";
+      if (next === "list") refetchActiveUsers();
       return next;
     });
   }, [refetchActiveUsers]);
@@ -136,37 +139,63 @@ export default function HomePage() {
     );
   }
 
-  if (!position && !locationDenied) {
-    return (
-      <>
-        <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
-        </div>
-      </>
-    );
-  }
+  if (effectiveMode === "map") {
+    if (!position) {
+      return (
+        <>
+          <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+          </div>
+        </>
+      );
+    }
 
-  if (locationDenied) {
     return (
       <>
         <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
-          <div className="absolute right-2 top-4 z-40">
+          <APIProvider apiKey={apiKey}>
+            <Map
+              defaultCenter={position}
+              defaultZoom={15}
+              gestureHandling="greedy"
+              disableDefaultUI
+              mapId="friendhere-map"
+            >
+              {position && (
+                <CustomMarker
+                  position={position}
+                  name={user?.name || "You"}
+                  image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
+                  isCurrentUser
+                  battery={myBattery ?? undefined}
+                  onClick={handleCurrentUserClick}
+                />
+              )}
+
+              {visibleLocations.map((loc) => (
+                <CustomMarker
+                  key={loc.id}
+                  position={{ lat: loc.latitude, lng: loc.longitude }}
+                  name={loc.name}
+                  image={loc.image || undefined}
+                  moving={movingUserIds.includes(loc.userId)}
+                  battery={loc.battery}
+                  onClick={() => handleMarkerClick(loc)}
+                />
+              ))}
+            </Map>
+          </APIProvider>
+
+          <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
             <VisibilityPicker />
+            <button
+              onClick={handleToggleView}
+              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
+            >
+              <List className="h-3.5 w-3.5" />
+              Danh sách
+            </button>
           </div>
-          {loadingActiveUsers ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
-            </div>
-          ) : (
-            <UserLocationList
-              users={activeUsers}
-              currentUser={user}
-              onUserClick={handleUserClick}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              onLoadMore={loadMore}
-            />
-          )}
 
           {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}
         </div>
@@ -177,71 +206,31 @@ export default function HomePage() {
   return (
     <>
       <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
-        <APIProvider apiKey={apiKey}>
-          <Map
-            defaultCenter={position}
-            defaultZoom={15}
-            gestureHandling="greedy"
-            disableDefaultUI
-            mapId="friendhere-map"
-          >
-            {position && (
-              <CustomMarker
-                position={position}
-                name={user?.name || "You"}
-                image={currentUserProfile?.images?.[0]?.thumbUrl || undefined}
-                isCurrentUser
-                battery={myBattery ?? undefined}
-                onClick={handleCurrentUserClick}
-              />
-            )}
-
-            {visibleLocations.map((loc) => (
-              <CustomMarker
-                key={loc.id}
-                position={{ lat: loc.latitude, lng: loc.longitude }}
-                name={loc.name}
-                image={loc.image || undefined}
-                moving={movingUserIds.includes(loc.userId)}
-                battery={loc.battery}
-                onClick={() => handleMarkerClick(loc)}
-              />
-            ))}
-          </Map>
-        </APIProvider>
-
         <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
           <VisibilityPicker />
-          <button
-            onClick={handleToggleNearby}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-md transition-colors ${
-              showNearbyList
-                ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-            }`}
-          >
-            {showNearbyList ? <X className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
-            Nearby
-          </button>
+          {!locationDenied && (
+            <button
+              onClick={handleToggleView}
+              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
+            >
+              <MapIcon className="h-3.5 w-3.5" />
+              Bản đồ
+            </button>
+          )}
         </div>
-
-        {showNearbyList && (
-          <div className="absolute bottom-4 right-2 top-16 z-40 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-xl">
-            {loadingActiveUsers ? (
-              <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
-              </div>
-            ) : (
-              <UserLocationList
-                users={activeUsers}
-                currentUser={user}
-                onUserClick={handleUserClick}
-                hasMore={hasMore}
-                isLoadingMore={isLoadingMore}
-                onLoadMore={loadMore}
-              />
-            )}
+        {loadingActiveUsers ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
           </div>
+        ) : (
+          <UserLocationList
+            users={activeUsers}
+            currentUser={user}
+            onUserClick={handleUserClick}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
+          />
         )}
 
         {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}

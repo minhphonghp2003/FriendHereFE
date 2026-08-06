@@ -4,3 +4,4 @@ export { useCreateMoment } from "./use-create-moment";
 export { useUpdateMoment } from "./use-update-moment";
 export { useDeleteMoment } from "./use-delete-moment";
 export { useHideMoment } from "./use-hide-moment";
+export { useChangeMomentVisibility } from "./use-change-moment-visibility";
