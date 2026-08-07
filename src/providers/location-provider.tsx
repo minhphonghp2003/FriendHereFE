@@ -24,11 +24,26 @@ import {
   clearMovingUser,
   resetLocation,
 } from "@/store/slices/location-slice";
-import { addConversation, appendMessage, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import {
+  addConversation,
+  appendMessage,
+  setConversationBlocked,
+  setConversationUnblocked,
+} from "@/store/slices/chat-slice";
 import { useBattery } from "@/hooks/location/use-battery";
 import { LOCATION_VISIBILITY_STORAGE_KEY } from "@/store/slices/location-slice";
+import type { MomentDto } from "@/types/moment";
+import { toMomentVisibility, toMomentStatus } from "@/types/moment";
 
 const UPDATE_BATCH_INTERVAL_MS = 5000;
+
+const normalizeMoments = (moments: MomentDto[] | null): MomentDto[] | null =>
+  moments?.map((m) => ({
+    ...m,
+    visibility: toMomentVisibility(m.visibility),
+    status: toMomentStatus(m.status),
+    reactions: m.reactions ?? [],
+  })) ?? moments;
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -55,7 +70,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const locationHubReadyRef = useRef(false);
   const geoReadyRef = useRef(false);
   const canJoinRef = useRef(false);
-  const pendingPosition = useRef<{ latitude: number; longitude: number; accuracy: number; speed?: number } | null>(null);
+  const pendingPosition = useRef<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    speed?: number;
+  } | null>(null);
   const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
   const movingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const batteryLevelRef = useRef<number | null>(null);
@@ -81,11 +101,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const handleBatteryChange = useCallback((level: number) => {
-    batteryLevelRef.current = level;
-    pendingBatteryRef.current = level;
-    dispatch(setMyBattery(level));
-  }, [dispatch]);
+  const handleBatteryChange = useCallback(
+    (level: number) => {
+      batteryLevelRef.current = level;
+      pendingBatteryRef.current = level;
+      dispatch(setMyBattery(level));
+    },
+    [dispatch],
+  );
 
   useBattery(handleBatteryChange);
 
@@ -138,22 +161,21 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
       console.log("[LocationProvider] Joining location hub...");
       const pos = pendingPosition.current;
-      locationHub.join({
-        ...(pos && {
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          accuracy: pos.accuracy,
-          speed: pos.speed,
-        }),
-      })
+      locationHub
+        .join({
+          ...(pos && {
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            accuracy: pos.accuracy,
+            speed: pos.speed,
+          }),
+        })
         .then(() => {
           if (batteryLevelRef.current !== null) {
             pendingBatteryRef.current = batteryLevelRef.current;
           }
         })
-        .catch((err) =>
-          console.error("[LocationProvider] Join error:", err),
-        );
+        .catch((err) => console.error("[LocationProvider] Join error:", err));
     };
 
     const init = async () => {
@@ -177,7 +199,11 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         locationHub.onReceiveLocations((locList) => {
           console.log(`[LocationHub] Received ${locList.length} location(s)`);
-          dispatch(setLocations(locList));
+          dispatch(
+            setLocations(
+              locList.map((loc) => ({ ...loc, moments: normalizeMoments(loc.moments) })),
+            ),
+          );
           const me = locList.find((l) => l.userId === user.id);
           if (me) {
             dispatch(setMyBattery(me.battery));
@@ -188,7 +214,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         locationHub.onNewJoin((_user, _location) => {
           if (_user.id === user.id) return;
-          console.log(`[LocationHub] ${_user.name} connected at (${_location.latitude}, ${_location.longitude})`);
+          console.log(
+            `[LocationHub] ${_user.name} connected at (${_location.latitude}, ${_location.longitude})`,
+          );
           dispatch(addLocation(_location));
         });
 
@@ -197,7 +225,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         });
 
         locationHub.onReceiveOtherMovement((location) => {
-          console.log(`[LocationHub] ${location.name} moved to (${location.latitude}, ${location.longitude})`);
+          console.log(
+            `[LocationHub] ${location.name} moved to (${location.latitude}, ${location.longitude})`,
+          );
           dispatch(updateOtherLocation(location));
           dispatch(setMovingUser(location.userId));
           const existing = movingTimers.current.get(location.userId);
@@ -212,7 +242,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         });
 
         locationHub.onReceiveVisibilityUpdated((location) => {
-          console.log(`[LocationHub] ${location.name} visibility changed to ${location.visibility}`);
+          console.log(
+            `[LocationHub] ${location.name} visibility changed to ${location.visibility}`,
+          );
           if (location.userId === user.id) {
             dispatch(setMyVisibility(location.visibility));
           }
@@ -291,7 +323,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             const dist = getDistance(prevPos.latitude, prevPos.longitude, latitude, longitude);
             if (dist >= 5) {
               console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, queuing location update`);
-              pendingPositionUpdateRef.current = { latitude, longitude, accuracy, speed: speed ?? undefined };
+              pendingPositionUpdateRef.current = {
+                latitude,
+                longitude,
+                accuracy,
+                speed: speed ?? undefined,
+              };
             }
           }
           lastPosition.current = { latitude, longitude };
