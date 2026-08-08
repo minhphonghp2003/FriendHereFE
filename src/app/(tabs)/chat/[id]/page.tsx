@@ -41,6 +41,9 @@ export default function ChatScreenPage() {
   const [giphyQuery, setGiphyQuery] = useState("");
   const [giphyResults, setGiphyResults] = useState<GiphyItem[]>([]);
   const [giphyLoading, setGiphyLoading] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Map<number, string>>(new Map());
+  const typingSentRef = useRef(false);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,10 +95,31 @@ export default function ChatScreenPage() {
     ]).finally(() => setLoading(false));
     appHub.joinConversation(conversationId).catch(console.error);
     return () => {
+      if (typingSentRef.current) {
+        typingSentRef.current = false;
+        appHub.sendTyping(conversationId, false).catch(() => {});
+      }
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
       dispatch(setActiveConversation(null));
       appHub.leaveConversation(conversationId).catch(console.error);
     };
   }, [conversationId, dispatch, fetchMessages]);
+
+  useEffect(() => {
+    const unsub = appHub.onReceiveTyping((data) => {
+      if (data.conversationId !== conversationId) return;
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        if (data.isTyping) {
+          next.set(data.userId, data.userName);
+        } else {
+          next.delete(data.userId);
+        }
+        return next;
+      });
+    });
+    return unsub;
+  }, [conversationId]);
 
   useEffect(() => {
     const cb = (message: MessageDto) => {
@@ -145,6 +169,11 @@ export default function ChatScreenPage() {
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if ((!text && !pendingMoment) || sending || isBlocked) return;
+    if (typingSentRef.current) {
+      typingSentRef.current = false;
+      appHub.sendTyping(conversationId, false).catch(() => {});
+    }
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
     setSending(true);
     setInput("");
     try {
@@ -162,6 +191,29 @@ export default function ChatScreenPage() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
   };
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setInput(text);
+    const hasText = text.trim().length > 0;
+    if (hasText && !typingSentRef.current && !isBlocked) {
+      typingSentRef.current = true;
+      appHub.sendTyping(conversationId, true).catch(() => {});
+    }
+    if (!hasText && typingSentRef.current) {
+      typingSentRef.current = false;
+      appHub.sendTyping(conversationId, false).catch(() => {});
+    }
+    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    if (hasText) {
+      typingStopTimerRef.current = setTimeout(() => {
+        if (typingSentRef.current) {
+          typingSentRef.current = false;
+          appHub.sendTyping(conversationId, false).catch(() => {});
+        }
+      }, 1500);
+    }
+  }, [conversationId, isBlocked]);
 
   const sendMessageByType = useCallback(async (content: string, messageType: number) => {
     if (isBlocked || sending) return;
@@ -315,6 +367,16 @@ export default function ChatScreenPage() {
         </div>
       ) : (
         <div className="relative border-t border-border">
+          {typingUsers.size > 0 && (
+            <div className="flex items-center gap-1.5 px-4 pt-2 text-xs text-muted-foreground">
+              <span className="flex gap-0.5">
+                <span className="h-1 w-1 animate-bounce rounded-full bg-current" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:0.15s]" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:0.3s]" />
+              </span>
+              <span>{Array.from(typingUsers.values()).join(", ")} đang nhập...</span>
+            </div>
+          )}
           {pendingMomentLoading ? (
             <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
           ) : pendingMoment ? (
@@ -398,7 +460,7 @@ export default function ChatScreenPage() {
             <button onClick={handleToggleGiphyPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-muted-foreground hover:bg-muted" aria-label="GIF & Sticker">
               GIF
             </button>
-            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
+            <input ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>

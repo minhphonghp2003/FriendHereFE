@@ -13,6 +13,15 @@ export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipUnblockedCallback = (dto: FriendshipDto) => void;
 
+export interface TypingData {
+  conversationId: number;
+  userId: number;
+  userName: string;
+  isTyping: boolean;
+}
+
+export type ReceiveTypingCallback = (data: TypingData) => void;
+
 export interface ChatBlockedData {
   targetUserId: number;
 }
@@ -34,6 +43,7 @@ class AppHub {
   private receiveFriendshipUnblockedCallbacks: Set<ReceiveFriendshipUnblockedCallback> = new Set();
   private receiveChatBlockedCallbacks: Set<ReceiveChatBlockedCallback> = new Set();
   private receiveChatUnblockedCallbacks: Set<ReceiveChatUnblockedCallback> = new Set();
+  private receiveTypingCallbacks: Set<ReceiveTypingCallback> = new Set();
   private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
@@ -105,6 +115,10 @@ class AppHub {
       this.receiveChatUnblockedCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveTyping", (data: TypingData) => {
+      this.receiveTypingCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.on("ReceiveMomentReacted", (data: MomentReactionNotification) => {
       this.receiveMomentReactedCallbacks.forEach((cb) => cb(data));
     });
@@ -150,6 +164,7 @@ class AppHub {
     this.receiveFriendshipUnblockedCallbacks.clear();
     this.receiveChatBlockedCallbacks.clear();
     this.receiveChatUnblockedCallbacks.clear();
+    this.receiveTypingCallbacks.clear();
     this.receiveMomentReactedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
@@ -164,6 +179,11 @@ class AppHub {
   async sendMessage(dto: SendMessageRequest): Promise<void> {
     if (!this.connection) throw new Error("AppHub not connected");
     await this.connection.invoke("SendMessage", dto);
+  }
+
+  async sendTyping(conversationId: number, isTyping: boolean): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("Typing", conversationId, isTyping);
   }
 
   async joinConversation(id: number): Promise<void> {
@@ -220,6 +240,11 @@ class AppHub {
   onReceiveChatUnblocked(callback: ReceiveChatUnblockedCallback): () => void {
     this.receiveChatUnblockedCallbacks.add(callback);
     return () => { this.receiveChatUnblockedCallbacks.delete(callback); };
+  }
+
+  onReceiveTyping(callback: ReceiveTypingCallback): () => void {
+    this.receiveTypingCallbacks.add(callback);
+    return () => { this.receiveTypingCallbacks.delete(callback); };
   }
 
   onReceiveMomentReacted(callback: ReceiveMomentReactedCallback): () => void {
