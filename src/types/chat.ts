@@ -82,7 +82,16 @@ export const isVideoUrl = (url?: string | null): boolean =>
 
 export const getMessagePreview = (msg: MessageDto | null): string => {
   if (!msg) return "";
+
+  const type = toChatMessageRenderType(msg.type);
+
+  if (type === "Gif") return "[GIF]";
+  if (type === "Sticker") return "[Sticker]";
+  if (type === "File") return "[File]";
+  if (type === "Emoji") return msg.content || "[Emoji]";
+  if (type === "System") return msg.content || "[Hệ thống]";
   if (msg.content) return msg.content;
+
   if (msg.attachments && msg.attachments.length > 0) {
     const hasVideo = msg.attachments.some((a) => isVideoUrl(a.originalUrl));
     return hasVideo ? "[Video]" : `[Hình ảnh${msg.attachments.length > 1 ? ` (${msg.attachments.length})` : ""}]`;
