@@ -1,3 +1,5 @@
+import type { MomentDto } from "@/types/moment";
+
 export interface ImageDto {
   originalUrl: string;
   thumbUrl: string;
@@ -35,6 +37,7 @@ export interface LocationDto {
   status: string | null;
   visibility: number;
   updatedAt: string;
+  moments: MomentDto[] | null;
 }
 
 export interface ActiveUserDto {

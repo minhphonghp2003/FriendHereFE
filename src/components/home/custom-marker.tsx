@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useMemo, useId } from "react";
+import { useState, useMemo } from "react";
+import Image from "next/image";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
+import { getMomentThumbnail } from "@/services/moment";
+import type { MomentDto } from "@/types/moment";
 
 const MARKER_COLORS = [
   "#3b82f6",
@@ -27,6 +30,11 @@ const stringToColor = (str: string) => {
   return MARKER_COLORS[Math.abs(hash) % MARKER_COLORS.length];
 };
 
+const MARKER_WIDTH = 60;
+const MARKER_HEIGHT = 60;
+const MOMENT_WIDTH = 30;
+const MOMENT_HEIGHT = 30;
+
 interface CustomMarkerProps {
   position: google.maps.LatLngLiteral;
   name: string;
@@ -35,6 +43,8 @@ interface CustomMarkerProps {
   moving?: boolean;
   battery?: number | null;
   status?: string | null;
+  moments?: MomentDto[] | null;
+  onMomentClick?: (moment: MomentDto) => void;
   onClick?: () => void;
 }
 
@@ -44,9 +54,19 @@ const getBatteryIcon = (level: number) => {
   return { Icon: BatteryFull, color: "#22c55e" };
 };
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, status, onClick }: CustomMarkerProps) => {
+export const CustomMarker = ({
+  position,
+  name,
+  image,
+  isCurrentUser,
+  moving,
+  battery,
+  status,
+  moments,
+  onMomentClick,
+  onClick,
+}: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
-  const clipId = useId();
 
   const color = useMemo(() => stringToColor(name), [name]);
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
@@ -54,6 +74,8 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
   const pinColor = isCurrentUser ? "#3b82f6" : color;
 
   const batteryInfo = battery != null ? getBatteryIcon(battery) : null;
+
+  const visibleMoments = moments ?? [];
 
   return (
     <AdvancedMarker
@@ -64,88 +86,106 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
       onClick={onClick}
     >
       <div
-        className={`relative transition-transform duration-200 ${moving ? "marker-glow" : ""}`}
+        className="relative transition-transform duration-200"
         style={{
-          marginTop: -26,
-          transform: hovered ? "scale(1.1)" : "scale(1)",
+          marginTop: -(MARKER_HEIGHT / 2),
+          transform: hovered ? "scale(1.06)" : "scale(1)",
           transformOrigin: "bottom center",
           filter: moving
-            ? "drop-shadow(0 2px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 12px " + pinColor + ")"
+            ? "drop-shadow(0 2px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 14px " + pinColor + ")"
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
         {status && (
           <div
-            className="pointer-events-none absolute left-1/2 z-10 max-w-[140px] -translate-x-1/2 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-center text-[10px] font-semibold leading-tight text-zinc-700 shadow-md"
-            style={{ bottom: "calc(100% + 2px)" }}
+            className="pointer-events-none absolute left-1/2 z-10 max-w-[160px] -translate-x-1/2 rounded-4xl border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] leading-tight font-semibold text-zinc-700 shadow-md"
+            style={{ bottom: "calc(100% + 4px)" }}
           >
             <span className="block truncate">{status}</span>
           </div>
         )}
-        <svg
-          width="48"
-          height="52"
-          viewBox="0 0 48 52"
-          style={{ display: "block" }}
+        <div
+          className="relative overflow-hidden rounded-full border-[3px]"
+          style={{
+            width: MARKER_WIDTH,
+            height: MARKER_HEIGHT,
+            borderColor: pinColor,
+            boxShadow: "0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,0.35)",
+            animation: moving ? "markerPulse 1s ease-in-out infinite" : undefined,
+          }}
         >
-          <defs>
-            <clipPath id={clipId}>
-              <circle cx="24" cy="24" r="16" />
-            </clipPath>
-            {moving && (
-              <>
-                <style>{`@keyframes markerPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }`}</style>
-              </>
-            )}
-          </defs>
-          {moving && (
-            <circle
-              cx="24" cy="24" r="22"
-              fill="none"
-              stroke={pinColor}
-              strokeWidth="2.5"
-              opacity="0.5"
-              style={{ animation: "markerPulse 1s ease-in-out infinite" }}
-            />
-          )}
-          <path
-            d="M 4 24 A 20 20 0 1 1 44 24 C 44 34 36 42 24 52 C 12 42 4 34 4 24 Z"
-            fill={pinColor}
-            stroke="white"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
           {image ? (
-            <image
-              href={image}
-              x="8" y="8" width="32" height="32"
-              preserveAspectRatio="xMidYMid slice"
-              clipPath={`url(#${clipId})`}
+            <Image
+              src={image}
+              alt={name}
+              fill
+              sizes="60px"
+              priority={isCurrentUser}
+              className="object-cover"
             />
           ) : (
-            <>
-              <circle cx="24" cy="24" r="16" fill={pinColor} clipPath={`url(#${clipId})`} />
-              <text
-                x="24" y="24.5"
-                textAnchor="middle" dominantBaseline="central"
-                fill="white"
-                fontSize="18"
-                fontWeight="bold"
-              >
-                {firstLetter}
-              </text>
-            </>
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{ backgroundColor: pinColor }}
+            >
+              <span className="text-4xl font-bold text-white drop-shadow">{firstLetter}</span>
+            </div>
           )}
-        </svg>
+        </div>
         {batteryInfo && (
           <div
-            className="pointer-events-none absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1 py-0.5 shadow-md"
+            className="pointer-events-none absolute -right-1.5 -bottom-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-0.5 shadow-md"
             title={`Battery ${battery}%`}
           >
             <batteryInfo.Icon className="h-3 w-3" color={batteryInfo.color} strokeWidth={2.5} />
-            <span className="text-[9px] font-bold leading-none" style={{ color: batteryInfo.color }}>
+            <span
+              className="text-[10px] leading-none font-bold"
+              style={{ color: batteryInfo.color }}
+            >
               {battery}%
             </span>
+          </div>
+        )}
+        {visibleMoments.length > 0 && (
+          <div
+            className="absolute top-1/2 z-20 flex -translate-y-1/2 items-center"
+            style={{ left: `calc(100% - ${MOMENT_WIDTH / 2}px)` }}
+          >
+            {visibleMoments.slice(0, 3).map((m, i) => {
+              const thumb = getMomentThumbnail(m);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  title={m.caption ?? `${m.userName}'s moment`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMomentClick?.(m);
+                  }}
+                  className={`relative overflow-hidden rounded-md border-2 border-white bg-zinc-200 shadow-md transition-transform duration-200 hover:-translate-y-1 ${i > 0 ? "-ml-2.5" : ""}`}
+                  style={{ width: MOMENT_WIDTH, height: MOMENT_HEIGHT, zIndex: i + 1 }}
+                >
+                  {thumb ? (
+                    <Image
+                      src={thumb.thumbUrl}
+                      alt={m.caption ?? m.userName}
+                      fill
+                      sizes="32px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-zinc-600">
+                      {m.id}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {visibleMoments.length > 3 && (
+              <span className="ml-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-zinc-700 shadow-md">
+                +{visibleMoments.length - 3}
+              </span>
+            )}
           </div>
         )}
       </div>

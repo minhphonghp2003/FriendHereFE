@@ -10,6 +10,7 @@ import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { VisibilityPicker } from "@/components/home/visibility-picker";
 import { StatusEditor } from "@/components/home/status-editor";
+import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT } from "@/services/location";
@@ -32,9 +33,14 @@ export default function HomePage() {
   const myStatus = useAppSelector((s) => s.location.status);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [selectedMomentId, setSelectedMomentId] = useState<number | null>(null);
 
   const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
-  const { data: userDetail, isLoading: loadingUserDetail, refetch: refetchUserDetail } = useUser(selectedUserId ?? 0);
+  const {
+    data: userDetail,
+    isLoading: loadingUserDetail,
+    refetch: refetchUserDetail,
+  } = useUser(selectedUserId ?? 0);
   const { data: currentUserProfile } = useCurrentUser();
   const {
     data: activeUsers,
@@ -83,21 +89,35 @@ export default function HomePage() {
     };
   }, [selectedUserId, user, refetchUserDetail]);
 
-  const position = latitude !== null && longitude !== null
-    ? { lat: latitude, lng: longitude } as google.maps.LatLngLiteral
-    : undefined;
+  const position =
+    latitude !== null && longitude !== null
+      ? ({ lat: latitude, lng: longitude } as google.maps.LatLngLiteral)
+      : undefined;
 
   const visibleLocations = useMemo(
     () => locations.filter((loc) => loc.userId !== user?.id),
     [locations, user?.id],
   );
 
+  const momentMarkers = useMemo(() => locations.flatMap((loc) => loc.moments ?? []), [locations]);
+
+  const selectedMoment =
+    selectedMomentId !== null
+      ? (momentMarkers.find((m) => m.id === selectedMomentId) ?? null)
+      : null;
+
+  const myLocation = locations.find((l) => l.userId === user?.id);
+
   const selectedLocation = locations.find((l) => l.userId === selectedUserId);
   const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
   const selectedBattery =
-    selectedActive?.battery ?? selectedLocation?.battery ?? (selectedUserId === user?.id ? myBattery ?? undefined : undefined);
+    selectedActive?.battery ??
+    selectedLocation?.battery ??
+    (selectedUserId === user?.id ? (myBattery ?? undefined) : undefined);
   const selectedStatus =
-    selectedLocation?.status ?? selectedActive?.status ?? (selectedUserId === user?.id ? myStatus ?? undefined : undefined);
+    selectedLocation?.status ??
+    selectedActive?.status ??
+    (selectedUserId === user?.id ? (myStatus ?? undefined) : undefined);
   const selectedDistance = selectedActive?.distance ?? null;
 
   const handleCurrentUserClick = useCallback(() => {
@@ -180,6 +200,8 @@ export default function HomePage() {
                   isCurrentUser
                   battery={myBattery ?? undefined}
                   status={myStatus ?? undefined}
+                  moments={myLocation?.moments ?? null}
+                  onMomentClick={(m) => setSelectedMomentId(m.id)}
                   onClick={handleCurrentUserClick}
                 />
               )}
@@ -193,13 +215,15 @@ export default function HomePage() {
                   moving={movingUserIds.includes(loc.userId)}
                   battery={loc.battery}
                   status={loc.status}
+                  moments={loc.moments}
+                  onMomentClick={(m) => setSelectedMomentId(m.id)}
                   onClick={() => handleMarkerClick(loc)}
                 />
               ))}
             </Map>
           </APIProvider>
 
-          <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
+          <div className="absolute top-4 right-2 z-40 flex flex-col items-end gap-2">
             <VisibilityPicker />
             <StatusEditor />
             <button
@@ -212,6 +236,14 @@ export default function HomePage() {
           </div>
 
           {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}
+
+          {selectedMoment && (
+            <MomentDetailOverlay
+              momentId={selectedMoment.id}
+              currentUserId={user?.id}
+              onClose={() => setSelectedMomentId(null)}
+            />
+          )}
         </div>
       </>
     );
@@ -220,7 +252,7 @@ export default function HomePage() {
   return (
     <>
       <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
-        <div className="absolute right-2 top-4 z-40 flex flex-col items-end gap-2">
+        <div className="absolute top-4 right-2 z-40 flex flex-col items-end gap-2">
           <VisibilityPicker />
           <StatusEditor />
           {!locationDenied && (
@@ -250,6 +282,14 @@ export default function HomePage() {
 
         {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}
       </div>
+
+      {selectedMoment && (
+        <MomentDetailOverlay
+          momentId={selectedMoment.id}
+          currentUserId={user?.id}
+          onClose={() => setSelectedMomentId(null)}
+        />
+      )}
     </>
   );
 }

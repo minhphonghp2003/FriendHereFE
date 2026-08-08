@@ -1,9 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { LocationDto } from "@/lib/signalr/types";
-import {
-  LOCATION_VISIBILITY_VALUES,
-  type LocationVisibilityValue,
-} from "@/lib/signalr/types";
+import { LOCATION_VISIBILITY_VALUES, type LocationVisibilityValue } from "@/lib/signalr/types";
 
 export const LOCATION_VISIBILITY_STORAGE_KEY = "location.visibility";
 
@@ -74,7 +71,15 @@ const locationSlice = createSlice({
     setLocationDenied: (state) => {
       state.locationDenied = true;
     },
-    setCurrentPosition: (state, action: PayloadAction<{ latitude: number; longitude: number; accuracy?: number; speed?: number }>) => {
+    setCurrentPosition: (
+      state,
+      action: PayloadAction<{
+        latitude: number;
+        longitude: number;
+        accuracy?: number;
+        speed?: number;
+      }>,
+    ) => {
       state.locationDenied = false;
       state.latitude = action.payload.latitude;
       state.longitude = action.payload.longitude;
@@ -84,7 +89,11 @@ const locationSlice = createSlice({
     updateOtherLocation: (state, action: PayloadAction<LocationDto>) => {
       const idx = state.locations.findIndex((l) => l.userId === action.payload.userId);
       if (idx !== -1) {
-        state.locations[idx] = action.payload;
+        const existing = state.locations[idx];
+        state.locations[idx] = {
+          ...action.payload,
+          moments: action.payload.moments ?? existing.moments,
+        };
       }
     },
     updateLocationVisibility: (state, action: PayloadAction<LocationDto>) => {
@@ -95,7 +104,12 @@ const locationSlice = createSlice({
       }
       const idx = state.locations.findIndex((l) => l.userId === payload.userId);
       if (idx !== -1) {
-        state.locations[idx] = { ...state.locations[idx], ...payload };
+        const existing = state.locations[idx];
+        state.locations[idx] = {
+          ...state.locations[idx],
+          ...payload,
+          moments: payload.moments ?? existing.moments,
+        };
       } else {
         state.locations.push(payload);
       }
