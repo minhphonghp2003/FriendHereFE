@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { appHub } from "@/lib/signalr/app-hub";
+import { callAudio } from "@/lib/call-audio";
 import { IncomingCallOverlay } from "@/components/call/incoming-call-overlay";
 import { OutgoingCallOverlay } from "@/components/call/outgoing-call-overlay";
 import { ActiveCallOverlay } from "@/components/call/active-call-overlay";
@@ -65,6 +66,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const cleanup = useCallback(() => {
+    callAudio.stop();
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -129,6 +131,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       peerRef.current = newPeer;
       setPeer(newPeer);
       setStatus("outgoing");
+      callAudio.play();
       try {
         const stream = await getLocalMedia();
         const pc = createPeer(targetUserId);
@@ -167,6 +170,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         type: "answer",
         payload: JSON.stringify(answer),
       });
+      callAudio.stop();
       setStatus("active");
     } catch (err) {
       console.error("Failed to accept call", err);
@@ -229,6 +233,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       peerRef.current = newPeer;
       setPeer(newPeer);
       setStatus("incoming");
+      callAudio.play();
     });
 
     const unsubSignal = appHub.onReceiveCallSignal(async (data: CallSignalData) => {
@@ -247,6 +252,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
                 new RTCSessionDescription(JSON.parse(data.payload ?? "{}")),
               );
               flushCandidates(pcRef.current);
+              callAudio.stop();
               setStatus("active");
             } catch (err) {
               console.error("Failed to handle answer", err);
