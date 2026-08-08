@@ -22,6 +22,9 @@ interface PendingFile {
   file: File;
   preview: string;
   isVideo: boolean;
+  fileId?: string;
+  key?: string;
+  uploading: boolean;
 }
 
 const resolveContentType = (file: File): string => {
@@ -29,6 +32,24 @@ const resolveContentType = (file: File): string => {
   if (/\.(jpe?g|png|gif|webp|bmp|avif)$/i.test(file.name)) return "image/jpeg";
   if (/\.(mp4|webm|mov|m4v|avi)$/i.test(file.name)) return "video/mp4";
   return "application/octet-stream";
+};
+
+const extractFileKey = (data: unknown): string | undefined => {
+  if (typeof data === "string") return data;
+  if (!data || typeof data !== "object") return undefined;
+  const obj = data as Record<string, unknown>;
+  return (
+    (typeof obj.originalKey === "string" ? obj.originalKey : undefined) ??
+    (typeof obj.key === "string" ? obj.key : undefined) ??
+    (typeof obj.fileId === "string" ? obj.fileId : undefined) ??
+    undefined
+  );
+};
+
+const normalizeKeyToken = (key: string | undefined): string => {
+  if (!key) return "";
+  const idx = key.lastIndexOf("/");
+  return idx > 0 ? key.slice(0, idx) : key;
 };
 
 export default function ChatScreenPage() {
@@ -70,6 +91,34 @@ export default function ChatScreenPage() {
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const prevIdRef = useRef<number | null>(null);
+  const markedFileKeysRef = useRef<Set<string>>(new Set());
+  const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
+
+  const resolveFileWaiters = useCallback(() => {
+    fileWaitersRef.current = fileWaitersRef.current.filter((waiter) => {
+      const remaining = waiter.keys.filter((key) => !markedFileKeysRef.current.has(key));
+      if (remaining.length === 0) {
+        clearTimeout(waiter.timer);
+        waiter.resolve();
+        return false;
+      }
+      waiter.keys = remaining;
+      return true;
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
+      const fileKey = normalizeKeyToken(extractFileKey(data));
+      if (!fileKey) return;
+      markedFileKeysRef.current.add(fileKey);
+      setPendingFiles((prev) =>
+        prev.map((p) => (p.key === fileKey ? { ...p, uploading: false } : p))
+      );
+      resolveFileWaiters();
+    });
+    return unsub;
+  }, [resolveFileWaiters]);
 
   const fetchMessages = useCallback(async (prevId: number | null = null) => {
     try {
@@ -198,29 +247,19 @@ export default function ChatScreenPage() {
     }
   }, [hasMore, fetchMessages]);
 
-  const waitForFilesMarked = useCallback((fileIds: string[]): Promise<void> => {
+  const waitForFilesMarked = useCallback((fileKeys: string[]): Promise<void> => {
     return new Promise((resolve) => {
-      if (fileIds.length === 0) {
+      const remaining = fileKeys.filter((key) => !markedFileKeysRef.current.has(key));
+      if (remaining.length === 0) {
         resolve();
         return;
       }
-      const remaining = new Set(fileIds);
-      let settled = false;
-      const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
-        remaining.delete(data.fileId);
-        if (remaining.size === 0 && !settled) {
-          settled = true;
-          unsub();
-          clearTimeout(timer);
-          resolve();
-        }
-      });
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        unsub();
+      const waiter = { keys: remaining, resolve, timer: setTimeout(() => {
+        fileWaitersRef.current = fileWaitersRef.current.filter((w) => w !== waiter);
+        setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: false })));
         resolve();
-      }, 30000);
+      }, 30000) };
+      fileWaitersRef.current.push(waiter);
     });
   }, []);
 
@@ -248,7 +287,16 @@ export default function ChatScreenPage() {
           )
         );
         const fileIds = presigned.map((item) => item.fileId);
-        await waitForFilesMarked(fileIds);
+        const fileKeys = presigned.map((item) => normalizeKeyToken(item.key));
+        setPendingFiles((prev) =>
+          prev.map((p, i) => ({
+            ...p,
+            fileId: fileIds[i],
+            key: fileKeys[i],
+            uploading: !markedFileKeysRef.current.has(fileKeys[i]),
+          }))
+        );
+        await waitForFilesMarked(fileKeys);
         await appHub.sendMessage({
           conversationId,
           content: text || null,
@@ -321,6 +369,7 @@ export default function ChatScreenPage() {
         file,
         preview: URL.createObjectURL(file),
         isVideo: false,
+        uploading: false,
       })),
     ]);
   }, []);
@@ -334,7 +383,7 @@ export default function ChatScreenPage() {
       const nonVideos = prev.filter((p) => !p.isVideo);
       return [
         ...nonVideos,
-        { id: crypto.randomUUID(), file, preview: URL.createObjectURL(file), isVideo: true },
+        { id: crypto.randomUUID(), file, preview: URL.createObjectURL(file), isVideo: true, uploading: false },
       ];
     });
   }, []);
@@ -528,9 +577,15 @@ export default function ChatScreenPage() {
                   ) : (
                     <img src={pf.preview} alt="" className="h-full w-full rounded-lg object-cover" />
                   )}
+                  {pf.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    </div>
+                  )}
                   <button
                     onClick={() => removePendingFile(pf.id)}
-                    className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow"
+                    disabled={sending}
+                    className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow disabled:opacity-50"
                     aria-label="Xóa tệp"
                   >
                     <X className="h-4 w-4" />

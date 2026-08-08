@@ -34,7 +34,12 @@ export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveMomentReactedCallback = (data: MomentReactionNotification) => void;
 
 export interface FileMarkedSuccessData {
-  fileId: string;
+  originalKey: string;
+  thumbKey: string;
+  originalUrl: string;
+  thumbUrl: string;
+  fileId?: string;
+  key?: string;
 }
 
 export type ReceiveFileMarkedSuccessCallback = (data: FileMarkedSuccessData) => void;
