@@ -35,7 +35,8 @@ import { LOCATION_VISIBILITY_STORAGE_KEY } from "@/store/slices/location-slice";
 import type { MomentDto } from "@/types/moment";
 import { toMomentVisibility, toMomentStatus } from "@/types/moment";
 
-const UPDATE_BATCH_INTERVAL_MS = 5000;
+const UPDATE_BATCH_INTERVAL_MS = 10000;
+const MOVE_THRESHOLD_M = 10;
 
 const normalizeMoments = (moments: MomentDto[] | null): MomentDto[] | null =>
   moments?.map((m) => ({
@@ -76,7 +77,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     accuracy: number;
     speed?: number;
   } | null>(null);
-  const lastPosition = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastSentPosition = useRef<{ latitude: number; longitude: number } | null>(null);
   const movingTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const batteryLevelRef = useRef<number | null>(null);
   const pendingBatteryRef = useRef<number | null>(null);
@@ -97,6 +98,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     if (pendingPositionUpdateRef.current !== null) {
       const pos = pendingPositionUpdateRef.current;
       locationHub.updateLocation(pos.latitude, pos.longitude, pos.accuracy, pos.speed);
+      lastSentPosition.current = { latitude: pos.latitude, longitude: pos.longitude };
       pendingPositionUpdateRef.current = null;
     }
   }, []);
@@ -139,6 +141,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         geoReadyRef.current = false;
         canJoinRef.current = false;
         pendingPosition.current = null;
+        lastSentPosition.current = null;
         pendingBatteryRef.current = null;
         pendingPositionUpdateRef.current = null;
         dispatch(resetLocation());
@@ -173,6 +176,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         .then(() => {
           if (batteryLevelRef.current !== null) {
             pendingBatteryRef.current = batteryLevelRef.current;
+          }
+          if (pos) {
+            lastSentPosition.current = { latitude: pos.latitude, longitude: pos.longitude };
           }
         })
         .catch((err) => console.error("[LocationProvider] Join error:", err));
@@ -318,10 +324,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (canJoinRef.current) {
-          const prevPos = lastPosition.current;
-          if (prevPos) {
-            const dist = getDistance(prevPos.latitude, prevPos.longitude, latitude, longitude);
-            if (dist >= 5) {
+          const prevSent = lastSentPosition.current;
+          if (prevSent) {
+            const dist = getDistance(prevSent.latitude, prevSent.longitude, latitude, longitude);
+            if (dist >= MOVE_THRESHOLD_M) {
               console.log(`[LocationProvider] Moved ${dist.toFixed(1)}m, queuing location update`);
               pendingPositionUpdateRef.current = {
                 latitude,
@@ -331,7 +337,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
               };
             }
           }
-          lastPosition.current = { latitude, longitude };
         }
       },
       (err) => {
@@ -356,7 +361,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       geoReadyRef.current = false;
       canJoinRef.current = false;
       pendingPosition.current = null;
-      lastPosition.current = null;
+      lastSentPosition.current = null;
       pendingBatteryRef.current = null;
       pendingPositionUpdateRef.current = null;
       dispatch(resetLocation());
