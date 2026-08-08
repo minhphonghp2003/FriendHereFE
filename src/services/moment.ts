@@ -23,8 +23,10 @@ export const getMomentThumbnail = (moment: MomentDto): ImageDto | null =>
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
+// ISO-8601 UTC (e.g. "2026-08-08T00:00:00Z") so .NET parses a Kind=Utc DateTime;
+// "dd/MM/yyyy HH:mm" parses to Kind=Unspecified and Npgsql rejects it for timestamptz.
 export const formatMomentDate = (date: Date): string =>
-  `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`;
+  `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}T${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}Z`;
 
 export const getTodayRange = (): { fromDate: string; toDate: string } => {
   const now = new Date();
