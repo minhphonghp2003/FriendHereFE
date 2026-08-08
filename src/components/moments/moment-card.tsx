@@ -238,7 +238,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         </div>
 
         {showInfo && (
-          <div className="absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
+          <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200 absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
               {moment.userImage ? (
@@ -270,7 +270,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               <MoreHorizontal className="h-5 w-5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
+              <div className="animate-in fade-in-0 zoom-in-95 duration-100 absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
                 {showVisibilityMenu ? (
                   <>
                     <button
@@ -325,7 +325,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         )}
 
         {showInfo && (
-          <div className="absolute bottom-24 right-2 z-10 flex flex-col items-center gap-5">
+          <div className="animate-in fade-in-0 duration-200 absolute bottom-24 right-2 z-10 flex flex-col items-center gap-5">
             {!isOwner &&
               COMMON_EMOJIS.map((emoji) => (
                 <button
@@ -360,7 +360,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         )}
 
         {showInfo && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-24 pt-16 pr-20">
+          <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-24 pt-16 pr-20">
             {moment.timeline && !hideTimelineChip && (
               <div className="mb-2 flex justify-start">
                 <TimelineChip timeline={moment.timeline} variant="dark" />
@@ -430,7 +430,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             <MoreHorizontal className="h-4 w-4" />
           </Button>
           {showMenu && (
-            <div className="absolute right-0 top-full z-10 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
+            <div className="animate-in fade-in-0 zoom-in-95 duration-100 absolute right-0 top-full z-10 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
               {showVisibilityMenu ? (
                 <>
                   <button
