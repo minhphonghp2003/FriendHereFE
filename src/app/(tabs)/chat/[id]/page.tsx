@@ -4,12 +4,16 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
+import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
+import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2 } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 import type { MessageDto, ImageDto } from "@/types/chat";
+import { MessageType, toChatMessageRenderType } from "@/types/chat";
 
 export default function ChatScreenPage() {
   const router = useRouter();
@@ -31,6 +35,12 @@ export default function ChatScreenPage() {
   const [pendingMoment, setPendingMoment] = useState<ImageDto | null>(null);
   const [pendingMomentLoading, setPendingMomentLoading] = useState(!!momentIdParam);
   const [viewMomentId, setViewMomentId] = useState<number | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGiphyPicker, setShowGiphyPicker] = useState(false);
+  const [giphyTab, setGiphyTab] = useState<"gif" | "sticker">("gif");
+  const [giphyQuery, setGiphyQuery] = useState("");
+  const [giphyResults, setGiphyResults] = useState<GiphyItem[]>([]);
+  const [giphyLoading, setGiphyLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -153,6 +163,59 @@ export default function ChatScreenPage() {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
   };
 
+  const sendMessageByType = useCallback(async (content: string, messageType: number) => {
+    if (isBlocked || sending) return;
+    setSending(true);
+    try {
+      await appHub.sendMessage({ conversationId, content, messageType, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: undefined });
+    } catch (err) {
+      console.error("Failed to send message", err);
+    } finally {
+      setSending(false);
+    }
+  }, [conversationId, isBlocked, sending]);
+
+  const handleSendEmoji = useCallback((emoji: string) => {
+    setShowEmojiPicker(false);
+    sendMessageByType(emoji, MessageType.Emoji);
+  }, [sendMessageByType]);
+
+  const handleSendGiphy = useCallback((item: GiphyItem) => {
+    setShowGiphyPicker(false);
+    sendMessageByType(item.url, giphyTab === "sticker" ? MessageType.Sticker : MessageType.Gif);
+  }, [sendMessageByType, giphyTab]);
+
+  const fetchGiphy = useCallback(async (q: string, tab: "gif" | "sticker") => {
+    setGiphyLoading(true);
+    try {
+      setGiphyResults(await searchGiphy(q, tab));
+    } catch (err) {
+      console.error("Failed to fetch giphy", err);
+      setGiphyResults([]);
+    } finally {
+      setGiphyLoading(false);
+    }
+  }, []);
+
+  const handleToggleEmojiPicker = useCallback(() => {
+    setShowEmojiPicker((v) => !v);
+  }, []);
+
+  const handleToggleGiphyPicker = useCallback(() => {
+    setShowGiphyPicker((v) => !v);
+    if (!showGiphyPicker) fetchGiphy(giphyQuery, giphyTab);
+  }, [showGiphyPicker, giphyQuery, giphyTab, fetchGiphy]);
+
+  const handleGiphyTabChange = useCallback((tab: "gif" | "sticker") => {
+    setGiphyTab(tab);
+    if (showGiphyPicker) fetchGiphy(giphyQuery, tab);
+  }, [showGiphyPicker, giphyQuery, fetchGiphy]);
+
+  const handleGiphySearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    fetchGiphy(giphyQuery, giphyTab);
+  }, [giphyQuery, giphyTab, fetchGiphy]);
+
   const handleBlock = useCallback(async () => {
     if (!opponentId || blocking) return;
     setBlocking(true);
@@ -219,9 +282,10 @@ export default function ChatScreenPage() {
         )}
         {messages.map((msg) => {
           const isMe = msg.senderId === user?.id;
+          const isSystem = toChatMessageRenderType(msg.type) === "System";
           return (
-            <div key={msg.id} className={`flex gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
-              {!isMe && (
+            <div key={msg.id} className={`flex gap-2 ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}>
+              {!isMe && !isSystem && (
                 <div className="shrink-0 self-end">
                   {msg.senderAvatar?.thumbUrl ? (
                     <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
@@ -233,25 +297,8 @@ export default function ChatScreenPage() {
                 </div>
               )}
               <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
-                {!isMe && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
-                <div className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}>
-                  {msg.momentThumbnail ? (
-                    <div className="mb-1.5">
-                      <img
-                        src={msg.momentThumbnail.thumbUrl}
-                        alt=""
-                        onClick={() => msg.momentId && setViewMomentId(msg.momentId)}
-                        className="h-20 w-20 rounded-lg object-cover cursor-pointer"
-                      />
-                    </div>
-                  ) : null}
-                  {msg.content ? (
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                  ) : null}
-                  <p className="text-[10px] mt-1 opacity-70 text-right">
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
+                {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                <MessageBubble msg={msg} isMe={isMe} onViewMoment={(id) => setViewMomentId(id)} />
               </div>
             </div>
           );
@@ -267,7 +314,7 @@ export default function ChatScreenPage() {
           )}
         </div>
       ) : (
-        <div className="border-t border-border">
+        <div className="relative border-t border-border">
           {pendingMomentLoading ? (
             <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
           ) : pendingMoment ? (
@@ -285,7 +332,72 @@ export default function ChatScreenPage() {
               </button>
             </div>
           ) : null}
-          <div className="flex items-center gap-2 p-3">
+
+          {showEmojiPicker && (
+            <div className="absolute bottom-full left-3 z-50 mb-2">
+              <div className="rounded-xl border border-border bg-background shadow-lg">
+                <EmojiPicker
+                  onEmojiClick={(emojiData) => handleSendEmoji(emojiData.emoji)}
+                  width={300}
+                  height={320}
+                />
+              </div>
+            </div>
+          )}
+
+          {showGiphyPicker && (
+            <div className="absolute bottom-full left-3 z-50 mb-2 w-[min(90vw,340px)] overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+              <form onSubmit={handleGiphySearch} className="flex items-center gap-1.5 border-b border-border p-2">
+                <div className="flex shrink-0 rounded-full bg-muted p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleGiphyTabChange("gif")}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${giphyTab === "gif" ? "bg-background shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    GIF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleGiphyTabChange("sticker")}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${giphyTab === "sticker" ? "bg-background shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    Sticker
+                  </button>
+                </div>
+                <input
+                  value={giphyQuery}
+                  onChange={(e) => setGiphyQuery(e.target.value)}
+                  placeholder="Tìm kiếm..."
+                  className="flex-1 rounded-full bg-muted px-3 py-1.5 text-sm outline-none"
+                />
+              </form>
+              <div className="grid max-h-64 grid-cols-3 gap-1 overflow-y-auto p-2">
+                {giphyLoading ? (
+                  <div className="col-span-3 flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : giphyResults.length === 0 ? (
+                  <p className="col-span-3 py-8 text-center text-xs text-muted-foreground">
+                    Không tìm thấy {giphyTab === "sticker" ? "sticker" : "GIF"}
+                  </p>
+                ) : (
+                  giphyResults.map((item) => (
+                    <button key={item.id} onClick={() => handleSendGiphy(item)} className="overflow-hidden rounded-lg">
+                      <img src={item.thumbUrl} alt="" className="h-16 w-full object-cover" loading="lazy" />
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 p-3">
+            <button onClick={handleToggleEmojiPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Biểu tượng cảm xúc">
+              <Smile className="h-5 w-5" />
+            </button>
+            <button onClick={handleToggleGiphyPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-muted-foreground hover:bg-muted" aria-label="GIF & Sticker">
+              GIF
+            </button>
             <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
