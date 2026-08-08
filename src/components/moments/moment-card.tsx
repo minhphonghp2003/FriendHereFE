@@ -90,7 +90,18 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const reactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstIdRef = useRef(0);
   const [bursts, setBursts] = useState<ReactionBurst[]>([]);
+  const fullscreenVideoRef = useRef<HTMLVideoElement | null>(null);
   const isOwner = currentUserId === moment.userId;
+
+  useEffect(() => {
+    const video = fullscreenVideoRef.current;
+    if (!video) return;
+    if (active) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [active]);
 
   useEffect(() => {
     return () => {
@@ -209,12 +220,14 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               <span className="text-sm font-medium text-white">Đang xử lý...</span>
             </div>
           ) : moment.video ? (
-            <MomentVideoPlayer
+            <video
+              ref={fullscreenVideoRef}
               src={moment.video.originalUrl}
-              active={active}
-              fullscreen
-              showInfo={showInfo}
-              onToggleInfo={onToggleInfo}
+              poster={moment.video.thumbUrl || undefined}
+              controls
+              autoPlay
+              playsInline
+              className="h-full w-full object-contain"
             />
           ) : moment.images.length === 1 ? (
             <Image
