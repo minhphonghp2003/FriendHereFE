@@ -8,6 +8,7 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { MessageCircle, ChevronRight, Ban } from "lucide-react";
 import type { ConversationDto } from "@/types/chat";
+import { getMessagePreview } from "@/types/chat";
 
 export default function ChatListPage() {
   const router = useRouter();
@@ -122,7 +123,7 @@ export default function ChatListPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground truncate mt-0.5">
-                {conv.isBlocked ? "Đã chặn" : (conv.lastMessage?.content ?? "Chưa có tin nhắn")}
+                {conv.isBlocked ? "Đã chặn" : (getMessagePreview(conv.lastMessage) || "Chưa có tin nhắn")}
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />

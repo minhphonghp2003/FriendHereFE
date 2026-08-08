@@ -38,11 +38,12 @@ export interface ConversationDto {
 
 export interface SendMessageRequest {
   conversationId: number;
-  content: string;
+  content: string | null;
   messageType: number;
   replyToId: number | null;
   idempotencyKey: string;
   momentId?: number | null;
+  fileIds?: string[];
 }
 
 export const MessageType = {
@@ -73,3 +74,18 @@ const CHAT_RENDER_TYPE_MAP: Record<string, ChatMessageRenderType> = {
 
 export const toChatMessageRenderType = (type?: string | null): ChatMessageRenderType =>
   CHAT_RENDER_TYPE_MAP[type ?? ""] ?? "Text";
+
+const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v|avi)$/i;
+
+export const isVideoUrl = (url?: string | null): boolean =>
+  !!url && VIDEO_EXT_RE.test(url.split("?")[0]);
+
+export const getMessagePreview = (msg: MessageDto | null): string => {
+  if (!msg) return "";
+  if (msg.content) return msg.content;
+  if (msg.attachments && msg.attachments.length > 0) {
+    const hasVideo = msg.attachments.some((a) => isVideoUrl(a.originalUrl));
+    return hasVideo ? "[Video]" : `[Hình ảnh${msg.attachments.length > 1 ? ` (${msg.attachments.length})` : ""}]`;
+  }
+  return "";
+};
