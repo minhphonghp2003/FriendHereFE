@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { LocationProvider } from "@/providers/location-provider";
+import { CallProvider } from "@/providers/call-provider";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
@@ -28,25 +29,27 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <LocationProvider>
-      <div className="flex min-h-dvh flex-col">
-        <main className="flex-1 pb-16">{children}</main>
-        <BottomNav />
-      </div>
-      <Dialog open={kicked} onOpenChange={() => {}}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Disconnected</DialogTitle>
-            <DialogDescription>
-              You were disconnected because you opened the app on another device.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={logout} className="w-full">
-              Logout
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CallProvider>
+        <div className="flex min-h-dvh flex-col">
+          <main className="flex-1 pb-16">{children}</main>
+          <BottomNav />
+        </div>
+        <Dialog open={kicked} onOpenChange={() => {}}>
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>Disconnected</DialogTitle>
+              <DialogDescription>
+                You were disconnected because you opened the app on another device.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button onClick={logout} className="w-full">
+                Logout
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CallProvider>
     </LocationProvider>
   );
 }
