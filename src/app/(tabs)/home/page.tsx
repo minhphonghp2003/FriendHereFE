@@ -7,7 +7,6 @@ import { useTheme } from "next-themes";
 import { Map as MapIcon, List } from "lucide-react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
-import { MomentMarker } from "@/components/home/moment-marker";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { VisibilityPicker } from "@/components/home/visibility-picker";
 import { StatusEditor } from "@/components/home/status-editor";
@@ -101,7 +100,7 @@ export default function HomePage() {
   );
 
   const momentMarkers = useMemo(
-    () => locations.flatMap((loc) => (loc.moments ?? []).filter((m) => m.location?.isShowed)),
+    () => locations.flatMap((loc) => loc.moments ?? []),
     [locations],
   );
 
@@ -109,6 +108,8 @@ export default function HomePage() {
     selectedMomentId !== null
       ? (momentMarkers.find((m) => m.id === selectedMomentId) ?? null)
       : null;
+
+  const myLocation = locations.find((l) => l.userId === user?.id);
 
   const selectedLocation = locations.find((l) => l.userId === selectedUserId);
   const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
@@ -202,6 +203,8 @@ export default function HomePage() {
                   isCurrentUser
                   battery={myBattery ?? undefined}
                   status={myStatus ?? undefined}
+                  moments={myLocation?.moments ?? null}
+                  onMomentClick={(m) => setSelectedMomentId(m.id)}
                   onClick={handleCurrentUserClick}
                 />
               )}
@@ -215,15 +218,9 @@ export default function HomePage() {
                   moving={movingUserIds.includes(loc.userId)}
                   battery={loc.battery}
                   status={loc.status}
+                  moments={loc.moments}
+                  onMomentClick={(m) => setSelectedMomentId(m.id)}
                   onClick={() => handleMarkerClick(loc)}
-                />
-              ))}
-
-              {momentMarkers.map((moment) => (
-                <MomentMarker
-                  key={moment.id}
-                  moment={moment}
-                  onClick={() => setSelectedMomentId(moment.id)}
                 />
               ))}
             </Map>
