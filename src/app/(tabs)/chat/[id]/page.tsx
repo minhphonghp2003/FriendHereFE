@@ -276,6 +276,7 @@ export default function ChatScreenPage() {
     try {
       if (pendingFiles.length > 0) {
         const files = pendingFiles;
+        setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: true })));
         const contentTypes = files.map((f) => resolveContentType(f.file));
         const presigned = await getPresignedUploadUrls({
           bucket: "Chat",
@@ -293,7 +294,7 @@ export default function ChatScreenPage() {
             ...p,
             fileId: fileIds[i],
             key: fileKeys[i],
-            uploading: !markedFileKeysRef.current.has(fileKeys[i]),
+            uploading: true,
           }))
         );
         await waitForFilesMarked(fileKeys);
