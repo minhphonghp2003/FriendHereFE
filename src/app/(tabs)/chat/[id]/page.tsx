@@ -162,6 +162,13 @@ export default function ChatScreenPage() {
   }, [conversationId, user, opponentId, dispatch]);
 
   useEffect(() => {
+    if (!loading) {
+      const el = messagesContainerRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight });
+    }
+  }, [loading]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
