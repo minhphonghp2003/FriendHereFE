@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserMoments } from "@/services/moment";
 import type { MomentDto } from "@/types/moment";
 
-export const useUserMoments = (userId: number, take = 10) => {
+export const useUserMoments = (userId: number, take = 10, fromDate?: string, toDate?: string) => {
   const [data, setData] = useState<MomentDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -18,7 +18,7 @@ export const useUserMoments = (userId: number, take = 10) => {
     setIsLoadingMore(true);
     setError(null);
     try {
-      const result = await getUserMoments(userId, prevIdRef.current, take);
+      const result = await getUserMoments(userId, prevIdRef.current, take, fromDate, toDate);
       setData((prev) => {
         const existingIds = new Set(prev.map((m) => m.id));
         return [...prev, ...result.data.filter((m) => !existingIds.has(m.id))];
@@ -30,7 +30,7 @@ export const useUserMoments = (userId: number, take = 10) => {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoading, isLoadingMore, hasMore, take, userId]);
+  }, [isLoading, isLoadingMore, hasMore, take, userId, fromDate, toDate]);
 
   useEffect(() => {
     if (!userId) {
@@ -42,7 +42,7 @@ export const useUserMoments = (userId: number, take = 10) => {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
-    getUserMoments(userId, null, take)
+    getUserMoments(userId, null, take, fromDate, toDate)
       .then((result) => {
         if (cancelled) return;
         setData(result.data);
@@ -59,7 +59,7 @@ export const useUserMoments = (userId: number, take = 10) => {
     return () => {
       cancelled = true;
     };
-  }, [userId, take, refreshKey]);
+  }, [userId, take, fromDate, toDate, refreshKey]);
 
   return { data, isLoading, isLoadingMore, error, hasMore, refetch, loadMore };
 };
