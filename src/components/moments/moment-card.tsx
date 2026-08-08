@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SmilePlus, Trash2, EyeOff, Eye, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2, Check, ChevronLeft } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
+import { Trash2, EyeOff, Eye, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2, Check, ChevronLeft } from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { MomentVideoPlayer } from "./moment-video-player";
@@ -18,6 +17,15 @@ import type { MomentDto, MomentReactionDto, MomentVisibility } from "@/types/mom
 import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 
 const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+
+const BURST_TTL_MS = 800;
+
+interface ReactionBurst {
+  id: number;
+  emoji: string;
+  x: number;
+  y: number;
+}
 
 interface MomentCardProps {
   moment: MomentDto;
@@ -76,11 +84,27 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
   const [localVisibility, setLocalVisibility] = useState<MomentVisibility>(moment.visibility);
+  const reactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstIdRef = useRef(0);
+  const [bursts, setBursts] = useState<ReactionBurst[]>([]);
   const isOwner = currentUserId === moment.userId;
+
+  useEffect(() => {
+    return () => {
+      if (reactTimeoutRef.current) clearTimeout(reactTimeoutRef.current);
+    };
+  }, []);
+
+  const spawnBurst = (emoji: string, x: number, y: number) => {
+    const id = ++burstIdRef.current;
+    setBursts((prev) => [...prev.slice(-5), { id, emoji, x, y }]);
+    setTimeout(() => {
+      setBursts((prev) => prev.filter((b) => b.id !== id));
+    }, BURST_TTL_MS);
+  };
 
   useEffect(() => {
     setLocalReactions(moment.reactions);
@@ -113,9 +137,15 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
     return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds, count: userIds.length }));
   }, [localReactions]);
 
-  const handleReact = (emoji: string) => {
+  const handleReact = (emoji: string, x?: number, y?: number) => {
+    if (typeof x === "number" && typeof y === "number") spawnBurst(emoji, x, y);
     setReactingEmoji(emoji);
-    addMomentReaction(moment.id, emoji).finally(() => setReactingEmoji(null));
+    if (reactTimeoutRef.current) clearTimeout(reactTimeoutRef.current);
+    reactTimeoutRef.current = setTimeout(() => {
+      addMomentReaction(moment.id, emoji).finally(() => {
+        setReactingEmoji((current) => (current === emoji ? null : current));
+      });
+    }, 500);
   };
 
   const handleSendMessage = async () => {
@@ -300,22 +330,12 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               COMMON_EMOJIS.map((emoji) => (
                 <button
                   key={emoji}
-                  onClick={() => handleReact(emoji)}
-                  disabled={reactingEmoji === emoji}
-                  className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110 disabled:opacity-50"
+                  onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
+                  className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110"
                 >
                   {emoji}
                 </button>
               ))}
-            {!isOwner && (
-              <button
-                onClick={() => setShowEmojiPicker(true)}
-                disabled={reactingEmoji !== null}
-                className="text-white/90 hover:text-white disabled:opacity-50"
-              >
-                <SmilePlus className="h-8 w-8 drop-shadow-lg" />
-              </button>
-            )}
             {!isOwner && moment.allowComment && (
               <button
                 onClick={handleSendMessage}
@@ -358,29 +378,21 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
           </div>
         )}
 
-        {showEmojiPicker && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-            onClick={() => setShowEmojiPicker(false)}
-          >
-            <div onClick={(e) => e.stopPropagation()}>
-              <EmojiPicker
-                onEmojiClick={(emojiData) => {
-                  handleReact(emojiData.emoji);
-                  setShowEmojiPicker(false);
-                }}
-                width={300}
-                height={380}
-              />
-            </div>
-          </div>
-        )}
-
         <ReactionBottomSheet
           momentId={moment.id}
           open={showReactions}
           onClose={() => setShowReactions(false)}
         />
+
+        {bursts.map((b) => (
+          <span
+            key={b.id}
+            className="pointer-events-none fixed z-[70] text-4xl"
+            style={{ left: b.x, top: b.y, animation: "reaction-burst 0.8s ease-out forwards" }}
+          >
+            {b.emoji}
+          </span>
+        ))}
       </div>
     );
   }
@@ -521,36 +533,12 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             {COMMON_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
-                onClick={() => handleReact(emoji)}
-                disabled={reactingEmoji === emoji}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted disabled:opacity-50"
+                onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted"
               >
                 {emoji}
               </button>
             ))}
-            <div className="relative">
-              <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                disabled={reactingEmoji !== null}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-50"
-              >
-                <SmilePlus className="h-4 w-4" />
-              </button>
-              {showEmojiPicker && (
-                <div className="absolute bottom-full left-0 z-50 mb-2">
-                  <div className="rounded-lg border border-border bg-background shadow-lg">
-                    <EmojiPicker
-                      onEmojiClick={(emojiData) => {
-                        handleReact(emojiData.emoji);
-                        setShowEmojiPicker(false);
-                      }}
-                      width={280}
-                      height={320}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
           {moment.allowComment && (
             <button
@@ -591,6 +579,16 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         open={showReactions}
         onClose={() => setShowReactions(false)}
       />
+
+      {bursts.map((b) => (
+        <span
+          key={b.id}
+          className="pointer-events-none fixed z-[70] text-4xl"
+          style={{ left: b.x, top: b.y, animation: "reaction-burst 0.8s ease-out forwards" }}
+        >
+          {b.emoji}
+        </span>
+      ))}
     </div>
   );
 };
