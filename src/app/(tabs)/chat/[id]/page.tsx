@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
@@ -10,7 +10,8 @@ import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay"
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2 } from "lucide-react";
+import { useCall } from "@/providers/call-provider";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import type { MessageDto, ImageDto } from "@/types/chat";
 import { MessageType, toChatMessageRenderType } from "@/types/chat";
@@ -20,6 +21,7 @@ export default function ChatScreenPage() {
   const params = useParams();
   const dispatch = useAppDispatch();
   const { user } = useAuth();
+  const { startCall } = useCall();
   const conversationId = Number(params.id);
   const [convName, setConvName] = useState("Chat");
   const [convOnline, setConvOnline] = useState(false);
@@ -135,6 +137,11 @@ export default function ChatScreenPage() {
     const otherMsg = messages.find((m) => m.senderId !== user.id);
     if (otherMsg) setOpponentId(otherMsg.senderId);
   }, [messages, user]);
+
+  const opponentAvatar = useMemo(() => {
+    if (!opponentId) return null;
+    return messages.find((m) => m.senderId === opponentId)?.senderAvatar ?? null;
+  }, [messages, opponentId]);
 
   useEffect(() => {
     const unsubBlocked = appHub.onReceiveChatBlocked((data) => {
@@ -318,6 +325,14 @@ export default function ChatScreenPage() {
             {convOnline ? "Online" : "Offline"}
           </p>
         </div>
+        <button
+          onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
+          disabled={!opponentId || isBlocked}
+          className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
+          title="Gọi video"
+        >
+          <Phone className="w-5 h-5" />
+        </button>
         {isBlocked ? (
           <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
             <ShieldOff className="w-5 h-5" />

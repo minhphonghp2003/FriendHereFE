@@ -4,6 +4,7 @@ import { TOKEN_KEY } from "@/constants";
 import type { MessageDto, ConversationDto, SendMessageRequest } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
+import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
 
 export type KickedCallback = () => void;
 export type ReceiveMessageCallback = (message: MessageDto) => void;
@@ -21,6 +22,8 @@ export interface TypingData {
 }
 
 export type ReceiveTypingCallback = (data: TypingData) => void;
+export type ReceiveCallCallback = (data: IncomingCallData) => void;
+export type ReceiveCallSignalCallback = (data: CallSignalData) => void;
 
 export interface ChatBlockedData {
   targetUserId: number;
@@ -44,6 +47,8 @@ class AppHub {
   private receiveChatBlockedCallbacks: Set<ReceiveChatBlockedCallback> = new Set();
   private receiveChatUnblockedCallbacks: Set<ReceiveChatUnblockedCallback> = new Set();
   private receiveTypingCallbacks: Set<ReceiveTypingCallback> = new Set();
+  private receiveCallCallbacks: Set<ReceiveCallCallback> = new Set();
+  private receiveCallSignalCallbacks: Set<ReceiveCallSignalCallback> = new Set();
   private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
@@ -119,6 +124,14 @@ class AppHub {
       this.receiveTypingCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveCall", (data: IncomingCallData) => {
+      this.receiveCallCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveCallSignal", (data: CallSignalData) => {
+      this.receiveCallSignalCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.on("ReceiveMomentReacted", (data: MomentReactionNotification) => {
       this.receiveMomentReactedCallbacks.forEach((cb) => cb(data));
     });
@@ -165,6 +178,8 @@ class AppHub {
     this.receiveChatBlockedCallbacks.clear();
     this.receiveChatUnblockedCallbacks.clear();
     this.receiveTypingCallbacks.clear();
+    this.receiveCallCallbacks.clear();
+    this.receiveCallSignalCallbacks.clear();
     this.receiveMomentReactedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
@@ -184,6 +199,16 @@ class AppHub {
   async sendTyping(conversationId: number, isTyping: boolean): Promise<void> {
     if (!this.connection) throw new Error("AppHub not connected");
     await this.connection.invoke("Typing", conversationId, isTyping);
+  }
+
+  async call(targetUserId: number): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("Call", { targetUserId });
+  }
+
+  async sendCallSignal(dto: CallSignalDto): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("CallSignal", dto);
   }
 
   async joinConversation(id: number): Promise<void> {
@@ -245,6 +270,16 @@ class AppHub {
   onReceiveTyping(callback: ReceiveTypingCallback): () => void {
     this.receiveTypingCallbacks.add(callback);
     return () => { this.receiveTypingCallbacks.delete(callback); };
+  }
+
+  onReceiveCall(callback: ReceiveCallCallback): () => void {
+    this.receiveCallCallbacks.add(callback);
+    return () => { this.receiveCallCallbacks.delete(callback); };
+  }
+
+  onReceiveCallSignal(callback: ReceiveCallSignalCallback): () => void {
+    this.receiveCallSignalCallbacks.add(callback);
+    return () => { this.receiveCallSignalCallbacks.delete(callback); };
   }
 
   onReceiveMomentReacted(callback: ReceiveMomentReactedCallback): () => void {
