@@ -44,15 +44,16 @@ export async function getMessages(
 
 export async function createConversation(
   receiverId: number,
-  content: string,
+  content: string | null,
   messageType: number,
-  momentId?: number | null
+  momentId?: number | null,
+  fileIds?: string[]
 ): Promise<{
   data: number;
   success: boolean;
   message?: string;
 }> {
-  const res = await httpClient.post("/chat", { receiverId, content, messageType, momentId });
+  const res = await httpClient.post("/chat", { receiverId, content, messageType, momentId, fileIds });
   return res.data;
 }
 

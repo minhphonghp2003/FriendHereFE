@@ -4,6 +4,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
+import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
@@ -11,10 +12,45 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import type { MessageDto, ImageDto } from "@/types/chat";
 import { MessageType, toChatMessageRenderType } from "@/types/chat";
+
+interface PendingFile {
+  id: string;
+  file: File;
+  preview: string;
+  isVideo: boolean;
+  fileId?: string;
+  key?: string;
+  uploading: boolean;
+}
+
+const resolveContentType = (file: File): string => {
+  if (file.type) return file.type;
+  if (/\.(jpe?g|png|gif|webp|bmp|avif)$/i.test(file.name)) return "image/jpeg";
+  if (/\.(mp4|webm|mov|m4v|avi)$/i.test(file.name)) return "video/mp4";
+  return "application/octet-stream";
+};
+
+const extractFileKey = (data: unknown): string | undefined => {
+  if (typeof data === "string") return data;
+  if (!data || typeof data !== "object") return undefined;
+  const obj = data as Record<string, unknown>;
+  return (
+    (typeof obj.originalKey === "string" ? obj.originalKey : undefined) ??
+    (typeof obj.key === "string" ? obj.key : undefined) ??
+    (typeof obj.fileId === "string" ? obj.fileId : undefined) ??
+    undefined
+  );
+};
+
+const normalizeKeyToken = (key: string | undefined): string => {
+  if (!key) return "";
+  const idx = key.lastIndexOf("/");
+  return idx > 0 ? key.slice(0, idx) : key;
+};
 
 export default function ChatScreenPage() {
   const router = useRouter();
@@ -43,6 +79,9 @@ export default function ChatScreenPage() {
   const [giphyQuery, setGiphyQuery] = useState("");
   const [giphyResults, setGiphyResults] = useState<GiphyItem[]>([]);
   const [giphyLoading, setGiphyLoading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [typingUsers, setTypingUsers] = useState<Map<number, string>>(new Map());
   const typingSentRef = useRef(false);
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,6 +91,34 @@ export default function ChatScreenPage() {
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const prevIdRef = useRef<number | null>(null);
+  const markedFileKeysRef = useRef<Set<string>>(new Set());
+  const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
+
+  const resolveFileWaiters = useCallback(() => {
+    fileWaitersRef.current = fileWaitersRef.current.filter((waiter) => {
+      const remaining = waiter.keys.filter((key) => !markedFileKeysRef.current.has(key));
+      if (remaining.length === 0) {
+        clearTimeout(waiter.timer);
+        waiter.resolve();
+        return false;
+      }
+      waiter.keys = remaining;
+      return true;
+    });
+  }, []);
+
+  useEffect(() => {
+    const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
+      const fileKey = normalizeKeyToken(extractFileKey(data));
+      if (!fileKey) return;
+      markedFileKeysRef.current.add(fileKey);
+      setPendingFiles((prev) =>
+        prev.map((p) => (p.key === fileKey ? { ...p, uploading: false } : p))
+      );
+      resolveFileWaiters();
+    });
+    return unsub;
+  }, [resolveFileWaiters]);
 
   const fetchMessages = useCallback(async (prevId: number | null = null) => {
     try {
@@ -180,9 +247,25 @@ export default function ChatScreenPage() {
     }
   }, [hasMore, fetchMessages]);
 
+  const waitForFilesMarked = useCallback((fileKeys: string[]): Promise<void> => {
+    return new Promise((resolve) => {
+      const remaining = fileKeys.filter((key) => !markedFileKeysRef.current.has(key));
+      if (remaining.length === 0) {
+        resolve();
+        return;
+      }
+      const waiter = { keys: remaining, resolve, timer: setTimeout(() => {
+        fileWaitersRef.current = fileWaitersRef.current.filter((w) => w !== waiter);
+        setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: false })));
+        resolve();
+      }, 30000) };
+      fileWaitersRef.current.push(waiter);
+    });
+  }, []);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if ((!text && !pendingMoment) || sending || isBlocked) return;
+    if ((!text && !pendingMoment && pendingFiles.length === 0) || sending || isBlocked) return;
     if (typingSentRef.current) {
       typingSentRef.current = false;
       appHub.sendTyping(conversationId, false).catch(() => {});
@@ -191,7 +274,43 @@ export default function ChatScreenPage() {
     setSending(true);
     setInput("");
     try {
-      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+      if (pendingFiles.length > 0) {
+        const files = pendingFiles;
+        const contentTypes = files.map((f) => resolveContentType(f.file));
+        const presigned = await getPresignedUploadUrls({
+          bucket: "Chat",
+          contentTypes,
+        });
+        await Promise.all(
+          presigned.map((item, i) =>
+            uploadToPresignedUrl(item.uploadUrl, files[i].file, contentTypes[i])
+          )
+        );
+        const fileIds = presigned.map((item) => item.fileId);
+        const fileKeys = presigned.map((item) => normalizeKeyToken(item.key));
+        setPendingFiles((prev) =>
+          prev.map((p, i) => ({
+            ...p,
+            fileId: fileIds[i],
+            key: fileKeys[i],
+            uploading: !markedFileKeysRef.current.has(fileKeys[i]),
+          }))
+        );
+        await waitForFilesMarked(fileKeys);
+        await appHub.sendMessage({
+          conversationId,
+          content: text || null,
+          messageType: MessageType.File,
+          replyToId: null,
+          idempotencyKey: crypto.randomUUID(),
+          momentId: pendingMoment ? momentIdParam : undefined,
+          fileIds,
+        });
+        setPendingFiles([]);
+        files.forEach((f) => URL.revokeObjectURL(f.preview));
+      } else {
+        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+      }
       setPendingMoment(null);
     } catch (err) {
       console.error("Failed to send message", err);
@@ -200,7 +319,7 @@ export default function ChatScreenPage() {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [input, sending, conversationId, isBlocked, pendingMoment, momentIdParam]);
+  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
@@ -228,6 +347,56 @@ export default function ChatScreenPage() {
       }, 1500);
     }
   }, [conversationId, isBlocked]);
+
+  const removePendingFile = useCallback((id: string) => {
+    setPendingFiles((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
+
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (images.length === 0) return;
+    setPendingFiles((prev) => [
+      ...prev.filter((p) => !p.isVideo),
+      ...images.map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        preview: URL.createObjectURL(file),
+        isVideo: false,
+        uploading: false,
+      })),
+    ]);
+  }, []);
+
+  const handleVideoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("video/")) return;
+    setPendingFiles((prev) => {
+      prev.filter((p) => p.isVideo).forEach((p) => URL.revokeObjectURL(p.preview));
+      const nonVideos = prev.filter((p) => !p.isVideo);
+      return [
+        ...nonVideos,
+        { id: crypto.randomUUID(), file, preview: URL.createObjectURL(file), isVideo: true, uploading: false },
+      ];
+    });
+  }, []);
+
+  const pendingFilesRef = useRef<PendingFile[]>([]);
+  useEffect(() => {
+    pendingFilesRef.current = pendingFiles;
+  }, [pendingFiles]);
+  useEffect(() => {
+    return () => {
+      pendingFilesRef.current.forEach((p) => URL.revokeObjectURL(p.preview));
+    };
+  }, []);
 
   const sendMessageByType = useCallback(async (content: string, messageType: number) => {
     if (isBlocked || sending) return;
@@ -399,6 +568,33 @@ export default function ChatScreenPage() {
               <span>{Array.from(typingUsers.values()).join(", ")} đang nhập...</span>
             </div>
           )}
+          {pendingFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3">
+              {pendingFiles.map((pf) => (
+                <div key={pf.id} className="relative h-20 w-20">
+                  {pf.isVideo ? (
+                    <video src={pf.preview} className="h-full w-full rounded-lg bg-black object-cover" muted />
+                  ) : (
+                    <img src={pf.preview} alt="" className="h-full w-full rounded-lg object-cover" />
+                  )}
+                  {pf.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => removePendingFile(pf.id)}
+                    disabled={sending}
+                    className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow disabled:opacity-50"
+                    aria-label="Xóa tệp"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {pendingMomentLoading ? (
             <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
           ) : pendingMoment ? (
@@ -476,6 +672,27 @@ export default function ChatScreenPage() {
           )}
 
           <div className="flex items-center gap-1 p-3">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleVideoChange}
+              className="hidden"
+            />
+            <button onClick={() => imageInputRef.current?.click()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Gửi ảnh">
+              <ImagePlus className="h-5 w-5" />
+            </button>
+            <button onClick={() => videoInputRef.current?.click()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Gửi video">
+              <Film className="h-5 w-5" />
+            </button>
             <button onClick={handleToggleEmojiPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Biểu tượng cảm xúc">
               <Smile className="h-5 w-5" />
             </button>
@@ -483,7 +700,7 @@ export default function ChatScreenPage() {
               GIF
             </button>
             <input ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
-            <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>
           </div>

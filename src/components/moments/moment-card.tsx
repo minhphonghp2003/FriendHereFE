@@ -90,7 +90,18 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const reactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstIdRef = useRef(0);
   const [bursts, setBursts] = useState<ReactionBurst[]>([]);
+  const fullscreenVideoRef = useRef<HTMLVideoElement | null>(null);
   const isOwner = currentUserId === moment.userId;
+
+  useEffect(() => {
+    const video = fullscreenVideoRef.current;
+    if (!video) return;
+    if (active) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [active]);
 
   useEffect(() => {
     return () => {
@@ -198,47 +209,87 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const visConfig = visibilityConfig[localVisibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
   const displayName = isOwner ? "Bạn" : moment.userName;
+  const infoVisible = showInfo || !!moment.video;
 
   if (fullscreen) {
     return (
-      <div className="relative h-full w-full overflow-hidden bg-black">
-        <div className="absolute inset-0 flex items-center justify-center">
-          {moment.status === "Processing" ? (
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-10 w-10 animate-spin text-white" />
-              <span className="text-sm font-medium text-white">Đang xử lý...</span>
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-black">
+        <div className="relative min-h-0 flex-1">
+          <div className="absolute inset-0 flex items-center justify-center">
+            {moment.status === "Processing" ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-10 w-10 animate-spin text-white" />
+                <span className="text-sm font-medium text-white">Đang xử lý...</span>
+              </div>
+            ) : moment.video ? (
+              <video
+                ref={fullscreenVideoRef}
+                src={moment.video.originalUrl}
+                poster={moment.video.thumbUrl || undefined}
+                controls
+                autoPlay
+                playsInline
+                className="h-full w-full object-cover"
+              />
+            ) : moment.images.length === 1 ? (
+              <Image
+                src={moment.images[0].originalUrl}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 412px, 625px"
+                onClick={onToggleInfo}
+                className="h-full w-full object-contain select-none"
+                draggable={false}
+                fetchPriority="high"
+              />
+            ) : (
+              <MomentImageCarousel
+                fullscreen
+                images={moment.images}
+                showInfo={showInfo}
+                onToggleInfo={onToggleInfo}
+              />
+            )}
+          </div>
+
+          {infoVisible && (
+            <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-5">
+              {!isOwner &&
+                COMMON_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
+                    className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              {!isOwner && moment.allowComment && (
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sendingMessage}
+                  className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white disabled:opacity-50"
+                >
+                  <MessageCircle className="h-8 w-8 drop-shadow-lg" />
+                  <span className="text-[11px] font-medium">{sendingMessage ? "..." : "Nhắn tin"}</span>
+                </button>
+              )}
+              {isOwner && groupedReactions.length > 0 && (
+                <button
+                  onClick={() => setShowReactions(true)}
+                  className="flex flex-col-reverse items-center text-white/90 hover:text-white"
+                >
+                  {groupedReactions.slice(0, 3).map((g) => (
+                    <span key={g.emoji} className="text-3xl drop-shadow-lg">{g.emoji}</span>
+                  ))}
+                </button>
+              )}
             </div>
-          ) : moment.video ? (
-            <MomentVideoPlayer
-              src={moment.video.originalUrl}
-              active={active}
-              fullscreen
-              showInfo={showInfo}
-              onToggleInfo={onToggleInfo}
-            />
-          ) : moment.images.length === 1 ? (
-            <Image
-              src={moment.images[0].originalUrl}
-              alt=""
-              fill
-              sizes="(max-width: 640px) 412px, 625px"
-              onClick={onToggleInfo}
-              className="h-full w-full object-contain select-none"
-              draggable={false}
-              fetchPriority="high"
-            />
-          ) : (
-            <MomentImageCarousel
-              fullscreen
-              images={moment.images}
-              showInfo={showInfo}
-              onToggleInfo={onToggleInfo}
-            />
           )}
         </div>
 
-        {showInfo && (
-          <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200 absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
+        {infoVisible && (
+          <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200 absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
               {moment.userImage ? (
@@ -324,43 +375,8 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         </div>
         )}
 
-        {showInfo && (
-          <div className="animate-in fade-in-0 duration-200 absolute bottom-24 right-2 z-10 flex flex-col items-center gap-5">
-            {!isOwner &&
-              COMMON_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
-                  className="text-3xl text-white/90 drop-shadow-lg transition-transform hover:scale-110"
-                >
-                  {emoji}
-                </button>
-              ))}
-            {!isOwner && moment.allowComment && (
-              <button
-                onClick={handleSendMessage}
-                disabled={sendingMessage}
-                className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white disabled:opacity-50"
-              >
-                <MessageCircle className="h-8 w-8 drop-shadow-lg" />
-                <span className="text-[11px] font-medium">{sendingMessage ? "..." : "Nhắn tin"}</span>
-              </button>
-            )}
-            {isOwner && groupedReactions.length > 0 && (
-              <button
-                onClick={() => setShowReactions(true)}
-                className="flex flex-col-reverse items-center text-white/90 hover:text-white"
-              >
-                {groupedReactions.slice(0, 3).map((g) => (
-                  <span key={g.emoji} className="text-3xl drop-shadow-lg">{g.emoji}</span>
-                ))}
-              </button>
-            )}
-          </div>
-        )}
-
-        {showInfo && (
-          <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-24 pt-16 pr-20">
+        {infoVisible && (
+          <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 z-10 border-t border-white/10 bg-black px-4 pb-4 pt-3">
             {moment.timeline && !hideTimelineChip && (
               <div className="mb-2 flex justify-start">
                 <TimelineChip timeline={moment.timeline} variant="dark" />

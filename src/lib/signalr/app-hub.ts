@@ -33,6 +33,17 @@ export type ReceiveChatBlockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveMomentReactedCallback = (data: MomentReactionNotification) => void;
 
+export interface FileMarkedSuccessData {
+  originalKey: string;
+  thumbKey: string;
+  originalUrl: string;
+  thumbUrl: string;
+  fileId?: string;
+  key?: string;
+}
+
+export type ReceiveFileMarkedSuccessCallback = (data: FileMarkedSuccessData) => void;
+
 class AppHub {
   private connection: signalR.HubConnection | null = null;
   private epoch = 0;
@@ -50,6 +61,7 @@ class AppHub {
   private receiveCallCallbacks: Set<ReceiveCallCallback> = new Set();
   private receiveCallSignalCallbacks: Set<ReceiveCallSignalCallback> = new Set();
   private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
+  private receiveFileMarkedSuccessCallbacks: Set<ReceiveFileMarkedSuccessCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -136,6 +148,10 @@ class AppHub {
       this.receiveMomentReactedCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveFileMarkedSuccess", (data: FileMarkedSuccessData) => {
+      this.receiveFileMarkedSuccessCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -181,6 +197,7 @@ class AppHub {
     this.receiveCallCallbacks.clear();
     this.receiveCallSignalCallbacks.clear();
     this.receiveMomentReactedCallbacks.clear();
+    this.receiveFileMarkedSuccessCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -285,6 +302,11 @@ class AppHub {
   onReceiveMomentReacted(callback: ReceiveMomentReactedCallback): () => void {
     this.receiveMomentReactedCallbacks.add(callback);
     return () => { this.receiveMomentReactedCallbacks.delete(callback); };
+  }
+
+  onReceiveFileMarkedSuccess(callback: ReceiveFileMarkedSuccessCallback): () => void {
+    this.receiveFileMarkedSuccessCallbacks.add(callback);
+    return () => { this.receiveFileMarkedSuccessCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {
