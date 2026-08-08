@@ -131,7 +131,7 @@ export const MomentVideoPlayer = ({
       )}
       {controlsVisible && (
         <>
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="animate-in fade-in-0 duration-200 pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             <button
               onClick={togglePlay}
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
@@ -141,7 +141,7 @@ export const MomentVideoPlayer = ({
             </button>
           </div>
           <div
-            className={`absolute inset-x-0 px-4 ${fullscreen ? "bottom-12" : "bottom-4"}`}
+            className={`animate-in fade-in-0 duration-200 absolute inset-x-0 px-4 ${fullscreen ? "bottom-12" : "bottom-4"}`}
           >
             <div className="relative flex h-1 w-full items-center">
               <div className="absolute inset-y-0 left-0 right-0 rounded-full bg-white/30" />

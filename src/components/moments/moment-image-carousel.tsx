@@ -115,7 +115,7 @@ export const MomentImageCarousel = ({
         ))}
       </div>
       {images.length > 1 && showInfo && (
-        <div className={`absolute left-1/2 flex -translate-x-1/2 gap-1 ${fullscreen ? "bottom-20" : "bottom-2"}`}>
+        <div className={`animate-in fade-in-0 duration-200 absolute left-1/2 flex -translate-x-1/2 gap-1 ${fullscreen ? "bottom-20" : "bottom-2"}`}>
           {images.map((_, i) => (
             <div
               key={i}

@@ -10,7 +10,7 @@ import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { VisibilityPicker } from "@/components/home/visibility-picker";
 import { StatusEditor } from "@/components/home/status-editor";
-import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
+import { UserMomentsOverlay } from "@/components/moments/user-moments-overlay";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT } from "@/services/location";
@@ -33,7 +33,10 @@ export default function HomePage() {
   const myStatus = useAppSelector((s) => s.location.status);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
-  const [selectedMomentId, setSelectedMomentId] = useState<number | null>(null);
+  const [selectedUserMoments, setSelectedUserMoments] = useState<{
+    userId: number;
+    userName: string;
+  } | null>(null);
 
   const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
   const {
@@ -98,13 +101,6 @@ export default function HomePage() {
     () => locations.filter((loc) => loc.userId !== user?.id),
     [locations, user?.id],
   );
-
-  const momentMarkers = useMemo(() => locations.flatMap((loc) => loc.moments ?? []), [locations]);
-
-  const selectedMoment =
-    selectedMomentId !== null
-      ? (momentMarkers.find((m) => m.id === selectedMomentId) ?? null)
-      : null;
 
   const myLocation = locations.find((l) => l.userId === user?.id);
 
@@ -201,7 +197,9 @@ export default function HomePage() {
                   battery={myBattery ?? undefined}
                   status={myStatus ?? undefined}
                   moments={myLocation?.moments ?? null}
-                  onMomentClick={(m) => setSelectedMomentId(m.id)}
+                  onMomentClick={(m) =>
+                    setSelectedUserMoments({ userId: m.userId, userName: m.userName })
+                  }
                   onClick={handleCurrentUserClick}
                 />
               )}
@@ -216,7 +214,9 @@ export default function HomePage() {
                   battery={loc.battery}
                   status={loc.status}
                   moments={loc.moments}
-                  onMomentClick={(m) => setSelectedMomentId(m.id)}
+                  onMomentClick={(m) =>
+                    setSelectedUserMoments({ userId: m.userId, userName: m.userName })
+                  }
                   onClick={() => handleMarkerClick(loc)}
                 />
               ))}
@@ -237,11 +237,12 @@ export default function HomePage() {
 
           {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}
 
-          {selectedMoment && (
-            <MomentDetailOverlay
-              momentId={selectedMoment.id}
+          {selectedUserMoments && (
+            <UserMomentsOverlay
+              userId={selectedUserMoments.userId}
+              userName={selectedUserMoments.userName}
               currentUserId={user?.id}
-              onClose={() => setSelectedMomentId(null)}
+              onClose={() => setSelectedUserMoments(null)}
             />
           )}
         </div>
@@ -283,11 +284,12 @@ export default function HomePage() {
         {selectedUserId !== null && renderMarkerDetail(selectedUserId === user?.id)}
       </div>
 
-      {selectedMoment && (
-        <MomentDetailOverlay
-          momentId={selectedMoment.id}
+      {selectedUserMoments && (
+        <UserMomentsOverlay
+          userId={selectedUserMoments.userId}
+          userName={selectedUserMoments.userName}
           currentUserId={user?.id}
-          onClose={() => setSelectedMomentId(null)}
+          onClose={() => setSelectedUserMoments(null)}
         />
       )}
     </>

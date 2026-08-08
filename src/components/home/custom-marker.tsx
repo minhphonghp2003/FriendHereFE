@@ -121,7 +121,7 @@ export const CustomMarker = ({
               fill
               sizes="60px"
               priority={isCurrentUser}
-              className="object-cover"
+              className="rounded-full object-cover"
             />
           ) : (
             <div
