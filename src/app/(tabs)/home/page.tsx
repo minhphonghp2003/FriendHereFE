@@ -99,10 +99,7 @@ export default function HomePage() {
     [locations, user?.id],
   );
 
-  const momentMarkers = useMemo(
-    () => locations.flatMap((loc) => loc.moments ?? []),
-    [locations],
-  );
+  const momentMarkers = useMemo(() => locations.flatMap((loc) => loc.moments ?? []), [locations]);
 
   const selectedMoment =
     selectedMomentId !== null

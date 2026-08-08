@@ -30,10 +30,10 @@ const stringToColor = (str: string) => {
   return MARKER_COLORS[Math.abs(hash) % MARKER_COLORS.length];
 };
 
-const MARKER_WIDTH = 96/2;
-const MARKER_HEIGHT = 128/2;
-const MOMENT_WIDTH = 35/1.5;
-const MOMENT_HEIGHT = 44/1.5;
+const MARKER_WIDTH = 60;
+const MARKER_HEIGHT = 60;
+const MOMENT_WIDTH = 30;
+const MOMENT_HEIGHT = 30;
 
 interface CustomMarkerProps {
   position: google.maps.LatLngLiteral;
@@ -54,7 +54,18 @@ const getBatteryIcon = (level: number) => {
   return { Icon: BatteryFull, color: "#22c55e" };
 };
 
-export const CustomMarker = ({ position, name, image, isCurrentUser, moving, battery, status, moments, onMomentClick, onClick }: CustomMarkerProps) => {
+export const CustomMarker = ({
+  position,
+  name,
+  image,
+  isCurrentUser,
+  moving,
+  battery,
+  status,
+  moments,
+  onMomentClick,
+  onClick,
+}: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
 
   const color = useMemo(() => stringToColor(name), [name]);
@@ -87,14 +98,14 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
       >
         {status && (
           <div
-            className="pointer-events-none absolute left-1/2 z-10 max-w-[160px] -translate-x-1/2 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] font-semibold leading-tight text-zinc-700 shadow-md"
+            className="pointer-events-none absolute left-1/2 z-10 max-w-[160px] -translate-x-1/2 rounded-4xl border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] leading-tight font-semibold text-zinc-700 shadow-md"
             style={{ bottom: "calc(100% + 4px)" }}
           >
             <span className="block truncate">{status}</span>
           </div>
         )}
         <div
-          className="relative overflow-hidden rounded-xl border-[3px]"
+          className="relative overflow-hidden rounded-full border-[3px]"
           style={{
             width: MARKER_WIDTH,
             height: MARKER_HEIGHT,
@@ -108,7 +119,7 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
               src={image}
               alt={name}
               fill
-              sizes="96px"
+              sizes="60px"
               priority={isCurrentUser}
               className="object-cover"
             />
@@ -117,25 +128,29 @@ export const CustomMarker = ({ position, name, image, isCurrentUser, moving, bat
               className="flex h-full w-full items-center justify-center"
               style={{ backgroundColor: pinColor }}
             >
-              <span className="text-4xl font-bold text-white drop-shadow">
-                {firstLetter}
-              </span>
+              <span className="text-4xl font-bold text-white drop-shadow">{firstLetter}</span>
             </div>
           )}
         </div>
         {batteryInfo && (
           <div
-            className="pointer-events-none absolute -bottom-1.5 -right-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-0.5 shadow-md"
+            className="pointer-events-none absolute -right-1.5 -bottom-1.5 flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-1.5 py-0.5 shadow-md"
             title={`Battery ${battery}%`}
           >
             <batteryInfo.Icon className="h-3 w-3" color={batteryInfo.color} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold leading-none" style={{ color: batteryInfo.color }}>
+            <span
+              className="text-[10px] leading-none font-bold"
+              style={{ color: batteryInfo.color }}
+            >
               {battery}%
             </span>
           </div>
         )}
         {visibleMoments.length > 0 && (
-          <div className="absolute top-1/2 left-full z-20 ml-2 flex -translate-y-1/2 items-center">
+          <div
+            className="absolute top-1/2 z-20 flex -translate-y-1/2 items-center"
+            style={{ left: `calc(100% - ${MOMENT_WIDTH / 2}px)` }}
+          >
             {visibleMoments.slice(0, 3).map((m, i) => {
               const thumb = getMomentThumbnail(m);
               return (
