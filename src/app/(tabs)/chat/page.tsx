@@ -6,7 +6,7 @@ import { setConversations, addConversations } from "@/store/slices/chat-slice";
 import { getConversations } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { MessageCircle, ChevronRight, Ban } from "lucide-react";
+import { MessageCircle, ChevronRight, Ban, UserPlus } from "lucide-react";
 import type { ConversationDto } from "@/types/chat";
 import { getMessagePreview } from "@/types/chat";
 
@@ -86,8 +86,15 @@ export default function ChatListPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 pb-2">
+      <div className="p-4 pb-2 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Tin nhắn</h1>
+        <button
+          onClick={() => router.push("/chat/new-group")}
+          aria-label="Tạo nhóm chat"
+          className="rounded-full p-2 hover:bg-muted"
+        >
+          <UserPlus className="w-5 h-5" />
+        </button>
       </div>
       <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
         {conversations.length === 0 && (

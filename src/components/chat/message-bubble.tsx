@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useRef, useState, type ReactNode } from "react";
 import { X, Play } from "lucide-react";
-import { toChatMessageRenderType, isVideoUrl } from "@/types/chat";
+import { toChatMessageRenderType, isVideoUrl, getMessagePreview } from "@/types/chat";
 import type { MessageDto } from "@/types/chat";
 import { ImageLightbox } from "@/components/common/image-lightbox";
 
@@ -10,9 +10,66 @@ interface MessageBubbleProps {
   msg: MessageDto;
   isMe: boolean;
   onViewMoment?: (momentId: number) => void;
+  replyMessage?: MessageDto | null;
+  isEdited?: boolean;
+  onLongPress?: (msg: MessageDto) => void;
 }
 
-export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) => {
+interface BubbleWrapperProps {
+  msg: MessageDto;
+  onLongPress?: (msg: MessageDto) => void;
+  className?: string;
+  children: ReactNode;
+}
+
+const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperProps) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const start = useCallback(() => {
+    if (timerRef.current) return;
+    timerRef.current = setTimeout(() => {
+      suppressClickRef.current = true;
+      onLongPress?.(msg);
+    }, 500);
+  }, [msg, onLongPress]);
+
+  const cancel = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (suppressClickRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClickRef.current = false;
+    }
+  }, []);
+
+  return (
+    <div
+      className={className}
+      onTouchStart={start}
+      onTouchEnd={cancel}
+      onTouchMove={cancel}
+      onMouseDown={start}
+      onMouseUp={cancel}
+      onMouseLeave={cancel}
+      onClick={handleClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onLongPress?.(msg);
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+export const MessageBubble = ({ msg, isMe, onViewMoment, replyMessage, isEdited, onLongPress }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
@@ -36,21 +93,53 @@ export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) =
     return <p className="text-center text-xs text-muted-foreground">{msg.content}</p>;
   }
 
+  if (msg.isDeleted) {
+    return (
+      <div
+        className={`rounded-2xl px-4 py-2 italic text-xs text-muted-foreground ${isMe ? "bg-muted/60 rounded-br-md" : "bg-muted rounded-bl-md"}`}
+      >
+        Message has been deleted
+      </div>
+    );
+  }
+
+  const replyQuote =
+    msg.replyToId && replyMessage ? (
+      <div className={`mb-1.5 rounded-lg px-2.5 py-1.5 text-xs ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}>
+        <p className="truncate font-semibold">{replyMessage.senderName}</p>
+        <p className="truncate opacity-80">
+          {replyMessage.isDeleted ? "Message has been deleted" : (replyMessage.content ?? getMessagePreview(replyMessage))}
+        </p>
+      </div>
+    ) : null;
+
+  const editedLabel = isEdited ? " · đã chỉnh sửa" : "";
+
   if (renderType === "Emoji") {
-    return <div className="text-4xl leading-none">{msg.content}</div>;
+    return (
+      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="text-4xl leading-none">
+        {msg.content}
+      </BubbleWrapper>
+    );
   }
 
   if (renderType === "Sticker") {
-    return <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />;
+    return (
+      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="h-28 w-28 rounded-xl object-contain">
+        <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
+      </BubbleWrapper>
+    );
   }
 
   if (renderType === "Gif") {
     return (
-      <img
-        src={msg.content ?? ""}
-        alt=""
-        className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
-      />
+      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="max-h-[220px] max-w-[220px] rounded-xl object-contain">
+        <img
+          src={msg.content ?? ""}
+          alt=""
+          className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
+        />
+      </BubbleWrapper>
     );
   }
 
@@ -58,9 +147,12 @@ export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) =
     const images = msg.attachments.filter((a) => !isVideoUrl(a.originalUrl));
     const videos = msg.attachments.filter((a) => isVideoUrl(a.originalUrl));
     return (
-      <div
+      <BubbleWrapper
+        msg={msg}
+        onLongPress={onLongPress}
         className={`rounded-2xl px-2 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
       >
+        {replyQuote}
         <div className="space-y-1.5">
           {videos.map((v, i) => (
             <button
@@ -111,6 +203,7 @@ export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) =
         </div>
         <p className="mt-1 text-right text-[10px] opacity-70">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          {editedLabel}
         </p>
         {images.length > 0 && lightboxIndex !== null && (
           <ImageLightbox
@@ -143,14 +236,17 @@ export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) =
             />
           </div>
         )}
-      </div>
+      </BubbleWrapper>
     );
   }
 
   return (
-    <div
+    <BubbleWrapper
+      msg={msg}
+      onLongPress={onLongPress}
       className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
     >
+      {replyQuote}
       {msg.momentThumbnail ? (
         <div className="mb-1.5">
           <img
@@ -166,7 +262,8 @@ export const MessageBubble = ({ msg, isMe, onViewMoment }: MessageBubbleProps) =
       ) : null}
       <p className="mt-1 text-right text-[10px] opacity-70">
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        {editedLabel}
       </p>
-    </div>
+    </BubbleWrapper>
   );
 };

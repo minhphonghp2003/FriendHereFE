@@ -36,6 +36,11 @@ export interface ConversationDto {
   lastMessage: MessageDto | null;
 }
 
+export interface CreateGroupChatRequest {
+  name?: string;
+  memberIds: number[];
+}
+
 export interface SendMessageRequest {
   conversationId: number;
   content: string | null;

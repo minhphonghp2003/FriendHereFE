@@ -7,6 +7,7 @@ interface ChatState {
   activeConversationId: number | null;
   messages: Record<number, MessageDto[]>;
   messageHasMore: Record<number, boolean>;
+  editedMessageIds: number[];
 }
 
 const initialState: ChatState = {
@@ -15,6 +16,7 @@ const initialState: ChatState = {
   activeConversationId: null,
   messages: {},
   messageHasMore: {},
+  editedMessageIds: [],
 };
 
 const chatSlice = createSlice({
@@ -96,6 +98,37 @@ const chatSlice = createSlice({
         state.messages[conversationId].push(message);
       }
     },
+    updateMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
+      const { conversationId, message } = action.payload;
+      const list = state.messages[conversationId];
+      if (list) {
+        const idx = list.findIndex((m) => m.id === message.id);
+        if (idx !== -1) {
+          list[idx] = message;
+          if (!state.editedMessageIds.includes(message.id)) {
+            state.editedMessageIds.push(message.id);
+          }
+        }
+      }
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (conv && conv.lastMessage && conv.lastMessage.id === message.id) {
+        conv.lastMessage = message;
+      }
+    },
+    deleteMessage: (state, action: PayloadAction<{ conversationId: number; messageId: number }>) => {
+      const { conversationId, messageId } = action.payload;
+      const list = state.messages[conversationId];
+      if (list) {
+        const idx = list.findIndex((m) => m.id === messageId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], isDeleted: true, content: null, attachments: [] };
+        }
+      }
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (conv && conv.lastMessage && conv.lastMessage.id === messageId) {
+        conv.lastMessage = { ...conv.lastMessage, isDeleted: true, content: null, attachments: [] };
+      }
+    },
     resetChat: () => initialState,
   },
 });
@@ -112,6 +145,8 @@ export const {
   setMessages,
   prependMessages,
   appendMessage,
+  updateMessage,
+  deleteMessage,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;

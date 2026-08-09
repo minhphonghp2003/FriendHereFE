@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
@@ -12,10 +12,10 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import type { MessageDto, ImageDto } from "@/types/chat";
-import { MessageType, toChatMessageRenderType } from "@/types/chat";
+import { MessageType, toChatMessageRenderType, getMessagePreview } from "@/types/chat";
 
 interface PendingFile {
   id: string;
@@ -61,6 +61,7 @@ export default function ChatScreenPage() {
   const conversationId = Number(params.id);
   const [convName, setConvName] = useState("Chat");
   const [convOnline, setConvOnline] = useState(false);
+  const [isGroup, setIsGroup] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -90,6 +91,10 @@ export default function ChatScreenPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
+  const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
+  const [actionMessage, setActionMessage] = useState<MessageDto | null>(null);
+  const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageDto | null>(null);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
   const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
@@ -156,6 +161,7 @@ export default function ChatScreenPage() {
         if (res.data) {
           setConvName(res.data.name);
           setConvOnline(res.data.isOnline);
+          setIsGroup(!res.data.isDirect);
           setIsBlocked(res.data.isBlocked);
           setBlockedById(res.data.blockedById);
         }
@@ -200,6 +206,20 @@ export default function ChatScreenPage() {
   }, [conversationId, dispatch]);
 
   useEffect(() => {
+    const unsubEdited = appHub.onReceiveMessageEdited((message) => {
+      if (message.conversationId !== conversationId) return;
+      dispatch(updateMessage({ conversationId, message }));
+    });
+    const unsubDeleted = appHub.onReceiveMessageDeleted((messageId) => {
+      dispatch(deleteMessage({ conversationId, messageId }));
+    });
+    return () => {
+      unsubEdited();
+      unsubDeleted();
+    };
+  }, [conversationId, dispatch]);
+
+  useEffect(() => {
     if (!user || messages.length === 0) return;
     const otherMsg = messages.find((m) => m.senderId !== user.id);
     if (otherMsg) setOpponentId(otherMsg.senderId);
@@ -209,6 +229,12 @@ export default function ChatScreenPage() {
     if (!opponentId) return null;
     return messages.find((m) => m.senderId === opponentId)?.senderAvatar ?? null;
   }, [messages, opponentId]);
+
+  const replyMap = useMemo(() => {
+    const map = new Map<number, MessageDto>();
+    for (const m of messages) map.set(m.id, m);
+    return map;
+  }, [messages]);
 
   useEffect(() => {
     const unsubBlocked = appHub.onReceiveChatBlocked((data) => {
@@ -274,7 +300,10 @@ export default function ChatScreenPage() {
     setSending(true);
     setInput("");
     try {
-      if (pendingFiles.length > 0) {
+      if (editingMessage) {
+        await appHub.editMessage({ conversationId, messageId: editingMessage.id, content: text });
+        setEditingMessage(null);
+      } else if (pendingFiles.length > 0) {
         const files = pendingFiles;
         setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: true })));
         const contentTypes = files.map((f) => resolveContentType(f.file));
@@ -302,7 +331,7 @@ export default function ChatScreenPage() {
           conversationId,
           content: text || null,
           messageType: MessageType.File,
-          replyToId: null,
+          replyToId: replyTo?.id ?? null,
           idempotencyKey: crypto.randomUUID(),
           momentId: pendingMoment ? momentIdParam : undefined,
           fileIds,
@@ -310,8 +339,9 @@ export default function ChatScreenPage() {
         setPendingFiles([]);
         files.forEach((f) => URL.revokeObjectURL(f.preview));
       } else {
-        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: replyTo?.id ?? null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
       }
+      setReplyTo(null);
       setPendingMoment(null);
     } catch (err) {
       console.error("Failed to send message", err);
@@ -320,7 +350,7 @@ export default function ChatScreenPage() {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked]);
+  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked, editingMessage, replyTo]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
@@ -482,6 +512,52 @@ export default function ChatScreenPage() {
     }
   }, [opponentId, blocking, conversationId, dispatch]);
 
+  const handleLongPress = useCallback((msg: MessageDto) => {
+    if (msg.isDeleted) return;
+    setActionMessage(msg);
+  }, []);
+
+  const handleReply = useCallback((msg: MessageDto) => {
+    setReplyTo(msg);
+    setActionMessage(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleEdit = useCallback((msg: MessageDto) => {
+    setEditingMessage(msg);
+    setInput(msg.content ?? "");
+    setActionMessage(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleDelete = useCallback((msg: MessageDto) => {
+    setActionMessage(null);
+    if (replyTo?.id === msg.id) setReplyTo(null);
+    if (editingMessage?.id === msg.id) {
+      setEditingMessage(null);
+      setInput("");
+    }
+    appHub
+      .deleteMessage({ conversationId, messageId: msg.id })
+      .catch((err) => console.error("Failed to delete message", err));
+  }, [conversationId, replyTo, editingMessage]);
+
+  const handleCopy = useCallback(async (msg: MessageDto) => {
+    setActionMessage(null);
+    const text = msg.content ?? getMessagePreview(msg);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy message", err);
+    }
+  }, []);
+
+  const cancelReplyAndEdit = useCallback(() => {
+    setReplyTo(null);
+    setEditingMessage(null);
+    setInput("");
+  }, []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
@@ -502,22 +578,26 @@ export default function ChatScreenPage() {
             {convOnline ? "Online" : "Offline"}
           </p>
         </div>
-        <button
-          onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
-          disabled={!opponentId || isBlocked}
-          className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
-          title="Gọi video"
-        >
-          <Phone className="w-5 h-5" />
-        </button>
-        {isBlocked ? (
-          <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
-            <ShieldOff className="w-5 h-5" />
+        {!isGroup && (
+          <button
+            onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
+            disabled={!opponentId || isBlocked}
+            className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
+            title="Gọi video"
+          >
+            <Phone className="w-5 h-5" />
           </button>
-        ) : (
-          <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
-            <Ban className="w-5 h-5" />
-          </button>
+        )}
+        {!isGroup && (
+          isBlocked ? (
+            <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
+              <ShieldOff className="w-5 h-5" />
+            </button>
+          ) : (
+            <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
+              <Ban className="w-5 h-5" />
+            </button>
+          )
         )}
       </div>
       <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -542,7 +622,14 @@ export default function ChatScreenPage() {
               )}
               <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
                 {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
-                <MessageBubble msg={msg} isMe={isMe} onViewMoment={(id) => setViewMomentId(id)} />
+                <MessageBubble
+                  msg={msg}
+                  isMe={isMe}
+                  onViewMoment={(id) => setViewMomentId(id)}
+                  onLongPress={handleLongPress}
+                  replyMessage={msg.replyToId ? replyMap.get(msg.replyToId) ?? null : null}
+                  isEdited={editedMessageIds.includes(msg.id)}
+                />
               </div>
             </div>
           );
@@ -672,6 +759,27 @@ export default function ChatScreenPage() {
             </div>
           )}
 
+          {(replyTo || editingMessage) && (
+            <div className="flex items-center gap-2 border-t border-border bg-muted/50 px-3 py-2">
+              <div className="flex-1 min-w-0">
+                {editingMessage ? (
+                  <>
+                    <p className="text-xs font-semibold text-blue-600">Đang chỉnh sửa tin nhắn</p>
+                    <p className="truncate text-xs text-muted-foreground">{editingMessage.content ?? getMessagePreview(editingMessage)}</p>
+                  </>
+                ) : replyTo ? (
+                  <>
+                    <p className="text-xs font-semibold text-blue-600">Trả lời {replyTo.senderName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{replyTo.content ?? getMessagePreview(replyTo)}</p>
+                  </>
+                ) : null}
+              </div>
+              <button onClick={cancelReplyAndEdit} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Hủy">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-1 p-3">
             <input
               ref={imageInputRef}
@@ -704,6 +812,52 @@ export default function ChatScreenPage() {
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+      {actionMessage && (
+        <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setActionMessage(null)} />
+          <div
+            className="absolute inset-x-0 bottom-0 z-10 mx-auto mb-4 w-[min(90vw,380px)] overflow-hidden rounded-2xl bg-background shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="h-1 w-10 rounded-full bg-muted" />
+            </div>
+            <div className="px-3 py-2">
+              <MessageBubble
+                msg={actionMessage}
+                isMe={actionMessage.senderId === user?.id}
+                onViewMoment={(id) => setViewMomentId(id)}
+                replyMessage={actionMessage.replyToId ? replyMap.get(actionMessage.replyToId) ?? null : null}
+                isEdited={editedMessageIds.includes(actionMessage.id)}
+              />
+            </div>
+            <div className="border-t border-border">
+              <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
+                <Reply className="h-4 w-4" />
+                Reply
+              </button>
+              {actionMessage.senderId === user?.id && (
+                <>
+                  {toChatMessageRenderType(actionMessage.type) === "Text" && (
+                    <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </button>
+                  )}
+                  <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-muted">
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </>
+              )}
+              <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
+                <Copy className="h-4 w-4" />
+                Copy
+              </button>
+            </div>
           </div>
         </div>
       )}

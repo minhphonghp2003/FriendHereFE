@@ -57,6 +57,18 @@ export async function createConversation(
   return res.data;
 }
 
+export async function createGroupChat(
+  name: string | undefined,
+  memberIds: number[]
+): Promise<{
+  data: number;
+  success: boolean;
+  message?: string;
+}> {
+  const res = await httpClient.post("/Chat/group", { name, memberIds });
+  return res.data;
+}
+
 export async function blockChatUser(
   targetUserId: number
 ): Promise<{ data: null; success: boolean; message?: string }> {
