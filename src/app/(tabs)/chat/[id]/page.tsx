@@ -99,6 +99,7 @@ export default function ChatScreenPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stickToBottomRef = useRef(true);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
@@ -143,12 +144,20 @@ export default function ChatScreenPage() {
   }, [resolveFileWaiters]);
 
   const fetchMessages = useCallback(async (prevId: number | null = null) => {
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = prevId !== null && container ? container.scrollHeight : 0;
     try {
       const res = await getMessages(conversationId, prevId, 20);
       if (prevId === null) {
         dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       } else {
         dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
+        requestAnimationFrame(() => {
+          const el = messagesContainerRef.current;
+          if (el && prevScrollHeight > 0) {
+            el.scrollTop = el.scrollHeight - prevScrollHeight;
+          }
+        });
       }
       prevIdRef.current = res.prevId;
     } catch (err) {
@@ -289,13 +298,17 @@ export default function ChatScreenPage() {
   }, [loading]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el && stickToBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [messages.length]);
 
   const handleScroll = useCallback(() => {
     const el = messagesContainerRef.current;
-    if (!el || el.scrollTop > 0) return;
-    if (hasMore) {
+    if (!el) return;
+    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (el.scrollTop <= 0 && hasMore) {
       fetchMessages(prevIdRef.current);
     }
   }, [hasMore, fetchMessages]);
