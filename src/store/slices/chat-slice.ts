@@ -121,12 +121,31 @@ const chatSlice = createSlice({
       if (list) {
         const idx = list.findIndex((m) => m.id === messageId);
         if (idx !== -1) {
-          list[idx] = { ...list[idx], isDeleted: true, content: null, attachments: [] };
+          list[idx] = { ...list[idx], isDeleted: true, content: null, attachments: [], reactions: [] };
         }
       }
       const conv = state.conversations.find((c) => c.id === conversationId);
       if (conv && conv.lastMessage && conv.lastMessage.id === messageId) {
-        conv.lastMessage = { ...conv.lastMessage, isDeleted: true, content: null, attachments: [] };
+        conv.lastMessage = { ...conv.lastMessage, isDeleted: true, content: null, attachments: [], reactions: [] };
+      }
+    },
+    mergeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+      const { conversationId, messageId, userId, emoji } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const msg = list.find((m) => m.id === messageId);
+      if (!msg || msg.isDeleted) return;
+      const reactions = msg.reactions ?? [];
+      const sameIdx = reactions.findIndex((r) => r.userId === userId && r.emoji === emoji);
+      if (sameIdx !== -1) {
+        msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
+        return;
+      }
+      const userIdx = reactions.findIndex((r) => r.userId === userId);
+      if (userIdx !== -1) {
+        msg.reactions = reactions.map((r, i) => (i === userIdx ? { ...r, emoji } : r));
+      } else {
+        msg.reactions = [...reactions, { userId, emoji }];
       }
     },
     resetChat: () => initialState,
@@ -147,6 +166,7 @@ export const {
   appendMessage,
   updateMessage,
   deleteMessage,
+  mergeMessageReaction,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;

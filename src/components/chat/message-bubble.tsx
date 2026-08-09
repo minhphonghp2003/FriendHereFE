@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState, type ReactNode } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { X, Play } from "lucide-react";
 import { toChatMessageRenderType, isVideoUrl, getMessagePreview } from "@/types/chat";
 import type { MessageDto } from "@/types/chat";
@@ -9,10 +9,13 @@ import { ImageLightbox } from "@/components/common/image-lightbox";
 interface MessageBubbleProps {
   msg: MessageDto;
   isMe: boolean;
+  currentUserId?: number;
   onViewMoment?: (momentId: number) => void;
   replyMessage?: MessageDto | null;
   isEdited?: boolean;
   onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
+  onReact?: (msg: MessageDto, emoji: string) => void;
+  onOpenReactions?: (msg: MessageDto) => void;
 }
 
 interface BubbleWrapperProps {
@@ -79,12 +82,42 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
   );
 };
 
-export const MessageBubble = ({ msg, isMe, onViewMoment, replyMessage, isEdited, onLongPress }: MessageBubbleProps) => {
+export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onReact, onOpenReactions }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
 
   const handleVideoClose = useCallback(() => setVideoIndex(null), []);
+
+  const groupedReactions = useMemo(() => {
+    const map = new Map<string, { count: number; mine: boolean }>();
+    for (const r of msg.reactions ?? []) {
+      const cur = map.get(r.emoji) ?? { count: 0, mine: false };
+      cur.count += 1;
+      if (r.userId === currentUserId) cur.mine = true;
+      map.set(r.emoji, cur);
+    }
+    return [...map.entries()].map(([emoji, { count, mine }]) => ({ emoji, count, mine }));
+  }, [msg.reactions, currentUserId]);
+
+  const reactionRow = groupedReactions.length > 0 ? (
+    <div className={`relative z-10 mt-1 flex flex-wrap gap-1 ${isMe ? "justify-end" : "justify-start"}`}>
+      {groupedReactions.map((g) => (
+        <button
+          key={g.emoji}
+          onClick={() => onReact?.(msg, g.emoji)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onOpenReactions?.(msg);
+          }}
+          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm ${g.mine ? "border-blue-400 bg-blue-100/70" : "border-border bg-background/90"}`}
+        >
+          <span>{g.emoji}</span>
+          <span className={g.mine ? "font-semibold text-blue-600" : "text-muted-foreground"}>{g.count}</span>
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   useEffect(() => {
     if (videoIndex === null) return;
@@ -127,29 +160,38 @@ export const MessageBubble = ({ msg, isMe, onViewMoment, replyMessage, isEdited,
 
   if (renderType === "Emoji") {
     return (
-      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="text-4xl leading-none">
-        {msg.content}
-      </BubbleWrapper>
+      <div className="inline-block max-w-full">
+        <BubbleWrapper msg={msg} onLongPress={onLongPress} className="text-4xl leading-none">
+          {msg.content}
+        </BubbleWrapper>
+        {reactionRow}
+      </div>
     );
   }
 
   if (renderType === "Sticker") {
     return (
-      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="h-28 w-28 rounded-xl object-contain">
-        <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
-      </BubbleWrapper>
+      <div className="inline-block max-w-full">
+        <BubbleWrapper msg={msg} onLongPress={onLongPress} className="h-28 w-28 rounded-xl object-contain">
+          <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
+        </BubbleWrapper>
+        {reactionRow}
+      </div>
     );
   }
 
   if (renderType === "Gif") {
     return (
-      <BubbleWrapper msg={msg} onLongPress={onLongPress} className="max-h-[220px] max-w-[220px] rounded-xl object-contain">
-        <img
-          src={msg.content ?? ""}
-          alt=""
-          className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
-        />
-      </BubbleWrapper>
+      <div className="inline-block max-w-full">
+        <BubbleWrapper msg={msg} onLongPress={onLongPress} className="max-h-[220px] max-w-[220px] rounded-xl object-contain">
+          <img
+            src={msg.content ?? ""}
+            alt=""
+            className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
+          />
+        </BubbleWrapper>
+        {reactionRow}
+      </div>
     );
   }
 
@@ -215,6 +257,7 @@ export const MessageBubble = ({ msg, isMe, onViewMoment, replyMessage, isEdited,
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           {editedLabel}
         </p>
+        {reactionRow}
         {images.length > 0 && lightboxIndex !== null && (
           <ImageLightbox
             images={images}
@@ -274,6 +317,7 @@ export const MessageBubble = ({ msg, isMe, onViewMoment, replyMessage, isEdited,
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         {editedLabel}
       </p>
+      {reactionRow}
     </BubbleWrapper>
   );
 };

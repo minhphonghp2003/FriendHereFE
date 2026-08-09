@@ -2,8 +2,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
-import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
@@ -14,7 +14,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
 import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
-import type { MessageDto, ImageDto } from "@/types/chat";
+import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
 import { MessageType, toChatMessageRenderType, getMessagePreview } from "@/types/chat";
 
 interface PendingFile {
@@ -60,6 +60,8 @@ const extractLinks = (text: string): string[] => Array.from(new Set(text.match(U
 const extractPhones = (text: string): string[] =>
   Array.from(new Set((text.match(PHONE_RE) ?? []).filter((p) => p.replace(/\D/g, "").length >= 7)));
 
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "😮"];
+
 export default function ChatScreenPage() {
   const router = useRouter();
   const params = useParams();
@@ -104,6 +106,11 @@ export default function ChatScreenPage() {
   const [actionPos, setActionPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageDto | null>(null);
+  const [reactionMessage, setReactionMessage] = useState<MessageDto | null>(null);
+  const [reactionUsers, setReactionUsers] = useState<MessageReactionUserDto[]>([]);
+  const [reactionHasMore, setReactionHasMore] = useState(false);
+  const [reactionPrevId, setReactionPrevId] = useState<number | null>(null);
+  const [reactionsLoading, setReactionsLoading] = useState(false);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
   const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
@@ -222,9 +229,19 @@ export default function ChatScreenPage() {
     const unsubDeleted = appHub.onReceiveMessageDeleted((messageId) => {
       dispatch(deleteMessage({ conversationId, messageId }));
     });
+    const unsubReacted = appHub.onReceiveMessageReacted((data) => {
+      if (data.conversationId !== conversationId) return;
+      dispatch(mergeMessageReaction({
+        conversationId: data.conversationId,
+        messageId: data.messageId,
+        userId: data.userId,
+        emoji: data.emoji,
+      }));
+    });
     return () => {
       unsubEdited();
       unsubDeleted();
+      unsubReacted();
     };
   }, [conversationId, dispatch]);
 
@@ -574,6 +591,70 @@ export default function ChatScreenPage() {
     setInput("");
   }, []);
 
+  const reactTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingReactRef = useRef<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      reactTimersRef.current.forEach((t) => clearTimeout(t));
+      reactTimersRef.current.clear();
+      pendingReactRef.current.clear();
+    };
+  }, []);
+
+  const debouncedReact = useCallback(
+    (messageId: number, emoji: string) => {
+      pendingReactRef.current.set(messageId, emoji);
+      const existing = reactTimersRef.current.get(messageId);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => {
+        const finalEmoji = pendingReactRef.current.get(messageId);
+        reactTimersRef.current.delete(messageId);
+        pendingReactRef.current.delete(messageId);
+        if (finalEmoji !== undefined) {
+          appHub
+            .reactMessage({ conversationId, messageId, emoji: finalEmoji })
+            .catch((err) => console.error("Failed to react", err));
+        }
+      }, 200);
+      reactTimersRef.current.set(messageId, timer);
+    },
+    [conversationId],
+  );
+
+  const handleReact = useCallback(
+    (msg: MessageDto, emoji: string) => {
+      setActionMessage(null);
+      debouncedReact(msg.id, emoji);
+    },
+    [debouncedReact],
+  );
+
+  const loadReactions = useCallback(async (msg: MessageDto, prevId: number | null = null) => {
+    setReactionsLoading(true);
+    try {
+      const res = await getMessageReactions(msg.conversationId, msg.id, prevId, 20);
+      setReactionUsers((prev) => (prevId ? [...prev, ...res.data] : res.data));
+      setReactionHasMore(res.hasMore);
+      setReactionPrevId(res.prevId);
+    } catch (err) {
+      console.error("Failed to load reactions", err);
+    } finally {
+      setReactionsLoading(false);
+    }
+  }, []);
+
+  const openReactions = useCallback(
+    (msg: MessageDto) => {
+      setReactionMessage(msg);
+      setReactionUsers([]);
+      setReactionHasMore(false);
+      setReactionPrevId(null);
+      loadReactions(msg);
+    },
+    [loadReactions],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
@@ -641,8 +722,11 @@ export default function ChatScreenPage() {
                 <MessageBubble
                   msg={msg}
                   isMe={isMe}
+                  currentUserId={user?.id}
                   onViewMoment={(id) => setViewMomentId(id)}
                   onLongPress={handleLongPress}
+                  onReact={handleReact}
+                  onOpenReactions={openReactions}
                   replyMessage={msg.replyToId ? replyMap.get(msg.replyToId) ?? null : null}
                   isEdited={editedMessageIds.includes(msg.id)}
                 />
@@ -831,6 +915,62 @@ export default function ChatScreenPage() {
           </div>
         </div>
       )}
+      {reactionMessage && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" onClick={() => setReactionMessage(null)}>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setReactionMessage(null)} />
+          <div
+            className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="font-semibold text-sm">Reactions</p>
+              <button onClick={() => setReactionMessage(null)} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Đóng">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {reactionsLoading && reactionUsers.length === 0 ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : reactionUsers.length === 0 ? (
+                <p className="py-8 text-center text-xs text-muted-foreground">Chưa có phản ứng</p>
+              ) : (
+                reactionUsers.map((u) => (
+                  <div key={u.userId} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+                      {u.userImage?.thumbUrl ? (
+                        <img src={u.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground">
+                          {u.userName?.charAt(0)?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
+                    </div>
+                    <p className="flex-1 truncate text-sm">{u.userName}</p>
+                    <div className="flex gap-0.5 text-lg">
+                      {u.emojis.map((emoji, i) => (
+                        <span key={`${emoji}-${i}`}>{emoji}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+              {reactionHasMore && (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => reactionMessage && loadReactions(reactionMessage, reactionPrevId)}
+                    disabled={reactionsLoading}
+                    className="rounded-full bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/70 disabled:opacity-50"
+                  >
+                    {reactionsLoading ? "Đang tải..." : "Xem thêm"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {actionMessage && (() => {
         const content = actionMessage.isDeleted ? "" : (actionMessage.content ?? getMessagePreview(actionMessage));
         const links = actionMessage.isDeleted ? [] : extractLinks(content);
@@ -842,7 +982,7 @@ export default function ChatScreenPage() {
         if (phones.length > 0) itemCount += 1;
         itemCount += 1;
         const popupWidth = 210;
-        const popupHeight = 52 + itemCount * 40;
+        const popupHeight = 52 + itemCount * 40 + (actionMessage.isDeleted ? 0 : 48);
         const pad = 8;
         const left = Math.max(pad, Math.min(actionPos.x, window.innerWidth - popupWidth - pad));
         const top = Math.max(pad, Math.min(actionPos.y, window.innerHeight - popupHeight - pad));
@@ -860,6 +1000,20 @@ export default function ChatScreenPage() {
                   {actionMessage.isDeleted ? "Message has been deleted" : content}
                 </p>
               </div>
+              {!actionMessage.isDeleted && (
+                <div className="flex items-center justify-between gap-1 border-b border-border px-3 py-2">
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReact(actionMessage, emoji)}
+                      className="text-xl transition-transform hover:scale-125"
+                      aria-label={`React ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="py-1">
                 <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
                   <Reply className="h-4 w-4" />

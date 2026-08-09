@@ -3,6 +3,33 @@ export interface ImageDto {
   thumbUrl: string;
 }
 
+export interface MessageReactionDto {
+  userId: number;
+  emoji: string;
+}
+
+export interface MessageReactionNotificationDto {
+  conversationId: number;
+  messageId: number;
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  emoji: string;
+}
+
+export interface MessageReactionUserDto {
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  emojis: string[];
+}
+
+export interface AddMessageReactionRequest {
+  conversationId: number;
+  messageId: number;
+  emoji: string;
+}
+
 export interface MessageDto {
   id: number;
   conversationId: number;
@@ -18,6 +45,7 @@ export interface MessageDto {
   isDeleted: boolean;
   momentId?: number | null;
   momentThumbnail: ImageDto | null;
+  reactions?: MessageReactionDto[] | null;
 }
 
 export interface ConversationDto {
