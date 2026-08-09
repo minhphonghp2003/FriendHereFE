@@ -16,6 +16,7 @@ interface MessageBubbleProps {
   onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
   onReact?: (msg: MessageDto, emoji: string) => void;
   onOpenReactions?: (msg: MessageDto) => void;
+  onReplyClick?: (messageId: number) => void;
 }
 
 interface BubbleWrapperProps {
@@ -82,7 +83,7 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
   );
 };
 
-export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onReact, onOpenReactions }: MessageBubbleProps) => {
+export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onReact, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
@@ -148,10 +149,16 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
 
   const replyQuote =
     msg.replyToId && replyMessage ? (
-      <div className={`mb-1.5 rounded-lg px-2.5 py-1.5 text-xs ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}>
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onReplyClick?.(replyMessage.id);
+        }}
+        className={`mb-1.5 cursor-pointer rounded-lg px-2.5 py-1.5 text-xs ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}
+      >
         <p className="truncate font-semibold">{replyMessage.senderName}</p>
         <p className="truncate opacity-80">
-          {replyMessage.isDeleted ? "Message has been deleted" : (replyMessage.content ?? getMessagePreview(replyMessage))}
+          {replyMessage.isDeleted ? "Message has been deleted" : getMessagePreview(replyMessage)}
         </p>
       </div>
     ) : null;

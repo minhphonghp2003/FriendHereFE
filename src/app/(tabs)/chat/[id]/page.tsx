@@ -111,6 +111,7 @@ export default function ChatScreenPage() {
   const [reactionHasMore, setReactionHasMore] = useState(false);
   const [reactionPrevId, setReactionPrevId] = useState<number | null>(null);
   const [reactionsLoading, setReactionsLoading] = useState(false);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
   const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
@@ -655,6 +656,41 @@ export default function ChatScreenPage() {
     [loadReactions],
   );
 
+  const scrollToMessage = useCallback(
+    async (messageId: number) => {
+      const highlight = () => {
+        setHighlightedMsgId(null);
+        setHighlightedMsgId(messageId);
+        setTimeout(() => {
+          setHighlightedMsgId((cur) => (cur === messageId ? null : cur));
+        }, 2000);
+      };
+      const tryScroll = (): boolean => {
+        const el = document.getElementById(`message-${messageId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          highlight();
+          return true;
+        }
+        return false;
+      };
+
+      if (tryScroll()) return;
+
+      let guard = 0;
+      while (guard < 50) {
+        guard += 1;
+        const res = await getMessages(conversationId, prevIdRef.current, 20);
+        if (!res.data.length) break;
+        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
+        prevIdRef.current = res.prevId;
+        if (tryScroll()) break;
+        if (!res.hasMore) break;
+      }
+    },
+    [conversationId, dispatch],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
@@ -662,6 +698,27 @@ export default function ChatScreenPage() {
       </div>
     );
   }
+
+  const actionContent = actionMessage
+    ? actionMessage.isDeleted
+      ? ""
+      : (actionMessage.content ?? getMessagePreview(actionMessage))
+    : "";
+  const actionLinks = actionMessage && !actionMessage.isDeleted ? extractLinks(actionContent) : [];
+  const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
+  const actionIsMine = actionMessage?.senderId === user?.id;
+  const actionIsText = actionMessage ? toChatMessageRenderType(actionMessage.type) === "Text" : false;
+  let actionItemCount = 1 + (actionIsMine ? 1 : 0) + (actionIsMine && actionIsText ? 1 : 0);
+  if (actionLinks.length > 0) actionItemCount += 1;
+  if (actionPhones.length > 0) actionItemCount += 1;
+  actionItemCount += 1;
+  const actionPopupWidth = 210;
+  const actionPopupHeight = actionMessage
+    ? 52 + actionItemCount * 40 + (actionMessage.isDeleted ? 0 : 48)
+    : 0;
+  const actionPad = 8;
+  const actionLeft = Math.max(actionPad, Math.min(actionPos.x, window.innerWidth - actionPopupWidth - actionPad));
+  const actionTop = Math.max(actionPad, Math.min(actionPos.y, window.innerHeight - actionPopupHeight - actionPad));
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col overflow-hidden pb-16">
@@ -705,7 +762,11 @@ export default function ChatScreenPage() {
           const isMe = msg.senderId === user?.id;
           const isSystem = toChatMessageRenderType(msg.type) === "System";
           return (
-            <div key={msg.id} className={`flex gap-2 ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}>
+            <div
+              key={msg.id}
+              id={`message-${msg.id}`}
+              className={`flex gap-2 ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
+            >
               {!isMe && !isSystem && (
                 <div className="shrink-0 self-end">
                   {msg.senderAvatar?.thumbUrl ? (
@@ -727,6 +788,7 @@ export default function ChatScreenPage() {
                   onLongPress={handleLongPress}
                   onReact={handleReact}
                   onOpenReactions={openReactions}
+                  onReplyClick={scrollToMessage}
                   replyMessage={msg.replyToId ? replyMap.get(msg.replyToId) ?? null : null}
                   isEdited={editedMessageIds.includes(msg.id)}
                 />
@@ -870,7 +932,7 @@ export default function ChatScreenPage() {
                 ) : replyTo ? (
                   <>
                     <p className="text-xs font-semibold text-blue-600">Trả lời {replyTo.senderName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{replyTo.content ?? getMessagePreview(replyTo)}</p>
+                    <p className="truncate text-xs text-muted-foreground">{getMessagePreview(replyTo)}</p>
                   </>
                 ) : null}
               </div>
@@ -971,87 +1033,71 @@ export default function ChatScreenPage() {
           </div>
         </div>
       )}
-      {actionMessage && (() => {
-        const content = actionMessage.isDeleted ? "" : (actionMessage.content ?? getMessagePreview(actionMessage));
-        const links = actionMessage.isDeleted ? [] : extractLinks(content);
-        const phones = actionMessage.isDeleted ? [] : extractPhones(content);
-        let itemCount = 1;
-        if (actionMessage.senderId === user?.id) itemCount += 1;
-        if (actionMessage.senderId === user?.id && toChatMessageRenderType(actionMessage.type) === "Text") itemCount += 1;
-        if (links.length > 0) itemCount += 1;
-        if (phones.length > 0) itemCount += 1;
-        itemCount += 1;
-        const popupWidth = 210;
-        const popupHeight = 52 + itemCount * 40 + (actionMessage.isDeleted ? 0 : 48);
-        const pad = 8;
-        const left = Math.max(pad, Math.min(actionPos.x, window.innerWidth - popupWidth - pad));
-        const top = Math.max(pad, Math.min(actionPos.y, window.innerHeight - popupHeight - pad));
-        return (
-          <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
-            <div className="absolute inset-0" onClick={() => setActionMessage(null)} />
-            <div
-              className="absolute z-10 w-52 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
-              style={{ left, top }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-border px-3 py-2">
-                <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {actionMessage.isDeleted ? "Message has been deleted" : content}
-                </p>
+      {actionMessage && (
+        <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
+          <div className="absolute inset-0" onClick={() => setActionMessage(null)} />
+          <div
+            className="absolute z-10 w-52 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            style={{ left: actionLeft, top: actionTop }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-border px-3 py-2">
+              <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {actionMessage.isDeleted ? "Message has been deleted" : actionContent}
+              </p>
+            </div>
+            {!actionMessage.isDeleted && (
+              <div className="flex items-center justify-between gap-1 border-b border-border px-3 py-2">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReact(actionMessage, emoji)}
+                    className="text-xl transition-transform hover:scale-125"
+                    aria-label={`React ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
               </div>
-              {!actionMessage.isDeleted && (
-                <div className="flex items-center justify-between gap-1 border-b border-border px-3 py-2">
-                  {QUICK_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => handleReact(actionMessage, emoji)}
-                      className="text-xl transition-transform hover:scale-125"
-                      aria-label={`React ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+            )}
+            <div className="py-1">
+              <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <Reply className="h-4 w-4" />
+                Reply
+              </button>
+              {actionIsMine && actionIsText && (
+                <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </button>
               )}
-              <div className="py-1">
-                <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
-                  <Reply className="h-4 w-4" />
-                  Reply
+              {actionIsMine && (
+                <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
                 </button>
-                {actionMessage.senderId === user?.id && toChatMessageRenderType(actionMessage.type) === "Text" && (
-                  <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </button>
-                )}
-                {actionMessage.senderId === user?.id && (
-                  <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
-                )}
-                {links.length > 0 && (
-                  <button onClick={() => copyText(links.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
-                    <Link2 className="h-4 w-4" />
-                    Copy link
-                  </button>
-                )}
-                {phones.length > 0 && (
-                  <button onClick={() => copyText(phones.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
-                    <Phone className="h-4 w-4" />
-                    Copy phone
-                  </button>
-                )}
-                <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
-                  <Copy className="h-4 w-4" />
-                  Copy
+              )}
+              {actionLinks.length > 0 && (
+                <button onClick={() => copyText(actionLinks.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Link2 className="h-4 w-4" />
+                  Copy link
                 </button>
-              </div>
+              )}
+              {actionPhones.length > 0 && (
+                <button onClick={() => copyText(actionPhones.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Phone className="h-4 w-4" />
+                  Copy phone
+                </button>
+              )}
+              <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <Copy className="h-4 w-4" />
+                Copy
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
       <MomentDetailOverlay
         momentId={viewMomentId}
         currentUserId={user?.id}
