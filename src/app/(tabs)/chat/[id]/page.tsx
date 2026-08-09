@@ -12,7 +12,7 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import type { MessageDto, ImageDto } from "@/types/chat";
 import { MessageType, toChatMessageRenderType, getMessagePreview } from "@/types/chat";
@@ -51,6 +51,14 @@ const normalizeKeyToken = (key: string | undefined): string => {
   const idx = key.lastIndexOf("/");
   return idx > 0 ? key.slice(0, idx) : key;
 };
+
+const URL_RE = /https?:\/\/[^\s]+/g;
+const PHONE_RE = /(\+?\d{1,4}[\s.-]?)?(\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}/g;
+
+const extractLinks = (text: string): string[] => Array.from(new Set(text.match(URL_RE) ?? []));
+
+const extractPhones = (text: string): string[] =>
+  Array.from(new Set((text.match(PHONE_RE) ?? []).filter((p) => p.replace(/\D/g, "").length >= 7)));
 
 export default function ChatScreenPage() {
   const router = useRouter();
@@ -544,15 +552,21 @@ export default function ChatScreenPage() {
       .catch((err) => console.error("Failed to delete message", err));
   }, [conversationId, replyTo, editingMessage]);
 
-  const handleCopy = useCallback(async (msg: MessageDto) => {
+  const copyText = useCallback(async (text: string) => {
     setActionMessage(null);
-    const text = msg.content ?? getMessagePreview(msg);
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
-      console.error("Failed to copy message", err);
+      console.error("Failed to copy text", err);
     }
   }, []);
+
+  const handleCopy = useCallback(
+    (msg: MessageDto) => {
+      copyText(msg.content ?? getMessagePreview(msg));
+    },
+    [copyText],
+  );
 
   const cancelReplyAndEdit = useCallback(() => {
     setReplyTo(null);
@@ -818,10 +832,17 @@ export default function ChatScreenPage() {
         </div>
       )}
       {actionMessage && (() => {
+        const content = actionMessage.isDeleted ? "" : (actionMessage.content ?? getMessagePreview(actionMessage));
+        const links = actionMessage.isDeleted ? [] : extractLinks(content);
+        const phones = actionMessage.isDeleted ? [] : extractPhones(content);
+        let itemCount = 1;
+        if (actionMessage.senderId === user?.id) itemCount += 1;
+        if (actionMessage.senderId === user?.id && toChatMessageRenderType(actionMessage.type) === "Text") itemCount += 1;
+        if (links.length > 0) itemCount += 1;
+        if (phones.length > 0) itemCount += 1;
+        itemCount += 1;
         const popupWidth = 210;
-        const popupHeight = actionMessage.senderId === user?.id
-          ? (toChatMessageRenderType(actionMessage.type) === "Text" ? 230 : 180)
-          : 110;
+        const popupHeight = 52 + itemCount * 40;
         const pad = 8;
         const left = Math.max(pad, Math.min(actionPos.x, window.innerWidth - popupWidth - pad));
         const top = Math.max(pad, Math.min(actionPos.y, window.innerHeight - popupHeight - pad));
@@ -836,7 +857,7 @@ export default function ChatScreenPage() {
               <div className="border-b border-border px-3 py-2">
                 <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {actionMessage.isDeleted ? "Message has been deleted" : (actionMessage.content ?? getMessagePreview(actionMessage))}
+                  {actionMessage.isDeleted ? "Message has been deleted" : content}
                 </p>
               </div>
               <div className="py-1">
@@ -854,6 +875,18 @@ export default function ChatScreenPage() {
                   <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
                     <Trash2 className="h-4 w-4" />
                     Delete
+                  </button>
+                )}
+                {links.length > 0 && (
+                  <button onClick={() => copyText(links.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                    <Link2 className="h-4 w-4" />
+                    Copy link
+                  </button>
+                )}
+                {phones.length > 0 && (
+                  <button onClick={() => copyText(phones.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                    <Phone className="h-4 w-4" />
+                    Copy phone
                   </button>
                 )}
                 <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
