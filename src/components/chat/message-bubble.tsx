@@ -12,12 +12,12 @@ interface MessageBubbleProps {
   onViewMoment?: (momentId: number) => void;
   replyMessage?: MessageDto | null;
   isEdited?: boolean;
-  onLongPress?: (msg: MessageDto) => void;
+  onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
 }
 
 interface BubbleWrapperProps {
   msg: MessageDto;
-  onLongPress?: (msg: MessageDto) => void;
+  onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
   className?: string;
   children: ReactNode;
 }
@@ -25,14 +25,24 @@ interface BubbleWrapperProps {
 const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperProps) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressClickRef = useRef(false);
+  const posRef = useRef({ x: 0, y: 0 });
 
-  const start = useCallback(() => {
-    if (timerRef.current) return;
-    timerRef.current = setTimeout(() => {
-      suppressClickRef.current = true;
-      onLongPress?.(msg);
-    }, 500);
-  }, [msg, onLongPress]);
+  const start = useCallback(
+    (e: React.SyntheticEvent) => {
+      const native = e.nativeEvent as MouseEvent | TouchEvent;
+      if ("clientX" in native) {
+        posRef.current = { x: native.clientX, y: native.clientY };
+      } else if (native.touches && native.touches.length > 0) {
+        posRef.current = { x: native.touches[0].clientX, y: native.touches[0].clientY };
+      }
+      if (timerRef.current) return;
+      timerRef.current = setTimeout(() => {
+        suppressClickRef.current = true;
+        onLongPress?.(msg, posRef.current);
+      }, 500);
+    },
+    [msg, onLongPress],
+  );
 
   const cancel = useCallback(() => {
     if (timerRef.current) {
@@ -61,7 +71,7 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
       onClick={handleClick}
       onContextMenu={(e) => {
         e.preventDefault();
-        onLongPress?.(msg);
+        onLongPress?.(msg, { x: e.clientX, y: e.clientY });
       }}
     >
       {children}

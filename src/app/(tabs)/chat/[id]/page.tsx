@@ -93,6 +93,7 @@ export default function ChatScreenPage() {
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
   const [actionMessage, setActionMessage] = useState<MessageDto | null>(null);
+  const [actionPos, setActionPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageDto | null>(null);
   const prevIdRef = useRef<number | null>(null);
@@ -512,9 +513,10 @@ export default function ChatScreenPage() {
     }
   }, [opponentId, blocking, conversationId, dispatch]);
 
-  const handleLongPress = useCallback((msg: MessageDto) => {
+  const handleLongPress = useCallback((msg: MessageDto, pos: { x: number; y: number }) => {
     if (msg.isDeleted) return;
     setActionMessage(msg);
+    setActionPos(pos);
   }, []);
 
   const handleReply = useCallback((msg: MessageDto) => {
@@ -815,52 +817,54 @@ export default function ChatScreenPage() {
           </div>
         </div>
       )}
-      {actionMessage && (
-        <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
-          <div className="absolute inset-0 bg-black/50" onClick={() => setActionMessage(null)} />
-          <div
-            className="absolute inset-x-0 bottom-0 z-10 mx-auto mb-4 w-[min(90vw,380px)] overflow-hidden rounded-2xl bg-background shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-10 rounded-full bg-muted" />
-            </div>
-            <div className="px-3 py-2">
-              <MessageBubble
-                msg={actionMessage}
-                isMe={actionMessage.senderId === user?.id}
-                onViewMoment={(id) => setViewMomentId(id)}
-                replyMessage={actionMessage.replyToId ? replyMap.get(actionMessage.replyToId) ?? null : null}
-                isEdited={editedMessageIds.includes(actionMessage.id)}
-              />
-            </div>
-            <div className="border-t border-border">
-              <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
-                <Reply className="h-4 w-4" />
-                Reply
-              </button>
-              {actionMessage.senderId === user?.id && (
-                <>
-                  {toChatMessageRenderType(actionMessage.type) === "Text" && (
-                    <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </button>
-                  )}
-                  <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-muted">
+      {actionMessage && (() => {
+        const popupWidth = 210;
+        const popupHeight = actionMessage.senderId === user?.id
+          ? (toChatMessageRenderType(actionMessage.type) === "Text" ? 230 : 180)
+          : 110;
+        const pad = 8;
+        const left = Math.max(pad, Math.min(actionPos.x, window.innerWidth - popupWidth - pad));
+        const top = Math.max(pad, Math.min(actionPos.y, window.innerHeight - popupHeight - pad));
+        return (
+          <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
+            <div className="absolute inset-0" onClick={() => setActionMessage(null)} />
+            <div
+              className="absolute z-10 w-52 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+              style={{ left, top }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="border-b border-border px-3 py-2">
+                <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {actionMessage.isDeleted ? "Message has been deleted" : (actionMessage.content ?? getMessagePreview(actionMessage))}
+                </p>
+              </div>
+              <div className="py-1">
+                <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Reply className="h-4 w-4" />
+                  Reply
+                </button>
+                {actionMessage.senderId === user?.id && toChatMessageRenderType(actionMessage.type) === "Text" && (
+                  <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </button>
+                )}
+                {actionMessage.senderId === user?.id && (
+                  <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
                     <Trash2 className="h-4 w-4" />
                     Delete
                   </button>
-                </>
-              )}
-              <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
-                <Copy className="h-4 w-4" />
-                Copy
-              </button>
+                )}
+                <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       <MomentDetailOverlay
         momentId={viewMomentId}
         currentUserId={user?.id}
