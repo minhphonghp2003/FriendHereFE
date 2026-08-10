@@ -37,6 +37,13 @@ export interface MessageReactionRemovedNotificationDto {
   emoji: string;
 }
 
+export interface MessageReadNotificationDto {
+  conversationId: number;
+  messageIds: number[];
+  readerUserId: number;
+  readAt: string;
+}
+
 export interface MessageReactionUserDto {
   userId: number;
   userName: string;
@@ -67,6 +74,7 @@ export interface MessageDto {
   momentId?: number | null;
   momentThumbnail: ImageDto | null;
   reactions?: MessageReactionDto[] | null;
+  status?: number;
 }
 
 export interface ConversationDto {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
-import { X, Play } from "lucide-react";
+import { X, Play, Check } from "lucide-react";
 import { toChatMessageRenderType, isVideoUrl, MessageType } from "@/types/chat";
 import type { MessageDto, RepliedMessageDto } from "@/types/chat";
 import { ImageLightbox } from "@/components/common/image-lightbox";
@@ -144,6 +144,20 @@ const ReplyQuote = ({
         <img src={thumbUrl} alt="" className="ml-auto h-9 w-9 shrink-0 rounded object-cover" />
       )}
     </button>
+  );
+};
+
+const MessageTicks = ({ status, isMe }: { status?: number; isMe: boolean }) => {
+  if (!isMe) return null;
+  const read = status === 1;
+  return (
+    <span className="ml-1 inline-flex items-center align-middle">
+      {read && <Check className="h-3 w-3 text-blue-300" strokeWidth={2.5} />}
+      <Check
+        className={`h-3 w-3 ${read ? "text-blue-300 -ml-1" : "text-white/70"}`}
+        strokeWidth={2.5}
+      />
+    </span>
   );
 };
 
@@ -311,6 +325,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
         <p className="mt-1 text-right text-[10px] opacity-70">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           {editedLabel}
+          <MessageTicks status={msg.status} isMe={isMe} />
         </p>
         {reactionRow}
         {images.length > 0 && lightboxIndex !== null && (
@@ -374,6 +389,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
       <p className="mt-1 text-right text-[10px] opacity-70">
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         {editedLabel}
+        <MessageTicks status={msg.status} isMe={isMe} />
       </p>
       {reactionRow}
     </BubbleWrapper>

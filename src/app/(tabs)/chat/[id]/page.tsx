@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, markMessagesRead, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions, searchMessages } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
@@ -263,13 +263,23 @@ export default function ChatScreenPage() {
         emoji: data.emoji,
       }));
     });
+    const unsubMessagesRead = appHub.onReceiveMessagesRead((data) => {
+      if (data.conversationId !== conversationId) return;
+      if (!user || data.readerUserId === user.id) return;
+      dispatch(markMessagesRead({
+        conversationId: data.conversationId,
+        messageIds: data.messageIds,
+        myUserId: user.id,
+      }));
+    });
     return () => {
       unsubEdited();
       unsubDeleted();
       unsubReacted();
       unsubReactedRemoved();
+      unsubMessagesRead();
     };
-  }, [conversationId, dispatch]);
+  }, [conversationId, dispatch, user]);
 
   useEffect(() => {
     if (!user || messages.length === 0) return;

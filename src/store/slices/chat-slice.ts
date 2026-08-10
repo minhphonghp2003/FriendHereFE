@@ -149,6 +149,17 @@ const chatSlice = createSlice({
       const reactions = msg.reactions ?? [];
       msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
     },
+    markMessagesRead: (state, action: PayloadAction<{ conversationId: number; messageIds: number[]; myUserId: number }>) => {
+      const { conversationId, messageIds, myUserId } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const ids = new Set(messageIds);
+      for (const msg of list) {
+        if (msg.senderId === myUserId && ids.has(msg.id)) {
+          msg.status = 1;
+        }
+      }
+    },
     resetChat: () => initialState,
   },
 });
@@ -169,6 +180,7 @@ export const {
   deleteMessage,
   mergeMessageReaction,
   removeMessageReaction,
+  markMessagesRead,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;
