@@ -64,7 +64,8 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
 
   return (
     <div
-      className={className}
+      className={`select-none ${className}`}
+      style={{ WebkitTouchCallout: "none" }}
       onTouchStart={start}
       onTouchEnd={cancel}
       onTouchMove={cancel}

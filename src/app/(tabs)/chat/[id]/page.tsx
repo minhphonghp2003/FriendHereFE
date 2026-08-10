@@ -886,7 +886,7 @@ export default function ChatScreenPage() {
             <div
               key={msg.id}
               id={`message-${msg.id}`}
-              className={`flex gap-2 ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
+              className={`flex gap-2 select-none ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
             >
               {!isMe && !isSystem && (
                 <div className="shrink-0 self-end">
