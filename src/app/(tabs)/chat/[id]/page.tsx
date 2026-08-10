@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
@@ -14,6 +14,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
 import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
+import { toast } from "sonner";
 import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
 import { MessageType, toChatMessageRenderType, getMessagePreview } from "@/types/chat";
 
@@ -248,10 +249,20 @@ export default function ChatScreenPage() {
         emoji: data.emoji,
       }));
     });
+    const unsubReactedRemoved = appHub.onReceiveMessageReactedRemoved((data) => {
+      if (data.conversationId !== conversationId) return;
+      dispatch(removeMessageReaction({
+        conversationId: data.conversationId,
+        messageId: data.messageId,
+        userId: data.userId,
+        emoji: data.emoji,
+      }));
+    });
     return () => {
       unsubEdited();
       unsubDeleted();
       unsubReacted();
+      unsubReactedRemoved();
     };
   }, [conversationId, dispatch]);
 
@@ -605,43 +616,50 @@ export default function ChatScreenPage() {
     setInput("");
   }, []);
 
-  const reactTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
-  const pendingReactRef = useRef<Map<number, string>>(new Map());
-
-  useEffect(() => {
-    return () => {
-      reactTimersRef.current.forEach((t) => clearTimeout(t));
-      reactTimersRef.current.clear();
-      pendingReactRef.current.clear();
-    };
-  }, []);
-
-  const debouncedReact = useCallback(
-    (messageId: number, emoji: string) => {
-      pendingReactRef.current.set(messageId, emoji);
-      const existing = reactTimersRef.current.get(messageId);
-      if (existing) clearTimeout(existing);
-      const timer = setTimeout(() => {
-        const finalEmoji = pendingReactRef.current.get(messageId);
-        reactTimersRef.current.delete(messageId);
-        pendingReactRef.current.delete(messageId);
-        if (finalEmoji !== undefined) {
-          appHub
-            .reactMessage({ conversationId, messageId, emoji: finalEmoji })
-            .catch((err) => console.error("Failed to react", err));
+  const toggleReaction = useCallback(
+    async (msg: MessageDto, emoji: string) => {
+      if (msg.isDeleted) return;
+      const currentUserId = user?.id;
+      if (currentUserId === undefined) return;
+      const liveMsg = messages.find((m) => m.id === msg.id) ?? msg;
+      const hasEmoji = (liveMsg.reactions ?? []).some(
+        (r) => r.userId === currentUserId && r.emoji === emoji,
+      );
+      try {
+        if (hasEmoji) {
+          await appHub.removeReactMessage({ conversationId, messageId: msg.id, emoji });
+          dispatch(
+            removeMessageReaction({
+              conversationId,
+              messageId: msg.id,
+              userId: currentUserId,
+              emoji,
+            }),
+          );
+        } else {
+          await appHub.reactMessage({ conversationId, messageId: msg.id, emoji });
+          dispatch(
+            mergeMessageReaction({
+              conversationId,
+              messageId: msg.id,
+              userId: currentUserId,
+              emoji,
+            }),
+          );
         }
-      }, 200);
-      reactTimersRef.current.set(messageId, timer);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Không thể cập nhật phản ứng";
+        toast.error(message);
+      }
     },
-    [conversationId],
+    [conversationId, messages, user?.id, dispatch],
   );
 
   const handleReact = useCallback(
     (msg: MessageDto, emoji: string) => {
-      setActionMessage(null);
-      debouncedReact(msg.id, emoji);
+      toggleReaction(msg, emoji);
     },
-    [debouncedReact],
+    [toggleReaction],
   );
 
   const loadReactions = useCallback(async (msg: MessageDto, prevId: number | null = null) => {
@@ -721,6 +739,14 @@ export default function ChatScreenPage() {
   const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
   const actionIsMine = actionMessage?.senderId === user?.id;
   const actionIsText = actionMessage ? toChatMessageRenderType(actionMessage.type) === "Text" : false;
+  const actionLiveMessage = actionMessage
+    ? messages.find((m) => m.id === actionMessage.id) ?? actionMessage
+    : null;
+  const myReactionSet = new Set(
+    (actionLiveMessage?.reactions ?? [])
+      .filter((r) => r.userId === user?.id)
+      .map((r) => r.emoji),
+  );
   let actionItemCount = 1 + (actionIsMine ? 1 : 0) + (actionIsMine && actionIsText ? 1 : 0);
   if (actionLinks.length > 0) actionItemCount += 1;
   if (actionPhones.length > 0) actionItemCount += 1;
@@ -799,7 +825,6 @@ export default function ChatScreenPage() {
                   currentUserId={user?.id}
                   onViewMoment={(id) => setViewMomentId(id)}
                   onLongPress={handleLongPress}
-                  onReact={handleReact}
                   onOpenReactions={openReactions}
                   onReplyClick={scrollToMessage}
                   replyMessage={msg.replyToId ? replyMap.get(msg.replyToId) ?? null : null}
@@ -1066,7 +1091,7 @@ export default function ChatScreenPage() {
                   <button
                     key={emoji}
                     onClick={() => handleReact(actionMessage, emoji)}
-                    className="text-xl transition-transform hover:scale-125"
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 ${myReactionSet.has(emoji) ? "bg-blue-100" : ""}`}
                     aria-label={`React ${emoji}`}
                   >
                     {emoji}

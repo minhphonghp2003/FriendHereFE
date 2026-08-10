@@ -15,7 +15,6 @@ interface MessageBubbleProps {
   replyMessage?: MessageDto | null;
   isEdited?: boolean;
   onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
-  onReact?: (msg: MessageDto, emoji: string) => void;
   onOpenReactions?: (msg: MessageDto) => void;
   onReplyClick?: (messageId: number) => void;
 }
@@ -84,7 +83,7 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
   );
 };
 
-export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onReact, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
+export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
@@ -107,7 +106,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
       {groupedReactions.map((g) => (
         <button
           key={g.emoji}
-          onClick={() => onReact?.(msg, g.emoji)}
+          onClick={() => onOpenReactions?.(msg)}
           onContextMenu={(e) => {
             e.preventDefault();
             onOpenReactions?.(msg);

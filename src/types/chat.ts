@@ -17,6 +17,13 @@ export interface MessageReactionNotificationDto {
   emoji: string;
 }
 
+export interface MessageReactionRemovedNotificationDto {
+  conversationId: number;
+  messageId: number;
+  userId: number;
+  emoji: string;
+}
+
 export interface MessageReactionUserDto {
   userId: number;
   userName: string;

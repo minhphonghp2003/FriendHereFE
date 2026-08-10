@@ -136,17 +136,18 @@ const chatSlice = createSlice({
       const msg = list.find((m) => m.id === messageId);
       if (!msg || msg.isDeleted) return;
       const reactions = msg.reactions ?? [];
-      const sameIdx = reactions.findIndex((r) => r.userId === userId && r.emoji === emoji);
-      if (sameIdx !== -1) {
-        msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
-        return;
-      }
-      const userIdx = reactions.findIndex((r) => r.userId === userId);
-      if (userIdx !== -1) {
-        msg.reactions = reactions.map((r, i) => (i === userIdx ? { ...r, emoji } : r));
-      } else {
-        msg.reactions = [...reactions, { userId, emoji }];
-      }
+      const exists = reactions.some((r) => r.userId === userId && r.emoji === emoji);
+      if (exists) return;
+      msg.reactions = [...reactions, { userId, emoji }];
+    },
+    removeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+      const { conversationId, messageId, userId, emoji } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const msg = list.find((m) => m.id === messageId);
+      if (!msg) return;
+      const reactions = msg.reactions ?? [];
+      msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
     },
     resetChat: () => initialState,
   },
@@ -167,6 +168,7 @@ export const {
   updateMessage,
   deleteMessage,
   mergeMessageReaction,
+  removeMessageReaction,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;
