@@ -2,8 +2,8 @@
 
 import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { X, Play } from "lucide-react";
-import { toChatMessageRenderType, isVideoUrl, getMessagePreview } from "@/types/chat";
-import type { MessageDto } from "@/types/chat";
+import { toChatMessageRenderType, isVideoUrl, MessageType } from "@/types/chat";
+import type { MessageDto, RepliedMessageDto } from "@/types/chat";
 import { ImageLightbox } from "@/components/common/image-lightbox";
 import { DownloadButton } from "@/components/common/download-button";
 
@@ -12,7 +12,6 @@ interface MessageBubbleProps {
   isMe: boolean;
   currentUserId?: number;
   onViewMoment?: (momentId: number) => void;
-  replyMessage?: MessageDto | null;
   isEdited?: boolean;
   onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
   onOpenReactions?: (msg: MessageDto) => void;
@@ -83,7 +82,66 @@ const BubbleWrapper = ({ msg, onLongPress, className, children }: BubbleWrapperP
   );
 };
 
-export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMessage, isEdited, onLongPress, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
+const REPLIED_TYPE_LABEL: Record<number, string> = {
+  [Number(MessageType.File)]: "[File]",
+  [Number(MessageType.Emoji)]: "[Emoji]",
+  [Number(MessageType.Sticker)]: "[Sticker]",
+  [Number(MessageType.System)]: "[Hệ thống]",
+  [Number(MessageType.Gif)]: "[GIF]",
+};
+
+const repliedLabel = (r: RepliedMessageDto): string =>
+  r.content ? r.content : REPLIED_TYPE_LABEL[Number(r.type)] ?? "";
+
+const ReplyQuote = ({
+  msg,
+  isMe,
+  onReplyClick,
+}: {
+  msg: MessageDto;
+  isMe: boolean;
+  onReplyClick?: (messageId: number) => void;
+}) => {
+  const r = msg.repliedMessage;
+  if (!r) return null;
+
+  if (r.isDeleted) {
+    return (
+      <div
+        className={`mb-1.5 rounded-lg px-2.5 py-1.5 text-xs opacity-80 ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}
+      >
+        🚫 Tin nhắn đã bị xóa
+      </div>
+    );
+  }
+
+  const showThumb =
+    (Number(r.type) === Number(MessageType.File) && !!r.attachments?.length) || !!r.momentThumbnail;
+  const thumbUrl =
+    (Number(r.type) === Number(MessageType.File) ? r.attachments?.[0]?.thumbUrl : null) ??
+    r.momentThumbnail?.thumbUrl ??
+    null;
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onReplyClick?.(r.messageId);
+      }}
+      className={`mb-1.5 flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}
+    >
+      <div className="min-w-0">
+        <p className="truncate font-semibold">{r.senderName ?? "Người dùng"}</p>
+        <p className="truncate opacity-80">{showThumb ? (Number(r.type) === Number(MessageType.File) ? "[File]" : "[Khoảnh khắc]") : repliedLabel(r)}</p>
+      </div>
+      {showThumb && thumbUrl && (
+        <img src={thumbUrl} alt="" className="ml-auto h-9 w-9 shrink-0 rounded object-cover" />
+      )}
+    </button>
+  );
+};
+
+export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited, onLongPress, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
@@ -147,22 +205,6 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
     );
   }
 
-  const replyQuote =
-    msg.replyToId && replyMessage ? (
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onReplyClick?.(replyMessage.id);
-        }}
-        className={`mb-1.5 cursor-pointer rounded-lg px-2.5 py-1.5 text-xs ${isMe ? "bg-blue-500/30" : "bg-black/10"}`}
-      >
-        <p className="truncate font-semibold">{replyMessage.senderName}</p>
-        <p className="truncate opacity-80">
-          {replyMessage.isDeleted ? "Message has been deleted" : getMessagePreview(replyMessage)}
-        </p>
-      </div>
-    ) : null;
-
   const editedLabel = isEdited ? " · đã chỉnh sửa" : "";
 
   if (renderType === "Emoji") {
@@ -211,7 +253,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
         onLongPress={onLongPress}
         className={`rounded-2xl px-2 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
       >
-        {replyQuote}
+        {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
         <div className="space-y-1.5">
           {videos.map((v, i) => (
             <button
@@ -309,7 +351,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
       onLongPress={onLongPress}
       className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
     >
-      {replyQuote}
+      {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
       {msg.momentThumbnail ? (
         <div className="mb-1.5">
           <img

@@ -104,7 +104,7 @@ const chatSlice = createSlice({
       if (list) {
         const idx = list.findIndex((m) => m.id === message.id);
         if (idx !== -1) {
-          list[idx] = message;
+          list[idx] = { ...message, repliedMessage: message.repliedMessage ?? list[idx].repliedMessage };
           if (!state.editedMessageIds.includes(message.id)) {
             state.editedMessageIds.push(message.id);
           }

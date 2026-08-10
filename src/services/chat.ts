@@ -54,6 +54,23 @@ export async function getMessageReactions(
   return res.data;
 }
 
+export async function searchMessages(
+  conversationId: number,
+  params: { messageId?: number; content?: string }
+): Promise<{
+  success: boolean;
+  data: MessageDto[];
+  message?: string;
+}> {
+  const res = await httpClient.get(`/chat/${conversationId}/messages/search`, {
+    params: {
+      messageId: params.messageId ?? undefined,
+      content: params.content ?? undefined,
+    },
+  });
+  return res.data;
+}
+
 export async function createConversation(
   receiverId: number,
   content: string | null,

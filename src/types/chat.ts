@@ -3,6 +3,19 @@ export interface ImageDto {
   thumbUrl: string;
 }
 
+export type FileDto = ImageDto;
+
+export interface RepliedMessageDto {
+  messageId: number;
+  content: string | null;
+  senderName: string | null;
+  senderAvatar: FileDto | null;
+  type: number;
+  attachments: FileDto[] | null;
+  momentThumbnail: FileDto | null;
+  isDeleted: boolean;
+}
+
 export interface MessageReactionDto {
   userId: number;
   emoji: string;
@@ -46,6 +59,7 @@ export interface MessageDto {
   senderRole: string;
   content: string | null;
   replyToId: number | null;
+  repliedMessage: RepliedMessageDto | null;
   type: string;
   attachments: ImageDto[];
   createdAt: string;
