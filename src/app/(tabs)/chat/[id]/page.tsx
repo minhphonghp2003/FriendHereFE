@@ -12,7 +12,7 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown, BellOff } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { toast } from "sonner";
 import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
@@ -104,6 +104,7 @@ export default function ChatScreenPage() {
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
+  const currentConv = useAppSelector((s) => s.chat.conversations.find((c) => c.id === conversationId));
   const [actionMessage, setActionMessage] = useState<MessageDto | null>(null);
   const [actionPos, setActionPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
@@ -848,7 +849,10 @@ export default function ChatScreenPage() {
         ) : (
           <>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{convName}</p>
+              <p className="font-semibold truncate flex items-center gap-1.5">
+                <span className="truncate">{convName}</span>
+                {currentConv?.isMuted && <BellOff className="w-4 h-4 text-muted-foreground shrink-0" />}
+              </p>
               <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
                 {convOnline ? "Online" : "Offline"}
               </p>

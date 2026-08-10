@@ -111,3 +111,26 @@ export async function unblockChatUser(
   const res = await httpClient.post("/Chat/unblock-user", { targetUserId });
   return res.data;
 }
+
+export async function setConversationMuted(
+  conversationId: number,
+  isMuted: boolean
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/mute`, { isMuted });
+  return res.data;
+}
+
+export async function setConversationArchived(
+  conversationId: number,
+  isArchived: boolean
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/archive`, { isArchived });
+  return res.data;
+}
+
+export async function deleteChat(
+  conversationId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.delete(`/Chat/${conversationId}`);
+  return res.data;
+}

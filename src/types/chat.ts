@@ -82,6 +82,7 @@ export interface ConversationDto {
   name: string;
   isDirect: boolean;
   isMuted: boolean;
+  isArchived?: boolean;
   memberCount: number | null;
   isOnline: boolean;
   unreadCount: number | null;

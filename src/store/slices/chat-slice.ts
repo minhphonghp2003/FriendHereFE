@@ -160,6 +160,17 @@ const chatSlice = createSlice({
         }
       }
     },
+    updateConversationState: (state, action: PayloadAction<{ conversationId: number; patch: Partial<ConversationDto> }>) => {
+      const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
+      if (conv) {
+        Object.assign(conv, action.payload.patch);
+      }
+    },
+    removeConversation: (state, action: PayloadAction<number>) => {
+      state.conversations = state.conversations.filter((c) => c.id !== action.payload);
+      delete state.messages[action.payload];
+      delete state.messageHasMore[action.payload];
+    },
     resetChat: () => initialState,
   },
 });
@@ -181,6 +192,8 @@ export const {
   mergeMessageReaction,
   removeMessageReaction,
   markMessagesRead,
+  updateConversationState,
+  removeConversation,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;
