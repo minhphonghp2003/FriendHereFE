@@ -12,7 +12,7 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { toast } from "sonner";
 import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
@@ -117,6 +117,7 @@ export default function ChatScreenPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
   const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
@@ -153,6 +154,7 @@ export default function ChatScreenPage() {
     try {
       const res = await getMessages(conversationId, prevId, 20);
       if (prevId === null) {
+        setSearchMode(false);
         dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       } else {
         dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
@@ -698,6 +700,7 @@ export default function ChatScreenPage() {
 
   const applySearchWindow = useCallback(
     (data: MessageDto[], targetId: number) => {
+      setSearchMode(true);
       dispatch(setMessages({ conversationId, messages: data, hasMore: true }));
       stickToBottomRef.current = false;
       prevIdRef.current = data.length > 0 ? data[0].id - 1 : null;
@@ -753,6 +756,17 @@ export default function ChatScreenPage() {
     setSearchOpen(false);
     setSearchQuery("");
     fetchMessages(null);
+  }, [fetchMessages]);
+
+  const reloadToLatest = useCallback(async () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    try {
+      await fetchMessages(null);
+    } finally {
+      const el = messagesContainerRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [fetchMessages]);
 
   if (loading) {
@@ -902,6 +916,16 @@ export default function ChatScreenPage() {
         })}
         <div ref={messagesEndRef} />
       </div>
+      {searchMode && (
+        <button
+          onClick={reloadToLatest}
+          className="absolute bottom-24 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-blue-700"
+          title="Quay lại tin nhắn mới nhất"
+          aria-label="Quay lại tin nhắn mới nhất"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </button>
+      )}
       {isBlocked ? (
         <div className="flex items-center justify-center p-3 border-t border-border bg-muted/50">
           {blockedById === user?.id ? (

@@ -90,8 +90,13 @@ const REPLIED_TYPE_LABEL: Record<number, string> = {
   [Number(MessageType.Gif)]: "[GIF]",
 };
 
-const repliedLabel = (r: RepliedMessageDto): string =>
-  r.content ? r.content : REPLIED_TYPE_LABEL[Number(r.type)] ?? "";
+const repliedLabel = (r: RepliedMessageDto): string => {
+  const type = Number(r.type);
+  if (type === Number(MessageType.Sticker) || type === Number(MessageType.Gif)) {
+    return REPLIED_TYPE_LABEL[type] ?? "";
+  }
+  return r.content ? r.content : REPLIED_TYPE_LABEL[type] ?? "";
+};
 
 const ReplyQuote = ({
   msg,
