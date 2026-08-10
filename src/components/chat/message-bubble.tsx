@@ -5,6 +5,7 @@ import { X, Play } from "lucide-react";
 import { toChatMessageRenderType, isVideoUrl, getMessagePreview } from "@/types/chat";
 import type { MessageDto } from "@/types/chat";
 import { ImageLightbox } from "@/components/common/image-lightbox";
+import { DownloadButton } from "@/components/common/download-button";
 
 interface MessageBubbleProps {
   msg: MessageDto;
@@ -278,13 +279,16 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, replyMes
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
             onClick={handleVideoClose}
           >
-            <button
-              onClick={handleVideoClose}
-              className="absolute right-4 top-4 z-10 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-              aria-label="Đóng video"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+              <DownloadButton url={videos[videoIndex].originalUrl} />
+              <button
+                onClick={handleVideoClose}
+                className="rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+                aria-label="Đóng video"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             <video
               src={videos[videoIndex].originalUrl}
               poster={videos[videoIndex].thumbUrl || undefined}

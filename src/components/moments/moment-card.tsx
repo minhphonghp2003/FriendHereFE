@@ -9,6 +9,7 @@ import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { MomentVideoPlayer } from "./moment-video-player";
 import { TimelineChip } from "@/components/timelines/timeline-chip";
 import { Button } from "@/components/ui/button";
+import { DownloadButton } from "@/components/common/download-button";
 import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
@@ -84,6 +85,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
   const [reactingEmoji, setReactingEmoji] = useState<string | null>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [localReactions, setLocalReactions] = useState<MomentReactionDto[]>(moment.reactions);
   const [localVisibility, setLocalVisibility] = useState<MomentVisibility>(moment.visibility);
@@ -210,6 +212,11 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   const VisIcon = visConfig.icon;
   const displayName = isOwner ? "Bạn" : moment.userName;
   const infoVisible = showInfo || !!moment.video;
+  const downloadUrl = moment.video
+    ? moment.video.originalUrl
+    : moment.images.length > 1
+      ? moment.images[carouselIndex]?.originalUrl
+      : moment.images[0]?.originalUrl;
 
   if (fullscreen) {
     return (
@@ -248,6 +255,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                 images={moment.images}
                 showInfo={showInfo}
                 onToggleInfo={onToggleInfo}
+                onIndexChange={setCarouselIndex}
               />
             )}
           </div>
@@ -312,7 +320,8 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
               </div>
             </div>
           </div>
-          <div className="relative shrink-0">
+          <div className="relative flex shrink-0 items-center gap-1">
+            {downloadUrl && <DownloadButton url={downloadUrl} />}
             <button
               onClick={toggleMenu}
               className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
