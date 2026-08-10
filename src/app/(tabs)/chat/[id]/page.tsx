@@ -656,6 +656,7 @@ export default function ChatScreenPage() {
 
   const handleReact = useCallback(
     (msg: MessageDto, emoji: string) => {
+      setActionMessage(null);
       toggleReaction(msg, emoji);
     },
     [toggleReaction],
