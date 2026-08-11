@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
-import { getMessages, getConversation, blockChatUser, unblockChatUser } from "@/services/chat";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, markMessagesRead, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked, updateConversationState } from "@/store/slices/chat-slice";
+import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions, searchMessages } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
@@ -12,10 +12,11 @@ import { MessageBubble } from "@/components/chat/message-bubble";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown, BellOff } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
-import type { MessageDto, ImageDto } from "@/types/chat";
-import { MessageType, toChatMessageRenderType } from "@/types/chat";
+import { toast } from "sonner";
+import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
+import { MessageType, toChatMessageRenderType, getMessagePreview } from "@/types/chat";
 
 interface PendingFile {
   id: string;
@@ -52,6 +53,16 @@ const normalizeKeyToken = (key: string | undefined): string => {
   return idx > 0 ? key.slice(0, idx) : key;
 };
 
+const URL_RE = /https?:\/\/[^\s]+/g;
+const PHONE_RE = /(\+?\d{1,4}[\s.-]?)?(\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{3,4}/g;
+
+const extractLinks = (text: string): string[] => Array.from(new Set(text.match(URL_RE) ?? []));
+
+const extractPhones = (text: string): string[] =>
+  Array.from(new Set((text.match(PHONE_RE) ?? []).filter((p) => p.replace(/\D/g, "").length >= 7)));
+
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "😮"];
+
 export default function ChatScreenPage() {
   const router = useRouter();
   const params = useParams();
@@ -61,6 +72,7 @@ export default function ChatScreenPage() {
   const conversationId = Number(params.id);
   const [convName, setConvName] = useState("Chat");
   const [convOnline, setConvOnline] = useState(false);
+  const [isGroup, setIsGroup] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -88,8 +100,25 @@ export default function ChatScreenPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stickToBottomRef = useRef(true);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
+  const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
+  const currentConv = useAppSelector((s) => s.chat.conversations.find((c) => c.id === conversationId));
+  const [actionMessage, setActionMessage] = useState<MessageDto | null>(null);
+  const [actionPos, setActionPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageDto | null>(null);
+  const [reactionMessage, setReactionMessage] = useState<MessageDto | null>(null);
+  const [reactionUsers, setReactionUsers] = useState<MessageReactionUserDto[]>([]);
+  const [reactionHasMore, setReactionHasMore] = useState(false);
+  const [reactionPrevId, setReactionPrevId] = useState<number | null>(null);
+  const [reactionsLoading, setReactionsLoading] = useState(false);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<number | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
   const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
@@ -121,12 +150,21 @@ export default function ChatScreenPage() {
   }, [resolveFileWaiters]);
 
   const fetchMessages = useCallback(async (prevId: number | null = null) => {
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = prevId !== null && container ? container.scrollHeight : 0;
     try {
       const res = await getMessages(conversationId, prevId, 20);
       if (prevId === null) {
+        setSearchMode(false);
         dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
       } else {
         dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
+        requestAnimationFrame(() => {
+          const el = messagesContainerRef.current;
+          if (el && prevScrollHeight > 0) {
+            el.scrollTop = el.scrollHeight - prevScrollHeight;
+          }
+        });
       }
       prevIdRef.current = res.prevId;
     } catch (err) {
@@ -156,13 +194,20 @@ export default function ChatScreenPage() {
         if (res.data) {
           setConvName(res.data.name);
           setConvOnline(res.data.isOnline);
+          setIsGroup(!res.data.isDirect);
           setIsBlocked(res.data.isBlocked);
           setBlockedById(res.data.blockedById);
+          dispatch(updateConversationState({ conversationId, patch: res.data }));
         }
       }).catch(() => {}),
       fetchMessages(),
-    ]).finally(() => setLoading(false));
-    appHub.joinConversation(conversationId).catch(console.error);
+    ])
+      .then(() => appHub.joinConversation(conversationId))
+      .then(() => dispatch(resetUnreadCount(conversationId)))
+      .catch((err) => {
+        if (err) console.error(err);
+      })
+      .finally(() => setLoading(false));
     return () => {
       if (typingSentRef.current) {
         typingSentRef.current = false;
@@ -198,6 +243,50 @@ export default function ChatScreenPage() {
     };
     return appHub.onReceiveMessage(cb);
   }, [conversationId, dispatch]);
+
+  useEffect(() => {
+    const unsubEdited = appHub.onReceiveMessageEdited((message) => {
+      if (message.conversationId !== conversationId) return;
+      dispatch(updateMessage({ conversationId, message }));
+    });
+    const unsubDeleted = appHub.onReceiveMessageDeleted((messageId) => {
+      dispatch(deleteMessage({ conversationId, messageId }));
+    });
+    const unsubReacted = appHub.onReceiveMessageReacted((data) => {
+      if (data.conversationId !== conversationId) return;
+      dispatch(mergeMessageReaction({
+        conversationId: data.conversationId,
+        messageId: data.messageId,
+        userId: data.userId,
+        emoji: data.emoji,
+      }));
+    });
+    const unsubReactedRemoved = appHub.onReceiveMessageReactedRemoved((data) => {
+      if (data.conversationId !== conversationId) return;
+      dispatch(removeMessageReaction({
+        conversationId: data.conversationId,
+        messageId: data.messageId,
+        userId: data.userId,
+        emoji: data.emoji,
+      }));
+    });
+    const unsubMessagesRead = appHub.onReceiveMessagesRead((data) => {
+      if (data.conversationId !== conversationId) return;
+      if (!user || data.readerUserId === user.id) return;
+      dispatch(markMessagesRead({
+        conversationId: data.conversationId,
+        messageIds: data.messageIds,
+        myUserId: user.id,
+      }));
+    });
+    return () => {
+      unsubEdited();
+      unsubDeleted();
+      unsubReacted();
+      unsubReactedRemoved();
+      unsubMessagesRead();
+    };
+  }, [conversationId, dispatch, user]);
 
   useEffect(() => {
     if (!user || messages.length === 0) return;
@@ -236,13 +325,17 @@ export default function ChatScreenPage() {
   }, [loading]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el && stickToBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [messages.length]);
 
   const handleScroll = useCallback(() => {
     const el = messagesContainerRef.current;
-    if (!el || el.scrollTop > 0) return;
-    if (hasMore) {
+    if (!el) return;
+    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (el.scrollTop <= 0 && hasMore) {
       fetchMessages(prevIdRef.current);
     }
   }, [hasMore, fetchMessages]);
@@ -274,7 +367,10 @@ export default function ChatScreenPage() {
     setSending(true);
     setInput("");
     try {
-      if (pendingFiles.length > 0) {
+      if (editingMessage) {
+        await appHub.editMessage({ conversationId, messageId: editingMessage.id, content: text });
+        setEditingMessage(null);
+      } else if (pendingFiles.length > 0) {
         const files = pendingFiles;
         setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: true })));
         const contentTypes = files.map((f) => resolveContentType(f.file));
@@ -302,7 +398,7 @@ export default function ChatScreenPage() {
           conversationId,
           content: text || null,
           messageType: MessageType.File,
-          replyToId: null,
+          replyToId: replyTo?.id ?? null,
           idempotencyKey: crypto.randomUUID(),
           momentId: pendingMoment ? momentIdParam : undefined,
           fileIds,
@@ -310,8 +406,9 @@ export default function ChatScreenPage() {
         setPendingFiles([]);
         files.forEach((f) => URL.revokeObjectURL(f.preview));
       } else {
-        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: replyTo?.id ?? null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
       }
+      setReplyTo(null);
       setPendingMoment(null);
     } catch (err) {
       console.error("Failed to send message", err);
@@ -320,7 +417,7 @@ export default function ChatScreenPage() {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked]);
+  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked, editingMessage, replyTo]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
@@ -482,6 +579,214 @@ export default function ChatScreenPage() {
     }
   }, [opponentId, blocking, conversationId, dispatch]);
 
+  const handleLongPress = useCallback((msg: MessageDto, pos: { x: number; y: number }) => {
+    if (msg.isDeleted) return;
+    setActionMessage(msg);
+    setActionPos(pos);
+  }, []);
+
+  const handleReply = useCallback((msg: MessageDto) => {
+    setReplyTo(msg);
+    setActionMessage(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleEdit = useCallback((msg: MessageDto) => {
+    setEditingMessage(msg);
+    setInput(msg.content ?? "");
+    setActionMessage(null);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const handleDelete = useCallback((msg: MessageDto) => {
+    setActionMessage(null);
+    if (replyTo?.id === msg.id) setReplyTo(null);
+    if (editingMessage?.id === msg.id) {
+      setEditingMessage(null);
+      setInput("");
+    }
+    appHub
+      .deleteMessage({ conversationId, messageId: msg.id })
+      .catch((err) => console.error("Failed to delete message", err));
+  }, [conversationId, replyTo, editingMessage]);
+
+  const copyText = useCallback(async (text: string) => {
+    setActionMessage(null);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy text", err);
+    }
+  }, []);
+
+  const handleCopy = useCallback(
+    (msg: MessageDto) => {
+      copyText(msg.content ?? getMessagePreview(msg));
+    },
+    [copyText],
+  );
+
+  const cancelReplyAndEdit = useCallback(() => {
+    setReplyTo(null);
+    setEditingMessage(null);
+    setInput("");
+  }, []);
+
+  const toggleReaction = useCallback(
+    async (msg: MessageDto, emoji: string) => {
+      if (msg.isDeleted) return;
+      const currentUserId = user?.id;
+      if (currentUserId === undefined) return;
+      const liveMsg = messages.find((m) => m.id === msg.id) ?? msg;
+      const hasEmoji = (liveMsg.reactions ?? []).some(
+        (r) => r.userId === currentUserId && r.emoji === emoji,
+      );
+      try {
+        if (hasEmoji) {
+          await appHub.removeReactMessage({ conversationId, messageId: msg.id, emoji });
+          dispatch(
+            removeMessageReaction({
+              conversationId,
+              messageId: msg.id,
+              userId: currentUserId,
+              emoji,
+            }),
+          );
+        } else {
+          await appHub.reactMessage({ conversationId, messageId: msg.id, emoji });
+          dispatch(
+            mergeMessageReaction({
+              conversationId,
+              messageId: msg.id,
+              userId: currentUserId,
+              emoji,
+            }),
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Không thể cập nhật phản ứng";
+        toast.error(message);
+      }
+    },
+    [conversationId, messages, user?.id, dispatch],
+  );
+
+  const handleReact = useCallback(
+    (msg: MessageDto, emoji: string) => {
+      setActionMessage(null);
+      toggleReaction(msg, emoji);
+    },
+    [toggleReaction],
+  );
+
+  const loadReactions = useCallback(async (msg: MessageDto, prevId: number | null = null) => {
+    setReactionsLoading(true);
+    try {
+      const res = await getMessageReactions(msg.conversationId, msg.id, prevId, 20);
+      setReactionUsers((prev) => (prevId ? [...prev, ...res.data] : res.data));
+      setReactionHasMore(res.hasMore);
+      setReactionPrevId(res.prevId);
+    } catch (err) {
+      console.error("Failed to load reactions", err);
+    } finally {
+      setReactionsLoading(false);
+    }
+  }, []);
+
+  const openReactions = useCallback(
+    (msg: MessageDto) => {
+      setReactionMessage(msg);
+      setReactionUsers([]);
+      setReactionHasMore(false);
+      setReactionPrevId(null);
+      loadReactions(msg);
+    },
+    [loadReactions],
+  );
+
+  const scrollToAndHighlight = useCallback((messageId: number): boolean => {
+    const el = document.getElementById(`message-${messageId}`);
+    if (!el) return false;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedMsgId(null);
+    setHighlightedMsgId(messageId);
+    setTimeout(() => {
+      setHighlightedMsgId((cur) => (cur === messageId ? null : cur));
+    }, 2000);
+    return true;
+  }, []);
+
+  const applySearchWindow = useCallback(
+    (data: MessageDto[], targetId: number) => {
+      setSearchMode(true);
+      dispatch(setMessages({ conversationId, messages: data, hasMore: true }));
+      stickToBottomRef.current = false;
+      prevIdRef.current = data.length > 0 ? data[0].id - 1 : null;
+      setTimeout(() => scrollToAndHighlight(targetId), 60);
+    },
+    [conversationId, dispatch, scrollToAndHighlight],
+  );
+
+  const onTapReply = useCallback(
+    async (messageId: number) => {
+      if (messages.some((m) => m.id === messageId)) {
+        scrollToAndHighlight(messageId);
+        return;
+      }
+      try {
+        const res = await searchMessages(conversationId, { messageId });
+        if (res.success && res.data.length) {
+          applySearchWindow(res.data, messageId);
+        } else {
+          toast.error(res.message || "Không tìm thấy tin nhắn");
+        }
+      } catch {
+        toast.error("Không thể tải tin nhắn");
+      }
+    },
+    [messages, conversationId, scrollToAndHighlight, applySearchWindow],
+  );
+
+  const handleSearchSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const query = searchQuery.trim();
+      if (!query || searching) return;
+      setSearching(true);
+      try {
+        const res = await searchMessages(conversationId, { content: query });
+        if (res.success && res.data.length) {
+          const target = res.data[Math.floor(res.data.length / 2)] ?? res.data[res.data.length - 1];
+          applySearchWindow(res.data, target.id);
+        } else {
+          toast.error(res.message || "Không tìm thấy tin nhắn");
+        }
+      } catch {
+        toast.error("Không thể tìm kiếm tin nhắn");
+      } finally {
+        setSearching(false);
+      }
+    },
+    [conversationId, searchQuery, searching, applySearchWindow],
+  );
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    fetchMessages(null);
+  }, [fetchMessages]);
+
+  const reloadToLatest = useCallback(async () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    try {
+      await fetchMessages(null);
+    } finally {
+      const el = messagesContainerRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [fetchMessages]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
@@ -490,34 +795,104 @@ export default function ChatScreenPage() {
     );
   }
 
+  const actionContent = actionMessage
+    ? actionMessage.isDeleted
+      ? ""
+      : (actionMessage.content ?? getMessagePreview(actionMessage))
+    : "";
+  const actionLinks = actionMessage && !actionMessage.isDeleted ? extractLinks(actionContent) : [];
+  const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
+  const actionIsMine = actionMessage?.senderId === user?.id;
+  const actionIsText = actionMessage ? toChatMessageRenderType(actionMessage.type) === "Text" : false;
+  const actionLiveMessage = actionMessage
+    ? messages.find((m) => m.id === actionMessage.id) ?? actionMessage
+    : null;
+  const myReactionSet = new Set(
+    (actionLiveMessage?.reactions ?? [])
+      .filter((r) => r.userId === user?.id)
+      .map((r) => r.emoji),
+  );
+  let actionItemCount = 1 + (actionIsMine ? 1 : 0) + (actionIsMine && actionIsText ? 1 : 0);
+  if (actionLinks.length > 0) actionItemCount += 1;
+  if (actionPhones.length > 0) actionItemCount += 1;
+  actionItemCount += 1;
+  const actionPopupWidth = 210;
+  const actionPopupHeight = actionMessage
+    ? 52 + actionItemCount * 40 + (actionMessage.isDeleted ? 0 : 48)
+    : 0;
+  const actionPad = 8;
+  const actionLeft = Math.max(actionPad, Math.min(actionPos.x, window.innerWidth - actionPopupWidth - actionPad));
+  const actionTop = Math.max(actionPad, Math.min(actionPos.y, window.innerHeight - actionPopupHeight - actionPad));
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col overflow-hidden pb-16">
       <div className="flex items-center gap-3 p-3 border-b border-border">
         <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold truncate">{convName}</p>
-          <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
-            {convOnline ? "Online" : "Offline"}
-          </p>
-        </div>
-        <button
-          onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
-          disabled={!opponentId || isBlocked}
-          className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
-          title="Gọi video"
-        >
-          <Phone className="w-5 h-5" />
-        </button>
-        {isBlocked ? (
-          <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
-            <ShieldOff className="w-5 h-5" />
-          </button>
+        {searchOpen ? (
+          <form onSubmit={handleSearchSubmit} className="flex flex-1 items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm tin nhắn..."
+                className="w-full rounded-full bg-muted py-2 pl-9 pr-3 text-sm outline-none"
+              />
+            </div>
+            {searching && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+            <button
+              type="button"
+              onClick={closeSearch}
+              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Đóng tìm kiếm"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </form>
         ) : (
-          <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
-            <Ban className="w-5 h-5" />
-          </button>
+          <>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate flex items-center gap-1.5">
+                <span className="truncate">{convName}</span>
+                {currentConv?.isMuted && <BellOff className="w-4 h-4 text-muted-foreground shrink-0" />}
+              </p>
+              <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
+                {convOnline ? "Online" : "Offline"}
+              </p>
+            </div>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+              title="Tìm kiếm"
+              aria-label="Tìm kiếm"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            {!isGroup && (
+              <button
+                onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
+                disabled={!opponentId || isBlocked}
+                className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
+                title="Gọi video"
+              >
+                <Phone className="w-5 h-5" />
+              </button>
+            )}
+            {!isGroup && (
+              isBlocked ? (
+                <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
+                  <ShieldOff className="w-5 h-5" />
+                </button>
+              ) : (
+                <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
+                  <Ban className="w-5 h-5" />
+                </button>
+              )
+            )}
+          </>
         )}
       </div>
       <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -528,27 +903,51 @@ export default function ChatScreenPage() {
           const isMe = msg.senderId === user?.id;
           const isSystem = toChatMessageRenderType(msg.type) === "System";
           return (
-            <div key={msg.id} className={`flex gap-2 ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}>
-              {!isMe && !isSystem && (
-                <div className="shrink-0 self-end">
-                  {msg.senderAvatar?.thumbUrl ? (
-                    <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
-                    </div>
-                  )}
+            <Fragment key={msg.id}>
+              <div
+                id={`message-${msg.id}`}
+                className={`flex gap-2 select-none ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
+              >
+                {!isMe && !isSystem && (
+                  <div className="shrink-0 self-end">
+                    {msg.senderAvatar?.thumbUrl ? (
+                      <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                        {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
+                  {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                  <MessageBubble
+                    msg={msg}
+                    isMe={isMe}
+                    currentUserId={user?.id}
+                    onViewMoment={(id) => setViewMomentId(id)}
+                    onLongPress={handleLongPress}
+                    onOpenReactions={openReactions}
+                    onReplyClick={onTapReply}
+                    isEdited={editedMessageIds.includes(msg.id)}
+                  />
                 </div>
-              )}
-              <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
-                {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
-                <MessageBubble msg={msg} isMe={isMe} onViewMoment={(id) => setViewMomentId(id)} />
               </div>
-            </div>
+            </Fragment>
           );
         })}
         <div ref={messagesEndRef} />
       </div>
+      {searchMode && (
+        <button
+          onClick={reloadToLatest}
+          className="absolute bottom-24 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-blue-700"
+          title="Quay lại tin nhắn mới nhất"
+          aria-label="Quay lại tin nhắn mới nhất"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </button>
+      )}
       {isBlocked ? (
         <div className="flex items-center justify-center p-3 border-t border-border bg-muted/50">
           {blockedById === user?.id ? (
@@ -672,6 +1071,27 @@ export default function ChatScreenPage() {
             </div>
           )}
 
+          {(replyTo || editingMessage) && (
+            <div className="flex items-center gap-2 border-t border-border bg-muted/50 px-3 py-2">
+              <div className="flex-1 min-w-0">
+                {editingMessage ? (
+                  <>
+                    <p className="text-xs font-semibold text-blue-600">Đang chỉnh sửa tin nhắn</p>
+                    <p className="truncate text-xs text-muted-foreground">{editingMessage.content ?? getMessagePreview(editingMessage)}</p>
+                  </>
+                ) : replyTo ? (
+                  <>
+                    <p className="text-xs font-semibold text-blue-600">Trả lời {replyTo.senderName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{getMessagePreview(replyTo)}</p>
+                  </>
+                ) : null}
+              </div>
+              <button onClick={cancelReplyAndEdit} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Hủy">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-1 p-3">
             <input
               ref={imageInputRef}
@@ -704,6 +1124,127 @@ export default function ChatScreenPage() {
             <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
               <Send className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+      {reactionMessage && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" onClick={() => setReactionMessage(null)}>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setReactionMessage(null)} />
+          <div
+            className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="font-semibold text-sm">Reactions</p>
+              <button onClick={() => setReactionMessage(null)} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Đóng">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {reactionsLoading && reactionUsers.length === 0 ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : reactionUsers.length === 0 ? (
+                <p className="py-8 text-center text-xs text-muted-foreground">Chưa có phản ứng</p>
+              ) : (
+                reactionUsers.map((u) => (
+                  <div key={u.userId} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+                      {u.userImage?.thumbUrl ? (
+                        <img src={u.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground">
+                          {u.userName?.charAt(0)?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
+                    </div>
+                    <p className="flex-1 truncate text-sm">{u.userName}</p>
+                    <div className="flex gap-0.5 text-lg">
+                      {u.emojis.map((emoji, i) => (
+                        <span key={`${emoji}-${i}`}>{emoji}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+              {reactionHasMore && (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => reactionMessage && loadReactions(reactionMessage, reactionPrevId)}
+                    disabled={reactionsLoading}
+                    className="rounded-full bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/70 disabled:opacity-50"
+                  >
+                    {reactionsLoading ? "Đang tải..." : "Xem thêm"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {actionMessage && (
+        <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
+          <div className="absolute inset-0" onClick={() => setActionMessage(null)} />
+          <div
+            className="absolute z-10 w-52 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            style={{ left: actionLeft, top: actionTop }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-border px-3 py-2">
+              <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {actionMessage.isDeleted ? "Message has been deleted" : actionContent}
+              </p>
+            </div>
+            {!actionMessage.isDeleted && (
+              <div className="flex items-center justify-between gap-1 border-b border-border px-3 py-2">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReact(actionMessage, emoji)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 ${myReactionSet.has(emoji) ? "bg-blue-100" : ""}`}
+                    aria-label={`React ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="py-1">
+              <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <Reply className="h-4 w-4" />
+                Reply
+              </button>
+              {actionIsMine && actionIsText && (
+                <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
+              {actionIsMine && (
+                <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              )}
+              {actionLinks.length > 0 && (
+                <button onClick={() => copyText(actionLinks.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Link2 className="h-4 w-4" />
+                  Copy link
+                </button>
+              )}
+              {actionPhones.length > 0 && (
+                <button onClick={() => copyText(actionPhones.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                  <Phone className="h-4 w-4" />
+                  Copy phone
+                </button>
+              )}
+              <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <Copy className="h-4 w-4" />
+                Copy
+              </button>
+            </div>
           </div>
         </div>
       )}

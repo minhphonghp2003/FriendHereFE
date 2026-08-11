@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { DownloadButton } from "./download-button";
 
 interface ImageLightboxProps {
   images: { originalUrl: string; thumbUrl: string }[];
@@ -54,12 +55,15 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
       onClick={onClose}
     >
-      <button
-        onClick={onClose}
-        className="absolute right-4 top-4 z-10 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-      >
-        <X className="h-6 w-6" />
-      </button>
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        <DownloadButton url={images[index].originalUrl} />
+        <button
+          onClick={onClose}
+          className="rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+        >
+          <X className="h-6 w-6" />
+        </button>
+      </div>
 
       {images.length > 1 && (
         <>

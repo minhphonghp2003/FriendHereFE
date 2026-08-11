@@ -3,6 +3,66 @@ export interface ImageDto {
   thumbUrl: string;
 }
 
+export type FileDto = ImageDto;
+
+export interface RepliedMessageDto {
+  messageId: number;
+  content: string | null;
+  senderName: string | null;
+  senderAvatar: FileDto | null;
+  type: number;
+  attachments: FileDto[] | null;
+  momentThumbnail: FileDto | null;
+  isDeleted: boolean;
+}
+
+export interface MessageReactionDto {
+  userId: number;
+  emoji: string;
+}
+
+export interface MessageReactionNotificationDto {
+  conversationId: number;
+  messageId: number;
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  emoji: string;
+}
+
+export interface MessageReactionRemovedNotificationDto {
+  conversationId: number;
+  messageId: number;
+  userId: number;
+  emoji: string;
+}
+
+export interface MessageReadNotificationDto {
+  conversationId: number;
+  messageIds: number[];
+  readerUserId: number;
+  readAt: string;
+}
+
+export interface ConversationUpdatedNotificationDto {
+  conversationId: number;
+  lastMessage: MessageDto;
+  unreadCount: number;
+}
+
+export interface MessageReactionUserDto {
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  emojis: string[];
+}
+
+export interface AddMessageReactionRequest {
+  conversationId: number;
+  messageId: number;
+  emoji: string;
+}
+
 export interface MessageDto {
   id: number;
   conversationId: number;
@@ -12,12 +72,15 @@ export interface MessageDto {
   senderRole: string;
   content: string | null;
   replyToId: number | null;
+  repliedMessage: RepliedMessageDto | null;
   type: string;
   attachments: ImageDto[];
   createdAt: string;
   isDeleted: boolean;
   momentId?: number | null;
   momentThumbnail: ImageDto | null;
+  reactions?: MessageReactionDto[] | null;
+  status?: number;
 }
 
 export interface ConversationDto {
@@ -25,15 +88,19 @@ export interface ConversationDto {
   name: string;
   isDirect: boolean;
   isMuted: boolean;
+  isArchived?: boolean;
   memberCount: number | null;
   isOnline: boolean;
   unreadCount: number | null;
-  lastReadAt: string | null;
   isBlocked: boolean;
   blockedById: number | null;
   image: ImageDto | null;
-  lastReadMessage: MessageDto | null;
   lastMessage: MessageDto | null;
+}
+
+export interface CreateGroupChatRequest {
+  name?: string;
+  memberIds: number[];
 }
 
 export interface SendMessageRequest {

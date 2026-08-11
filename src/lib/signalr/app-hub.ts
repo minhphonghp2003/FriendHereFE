@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { MessageDto, ConversationDto, SendMessageRequest } from "@/types/chat";
+import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto, ConversationUpdatedNotificationDto } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
 import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
@@ -13,6 +13,24 @@ export type ReceiveFriendshipCreatedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipUnblockedCallback = (dto: FriendshipDto) => void;
+
+export interface EditMessageRequest {
+  conversationId: number;
+  messageId: number;
+  content: string;
+}
+
+export interface DeleteMessageRequest {
+  conversationId: number;
+  messageId: number;
+}
+
+export type ReceiveMessageEditedCallback = (message: MessageDto) => void;
+export type ReceiveMessageDeletedCallback = (messageId: number) => void;
+export type ReceiveMessageReactedCallback = (data: MessageReactionNotificationDto) => void;
+export type ReceiveMessageReactedRemovedCallback = (data: MessageReactionRemovedNotificationDto) => void;
+export type ReceiveMessagesReadCallback = (data: MessageReadNotificationDto) => void;
+export type ReceiveConversationUpdatedCallback = (data: ConversationUpdatedNotificationDto) => void;
 
 export interface TypingData {
   conversationId: number;
@@ -50,6 +68,12 @@ class AppHub {
   private connectionReady: Promise<void> | null = null;
   private kickedCallback: KickedCallback | null = null;
   private receiveMessageCallbacks: Set<ReceiveMessageCallback> = new Set();
+  private receiveMessageEditedCallbacks: Set<ReceiveMessageEditedCallback> = new Set();
+  private receiveMessageDeletedCallbacks: Set<ReceiveMessageDeletedCallback> = new Set();
+  private receiveMessageReactedCallbacks: Set<ReceiveMessageReactedCallback> = new Set();
+  private receiveMessageReactedRemovedCallbacks: Set<ReceiveMessageReactedRemovedCallback> = new Set();
+  private receiveMessagesReadCallbacks: Set<ReceiveMessagesReadCallback> = new Set();
+  private receiveConversationUpdatedCallbacks: Set<ReceiveConversationUpdatedCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
   private receiveFriendshipCreatedCallbacks: Set<ReceiveFriendshipCreatedCallback> = new Set();
   private receiveFriendshipAcceptedCallbacks: Set<ReceiveFriendshipAcceptedCallback> = new Set();
@@ -102,6 +126,30 @@ class AppHub {
 
     this.connection.on("ReceiveMessage", (message: MessageDto) => {
       this.receiveMessageCallbacks.forEach((cb) => cb(message));
+    });
+
+    this.connection.on("ReceiveMessageEdited", (message: MessageDto) => {
+      this.receiveMessageEditedCallbacks.forEach((cb) => cb(message));
+    });
+
+    this.connection.on("ReceiveMessageDeleted", (messageId: number) => {
+      this.receiveMessageDeletedCallbacks.forEach((cb) => cb(messageId));
+    });
+
+    this.connection.on("ReceiveMessageReacted", (data: MessageReactionNotificationDto) => {
+      this.receiveMessageReactedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveMessageReactedRemoved", (data: MessageReactionRemovedNotificationDto) => {
+      this.receiveMessageReactedRemovedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveMessagesRead", (data: MessageReadNotificationDto) => {
+      this.receiveMessagesReadCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveConversationUpdated", (data: ConversationUpdatedNotificationDto) => {
+      this.receiveConversationUpdatedCallbacks.forEach((cb) => cb(data));
     });
 
     this.connection.on("ReceiveNewConversation", (conversation: ConversationDto, initialMessage: MessageDto) => {
@@ -193,6 +241,13 @@ class AppHub {
     this.receiveFriendshipUnblockedCallbacks.clear();
     this.receiveChatBlockedCallbacks.clear();
     this.receiveChatUnblockedCallbacks.clear();
+    this.receiveMessageCallbacks.clear();
+    this.receiveMessageEditedCallbacks.clear();
+    this.receiveMessageDeletedCallbacks.clear();
+    this.receiveMessageReactedCallbacks.clear();
+    this.receiveMessageReactedRemovedCallbacks.clear();
+    this.receiveMessagesReadCallbacks.clear();
+    this.receiveConversationUpdatedCallbacks.clear();
     this.receiveTypingCallbacks.clear();
     this.receiveCallCallbacks.clear();
     this.receiveCallSignalCallbacks.clear();
@@ -211,6 +266,26 @@ class AppHub {
   async sendMessage(dto: SendMessageRequest): Promise<void> {
     if (!this.connection) throw new Error("AppHub not connected");
     await this.connection.invoke("SendMessage", dto);
+  }
+
+  async editMessage(dto: EditMessageRequest): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("EditMessage", dto);
+  }
+
+  async deleteMessage(dto: DeleteMessageRequest): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("DeleteMessage", dto);
+  }
+
+  async reactMessage(dto: AddMessageReactionRequest): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("ReactMessage", dto);
+  }
+
+  async removeReactMessage(dto: AddMessageReactionRequest): Promise<void> {
+    if (!this.connection) throw new Error("AppHub not connected");
+    await this.connection.invoke("RemoveReactMessage", dto);
   }
 
   async sendTyping(conversationId: number, isTyping: boolean): Promise<void> {
@@ -248,6 +323,36 @@ class AppHub {
   onReceiveMessage(callback: ReceiveMessageCallback): () => void {
     this.receiveMessageCallbacks.add(callback);
     return () => { this.receiveMessageCallbacks.delete(callback); };
+  }
+
+  onReceiveMessageEdited(callback: ReceiveMessageEditedCallback): () => void {
+    this.receiveMessageEditedCallbacks.add(callback);
+    return () => { this.receiveMessageEditedCallbacks.delete(callback); };
+  }
+
+  onReceiveMessageDeleted(callback: ReceiveMessageDeletedCallback): () => void {
+    this.receiveMessageDeletedCallbacks.add(callback);
+    return () => { this.receiveMessageDeletedCallbacks.delete(callback); };
+  }
+
+  onReceiveMessageReacted(callback: ReceiveMessageReactedCallback): () => void {
+    this.receiveMessageReactedCallbacks.add(callback);
+    return () => { this.receiveMessageReactedCallbacks.delete(callback); };
+  }
+
+  onReceiveMessageReactedRemoved(callback: ReceiveMessageReactedRemovedCallback): () => void {
+    this.receiveMessageReactedRemovedCallbacks.add(callback);
+    return () => { this.receiveMessageReactedRemovedCallbacks.delete(callback); };
+  }
+
+  onReceiveMessagesRead(callback: ReceiveMessagesReadCallback): () => void {
+    this.receiveMessagesReadCallbacks.add(callback);
+    return () => { this.receiveMessagesReadCallbacks.delete(callback); };
+  }
+
+  onReceiveConversationUpdated(callback: ReceiveConversationUpdatedCallback): () => void {
+    this.receiveConversationUpdatedCallbacks.add(callback);
+    return () => { this.receiveConversationUpdatedCallbacks.delete(callback); };
   }
 
   onReceiveNewConversation(callback: ReceiveNewConversationCallback): void {

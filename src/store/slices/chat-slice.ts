@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { ConversationDto, MessageDto } from "@/types/chat";
+import type { ConversationDto, MessageDto, ConversationUpdatedNotificationDto } from "@/types/chat";
 
 interface ChatState {
   conversations: ConversationDto[];
@@ -7,6 +7,7 @@ interface ChatState {
   activeConversationId: number | null;
   messages: Record<number, MessageDto[]>;
   messageHasMore: Record<number, boolean>;
+  editedMessageIds: number[];
 }
 
 const initialState: ChatState = {
@@ -15,6 +16,7 @@ const initialState: ChatState = {
   activeConversationId: null,
   messages: {},
   messageHasMore: {},
+  editedMessageIds: [],
 };
 
 const chatSlice = createSlice({
@@ -51,6 +53,18 @@ const chatSlice = createSlice({
         if (state.activeConversationId !== action.payload.conversationId) {
           conv.unreadCount = (conv.unreadCount ?? 0) + 1;
         }
+      }
+    },
+    updateConversationFromNotification: (state, action: PayloadAction<ConversationUpdatedNotificationDto>) => {
+      const { conversationId, lastMessage, unreadCount } = action.payload;
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (!conv) return;
+      conv.lastMessage = lastMessage;
+      conv.unreadCount = unreadCount;
+      const idx = state.conversations.indexOf(conv);
+      if (idx > 0) {
+        state.conversations.splice(idx, 1);
+        state.conversations.unshift(conv);
       }
     },
     setActiveConversation: (state, action: PayloadAction<number | null>) => {
@@ -96,6 +110,79 @@ const chatSlice = createSlice({
         state.messages[conversationId].push(message);
       }
     },
+    updateMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
+      const { conversationId, message } = action.payload;
+      const list = state.messages[conversationId];
+      if (list) {
+        const idx = list.findIndex((m) => m.id === message.id);
+        if (idx !== -1) {
+          list[idx] = { ...message, repliedMessage: message.repliedMessage ?? list[idx].repliedMessage };
+          if (!state.editedMessageIds.includes(message.id)) {
+            state.editedMessageIds.push(message.id);
+          }
+        }
+      }
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (conv && conv.lastMessage && conv.lastMessage.id === message.id) {
+        conv.lastMessage = message;
+      }
+    },
+    deleteMessage: (state, action: PayloadAction<{ conversationId: number; messageId: number }>) => {
+      const { conversationId, messageId } = action.payload;
+      const list = state.messages[conversationId];
+      if (list) {
+        const idx = list.findIndex((m) => m.id === messageId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], isDeleted: true, content: null, attachments: [], reactions: [] };
+        }
+      }
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (conv && conv.lastMessage && conv.lastMessage.id === messageId) {
+        conv.lastMessage = { ...conv.lastMessage, isDeleted: true, content: null, attachments: [], reactions: [] };
+      }
+    },
+    mergeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+      const { conversationId, messageId, userId, emoji } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const msg = list.find((m) => m.id === messageId);
+      if (!msg || msg.isDeleted) return;
+      const reactions = msg.reactions ?? [];
+      const exists = reactions.some((r) => r.userId === userId && r.emoji === emoji);
+      if (exists) return;
+      msg.reactions = [...reactions, { userId, emoji }];
+    },
+    removeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+      const { conversationId, messageId, userId, emoji } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const msg = list.find((m) => m.id === messageId);
+      if (!msg) return;
+      const reactions = msg.reactions ?? [];
+      msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
+    },
+    markMessagesRead: (state, action: PayloadAction<{ conversationId: number; messageIds: number[]; myUserId: number }>) => {
+      const { conversationId, messageIds, myUserId } = action.payload;
+      const list = state.messages[conversationId];
+      if (!list) return;
+      const ids = new Set(messageIds);
+      for (const msg of list) {
+        if (msg.senderId === myUserId && ids.has(msg.id)) {
+          msg.status = 1;
+        }
+      }
+    },
+    updateConversationState: (state, action: PayloadAction<{ conversationId: number; patch: Partial<ConversationDto> }>) => {
+      const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
+      if (conv) {
+        Object.assign(conv, action.payload.patch);
+      }
+    },
+    removeConversation: (state, action: PayloadAction<number>) => {
+      state.conversations = state.conversations.filter((c) => c.id !== action.payload);
+      delete state.messages[action.payload];
+      delete state.messageHasMore[action.payload];
+    },
     resetChat: () => initialState,
   },
 });
@@ -105,6 +192,7 @@ export const {
   addConversations,
   addConversation,
   updateConversationWithLastMessage,
+  updateConversationFromNotification,
   setActiveConversation,
   resetUnreadCount,
   setConversationBlocked,
@@ -112,6 +200,13 @@ export const {
   setMessages,
   prependMessages,
   appendMessage,
+  updateMessage,
+  deleteMessage,
+  mergeMessageReaction,
+  removeMessageReaction,
+  markMessagesRead,
+  updateConversationState,
+  removeConversation,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;

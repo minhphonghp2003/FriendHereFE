@@ -9,6 +9,7 @@ interface MomentImageCarouselProps {
   fullscreen?: boolean;
   showInfo?: boolean;
   onToggleInfo?: () => void;
+  onIndexChange?: (index: number) => void;
 }
 
 const SWIPE_THRESHOLD = 50;
@@ -18,6 +19,7 @@ export const MomentImageCarousel = ({
   fullscreen = false,
   showInfo = true,
   onToggleInfo,
+  onIndexChange,
 }: MomentImageCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
@@ -28,8 +30,13 @@ export const MomentImageCarousel = ({
 
   if (!images.length) return null;
 
-  const goNext = () => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
-  const goPrev = () => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+  const updateIndex = (next: number) => {
+    setCurrentIndex(next);
+    onIndexChange?.(next);
+  };
+
+  const goNext = () => updateIndex(currentIndex === images.length - 1 ? 0 : currentIndex + 1);
+  const goPrev = () => updateIndex(currentIndex === 0 ? images.length - 1 : currentIndex - 1);
 
   const handleDragStart = (clientX: number) => {
     startXRef.current = clientX;
