@@ -1,14 +1,15 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, markMessagesRead, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked } from "@/store/slices/chat-slice";
+import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, markMessagesRead, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked, updateConversationState } from "@/store/slices/chat-slice";
 import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions, searchMessages } from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { ReadDivider } from "@/components/chat/read-divider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
@@ -99,6 +100,7 @@ export default function ChatScreenPage() {
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const latestMessageRef = useRef<MessageDto | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -197,11 +199,29 @@ export default function ChatScreenPage() {
           setIsGroup(!res.data.isDirect);
           setIsBlocked(res.data.isBlocked);
           setBlockedById(res.data.blockedById);
+          dispatch(updateConversationState({ conversationId, patch: res.data }));
         }
       }).catch(() => {}),
       fetchMessages(),
-    ]).finally(() => setLoading(false));
-    appHub.joinConversation(conversationId).catch(console.error);
+    ])
+      .then(() => appHub.joinConversation(conversationId))
+      .then(() => {
+        const latest = latestMessageRef.current;
+        if (latest) {
+          dispatch(updateConversationState({
+            conversationId,
+            patch: {
+              lastReadAt: new Date().toISOString(),
+              lastReadMessage: latest,
+              unreadCount: 0,
+            },
+          }));
+        }
+      })
+      .catch((err) => {
+        if (err) console.error(err);
+      })
+      .finally(() => setLoading(false));
     return () => {
       if (typingSentRef.current) {
         typingSentRef.current = false;
@@ -212,6 +232,11 @@ export default function ChatScreenPage() {
       appHub.leaveConversation(conversationId).catch(console.error);
     };
   }, [conversationId, dispatch, fetchMessages]);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last) latestMessageRef.current = last;
+  }, [messages]);
 
   useEffect(() => {
     const unsub = appHub.onReceiveTyping((data) => {
@@ -233,10 +258,20 @@ export default function ChatScreenPage() {
     const cb = (message: MessageDto) => {
       if (message.conversationId === conversationId) {
         dispatch(appendMessage({ conversationId, message }));
+        if (message.senderId === user?.id) {
+          dispatch(updateConversationState({
+            conversationId,
+            patch: {
+              lastReadAt: new Date().toISOString(),
+              lastReadMessage: message,
+              unreadCount: 0,
+            },
+          }));
+        }
       }
     };
     return appHub.onReceiveMessage(cb);
-  }, [conversationId, dispatch]);
+  }, [conversationId, dispatch, user?.id]);
 
   useEffect(() => {
     const unsubEdited = appHub.onReceiveMessageEdited((message) => {
@@ -794,6 +829,8 @@ export default function ChatScreenPage() {
       ? ""
       : (actionMessage.content ?? getMessagePreview(actionMessage))
     : "";
+  const lastReadMessageId = currentConv?.lastReadMessage?.id ?? null;
+  const lastReadAt = currentConv?.lastReadAt ?? null;
   const actionLinks = actionMessage && !actionMessage.isDeleted ? extractLinks(actionContent) : [];
   const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
   const actionIsMine = actionMessage?.senderId === user?.id;
@@ -897,36 +934,40 @@ export default function ChatScreenPage() {
           const isMe = msg.senderId === user?.id;
           const isSystem = toChatMessageRenderType(msg.type) === "System";
           return (
-            <div
-              key={msg.id}
-              id={`message-${msg.id}`}
-              className={`flex gap-2 select-none ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
-            >
-              {!isMe && !isSystem && (
-                <div className="shrink-0 self-end">
-                  {msg.senderAvatar?.thumbUrl ? (
-                    <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
-                    </div>
-                  )}
+            <Fragment key={msg.id}>
+              <div
+                id={`message-${msg.id}`}
+                className={`flex gap-2 select-none ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
+              >
+                {!isMe && !isSystem && (
+                  <div className="shrink-0 self-end">
+                    {msg.senderAvatar?.thumbUrl ? (
+                      <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                        {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
+                  {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                  <MessageBubble
+                    msg={msg}
+                    isMe={isMe}
+                    currentUserId={user?.id}
+                    onViewMoment={(id) => setViewMomentId(id)}
+                    onLongPress={handleLongPress}
+                    onOpenReactions={openReactions}
+                    onReplyClick={onTapReply}
+                    isEdited={editedMessageIds.includes(msg.id)}
+                  />
                 </div>
-              )}
-              <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
-                {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
-                <MessageBubble
-                  msg={msg}
-                  isMe={isMe}
-                  currentUserId={user?.id}
-                  onViewMoment={(id) => setViewMomentId(id)}
-                  onLongPress={handleLongPress}
-                  onOpenReactions={openReactions}
-                  onReplyClick={onTapReply}
-                  isEdited={editedMessageIds.includes(msg.id)}
-                />
               </div>
-            </div>
+              {lastReadMessageId !== null && msg.id === lastReadMessageId && (
+                <ReadDivider lastReadAt={lastReadAt} />
+              )}
+            </Fragment>
           );
         })}
         <div ref={messagesEndRef} />
