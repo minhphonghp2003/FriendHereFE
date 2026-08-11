@@ -203,6 +203,7 @@ export default function ChatScreenPage() {
       fetchMessages(),
     ])
       .then(() => appHub.joinConversation(conversationId))
+      .then(() => dispatch(resetUnreadCount(conversationId)))
       .catch((err) => {
         if (err) console.error(err);
       })
