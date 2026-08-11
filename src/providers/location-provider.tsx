@@ -65,12 +65,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
-  const conversations = useAppSelector((s) => s.chat.conversations);
   const myVisibility = useAppSelector((s) => s.location.visibility);
   const activeConversationIdRef = useRef(activeConversationId);
   activeConversationIdRef.current = activeConversationId;
-  const conversationsRef = useRef(conversations);
-  conversationsRef.current = conversations;
   const startedRef = useRef(false);
   const locationHubReadyRef = useRef(false);
   const geoReadyRef = useRef(false);
@@ -291,24 +288,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         appHub.onReceiveFriendshipAccepted(() => {});
 
-        appHub.onReceiveMessage((message) => {
-          if (message.senderId === user.id) return;
-          if (message.conversationId === activeConversationIdRef.current) return;
-          const conv = conversationsRef.current.find((c) => c.id === message.conversationId);
-          if (conv?.isMuted) return;
-          toast.info(`Tin nhắn mới từ ${message.senderName}`, {
-            description: message.content?.slice(0, 50),
-          });
-        });
-
         appHub.onReceiveConversationUpdated((data) => {
           if (data.conversationId === activeConversationIdRef.current) return;
           dispatch(updateConversationFromNotification(data));
-          const conv = conversationsRef.current.find((c) => c.id === data.conversationId);
-          if (conv?.isMuted) return;
-          toast.info(`Tin nhắn mới từ ${data.lastMessage.senderName}`, {
-            description: data.lastMessage.content?.slice(0, 50),
-          });
         });
 
         locationHubReadyRef.current = true;

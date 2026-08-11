@@ -9,7 +9,6 @@ import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { MessageBubble } from "@/components/chat/message-bubble";
-import { ReadDivider } from "@/components/chat/read-divider";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
@@ -100,7 +99,6 @@ export default function ChatScreenPage() {
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const latestMessageRef = useRef<MessageDto | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
@@ -205,19 +203,6 @@ export default function ChatScreenPage() {
       fetchMessages(),
     ])
       .then(() => appHub.joinConversation(conversationId))
-      .then(() => {
-        const latest = latestMessageRef.current;
-        if (latest) {
-          dispatch(updateConversationState({
-            conversationId,
-            patch: {
-              lastReadAt: new Date().toISOString(),
-              lastReadMessage: latest,
-              unreadCount: 0,
-            },
-          }));
-        }
-      })
       .catch((err) => {
         if (err) console.error(err);
       })
@@ -232,11 +217,6 @@ export default function ChatScreenPage() {
       appHub.leaveConversation(conversationId).catch(console.error);
     };
   }, [conversationId, dispatch, fetchMessages]);
-
-  useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (last) latestMessageRef.current = last;
-  }, [messages]);
 
   useEffect(() => {
     const unsub = appHub.onReceiveTyping((data) => {
@@ -258,20 +238,10 @@ export default function ChatScreenPage() {
     const cb = (message: MessageDto) => {
       if (message.conversationId === conversationId) {
         dispatch(appendMessage({ conversationId, message }));
-        if (message.senderId === user?.id) {
-          dispatch(updateConversationState({
-            conversationId,
-            patch: {
-              lastReadAt: new Date().toISOString(),
-              lastReadMessage: message,
-              unreadCount: 0,
-            },
-          }));
-        }
       }
     };
     return appHub.onReceiveMessage(cb);
-  }, [conversationId, dispatch, user?.id]);
+  }, [conversationId, dispatch]);
 
   useEffect(() => {
     const unsubEdited = appHub.onReceiveMessageEdited((message) => {
@@ -829,8 +799,6 @@ export default function ChatScreenPage() {
       ? ""
       : (actionMessage.content ?? getMessagePreview(actionMessage))
     : "";
-  const lastReadMessageId = currentConv?.lastReadMessage?.id ?? null;
-  const lastReadAt = currentConv?.lastReadAt ?? null;
   const actionLinks = actionMessage && !actionMessage.isDeleted ? extractLinks(actionContent) : [];
   const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
   const actionIsMine = actionMessage?.senderId === user?.id;
@@ -964,9 +932,6 @@ export default function ChatScreenPage() {
                   />
                 </div>
               </div>
-              {lastReadMessageId !== null && msg.id === lastReadMessageId && (
-                <ReadDivider lastReadAt={lastReadAt} />
-              )}
             </Fragment>
           );
         })}
