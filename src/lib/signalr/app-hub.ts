@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto } from "@/types/chat";
+import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto, ConversationUpdatedNotificationDto } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
 import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
@@ -30,6 +30,7 @@ export type ReceiveMessageDeletedCallback = (messageId: number) => void;
 export type ReceiveMessageReactedCallback = (data: MessageReactionNotificationDto) => void;
 export type ReceiveMessageReactedRemovedCallback = (data: MessageReactionRemovedNotificationDto) => void;
 export type ReceiveMessagesReadCallback = (data: MessageReadNotificationDto) => void;
+export type ReceiveConversationUpdatedCallback = (data: ConversationUpdatedNotificationDto) => void;
 
 export interface TypingData {
   conversationId: number;
@@ -72,6 +73,7 @@ class AppHub {
   private receiveMessageReactedCallbacks: Set<ReceiveMessageReactedCallback> = new Set();
   private receiveMessageReactedRemovedCallbacks: Set<ReceiveMessageReactedRemovedCallback> = new Set();
   private receiveMessagesReadCallbacks: Set<ReceiveMessagesReadCallback> = new Set();
+  private receiveConversationUpdatedCallbacks: Set<ReceiveConversationUpdatedCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
   private receiveFriendshipCreatedCallbacks: Set<ReceiveFriendshipCreatedCallback> = new Set();
   private receiveFriendshipAcceptedCallbacks: Set<ReceiveFriendshipAcceptedCallback> = new Set();
@@ -144,6 +146,10 @@ class AppHub {
 
     this.connection.on("ReceiveMessagesRead", (data: MessageReadNotificationDto) => {
       this.receiveMessagesReadCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveConversationUpdated", (data: ConversationUpdatedNotificationDto) => {
+      this.receiveConversationUpdatedCallbacks.forEach((cb) => cb(data));
     });
 
     this.connection.on("ReceiveNewConversation", (conversation: ConversationDto, initialMessage: MessageDto) => {
@@ -241,6 +247,7 @@ class AppHub {
     this.receiveMessageReactedCallbacks.clear();
     this.receiveMessageReactedRemovedCallbacks.clear();
     this.receiveMessagesReadCallbacks.clear();
+    this.receiveConversationUpdatedCallbacks.clear();
     this.receiveTypingCallbacks.clear();
     this.receiveCallCallbacks.clear();
     this.receiveCallSignalCallbacks.clear();
@@ -341,6 +348,11 @@ class AppHub {
   onReceiveMessagesRead(callback: ReceiveMessagesReadCallback): () => void {
     this.receiveMessagesReadCallbacks.add(callback);
     return () => { this.receiveMessagesReadCallbacks.delete(callback); };
+  }
+
+  onReceiveConversationUpdated(callback: ReceiveConversationUpdatedCallback): () => void {
+    this.receiveConversationUpdatedCallbacks.add(callback);
+    return () => { this.receiveConversationUpdatedCallbacks.delete(callback); };
   }
 
   onReceiveNewConversation(callback: ReceiveNewConversationCallback): void {

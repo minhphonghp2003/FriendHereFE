@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { ConversationDto, MessageDto } from "@/types/chat";
+import type { ConversationDto, MessageDto, ConversationUpdatedNotificationDto } from "@/types/chat";
 
 interface ChatState {
   conversations: ConversationDto[];
@@ -53,6 +53,18 @@ const chatSlice = createSlice({
         if (state.activeConversationId !== action.payload.conversationId) {
           conv.unreadCount = (conv.unreadCount ?? 0) + 1;
         }
+      }
+    },
+    updateConversationFromNotification: (state, action: PayloadAction<ConversationUpdatedNotificationDto>) => {
+      const { conversationId, lastMessage, unreadCount } = action.payload;
+      const conv = state.conversations.find((c) => c.id === conversationId);
+      if (!conv) return;
+      conv.lastMessage = lastMessage;
+      conv.unreadCount = unreadCount;
+      const idx = state.conversations.indexOf(conv);
+      if (idx > 0) {
+        state.conversations.splice(idx, 1);
+        state.conversations.unshift(conv);
       }
     },
     setActiveConversation: (state, action: PayloadAction<number | null>) => {
@@ -180,6 +192,7 @@ export const {
   addConversations,
   addConversation,
   updateConversationWithLastMessage,
+  updateConversationFromNotification,
   setActiveConversation,
   resetUnreadCount,
   setConversationBlocked,

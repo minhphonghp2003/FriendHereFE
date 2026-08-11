@@ -44,6 +44,12 @@ export interface MessageReadNotificationDto {
   readAt: string;
 }
 
+export interface ConversationUpdatedNotificationDto {
+  conversationId: number;
+  lastMessage: MessageDto;
+  unreadCount: number;
+}
+
 export interface MessageReactionUserDto {
   userId: number;
   userName: string;

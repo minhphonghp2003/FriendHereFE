@@ -29,6 +29,7 @@ import {
   appendMessage,
   setConversationBlocked,
   setConversationUnblocked,
+  updateConversationFromNotification,
 } from "@/store/slices/chat-slice";
 import { useBattery } from "@/hooks/location/use-battery";
 import { LOCATION_VISIBILITY_STORAGE_KEY } from "@/store/slices/location-slice";
@@ -297,6 +298,16 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           if (conv?.isMuted) return;
           toast.info(`Tin nhắn mới từ ${message.senderName}`, {
             description: message.content?.slice(0, 50),
+          });
+        });
+
+        appHub.onReceiveConversationUpdated((data) => {
+          if (data.conversationId === activeConversationIdRef.current) return;
+          dispatch(updateConversationFromNotification(data));
+          const conv = conversationsRef.current.find((c) => c.id === data.conversationId);
+          if (conv?.isMuted) return;
+          toast.info(`Tin nhắn mới từ ${data.lastMessage.senderName}`, {
+            description: data.lastMessage.content?.slice(0, 50),
           });
         });
 

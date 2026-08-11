@@ -141,6 +141,12 @@ export default function ChatListPage() {
 
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
+    const lastPreview = getMessagePreview(conv.lastMessage);
+    const preview = !lastPreview
+      ? "Chưa có tin nhắn"
+      : !conv.isDirect && conv.lastMessage && conv.lastMessage.senderId !== user?.id
+        ? `${conv.lastMessage.senderName}: ${lastPreview}`
+        : lastPreview;
     return (
       <div key={conv.id} onClick={() => handleChatClick(conv)} className="flex items-center gap-3 w-full py-3 text-left hover:bg-muted/50 rounded-lg px-2 transition-colors cursor-pointer">
         <div className="relative shrink-0">
@@ -171,7 +177,7 @@ export default function ChatListPage() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {conv.isBlocked ? "Đã chặn" : (getMessagePreview(conv.lastMessage) || "Chưa có tin nhắn")}
+            {conv.isBlocked ? "Đã chặn" : preview}
           </p>
         </div>
         <button
