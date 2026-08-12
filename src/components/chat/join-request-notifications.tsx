@@ -24,12 +24,6 @@ export function JoinRequestNotifications() {
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   useEffect(() => {
-    const unsubCreated = appHub.onReceiveJoinRequestCreated((joinRequest) => {
-      setRequests((prev) => {
-        if (prev.some((r) => r.id === joinRequest.id)) return prev;
-        return [...prev, joinRequest];
-      });
-    });
     const unsubProcessed = appHub.onReceiveJoinRequestProcessed((data) => {
       const convName = data.conversationName ?? "nhóm";
       if (data.result === JoinRequestResult.Approved) {
@@ -39,7 +33,6 @@ export function JoinRequestNotifications() {
       }
     });
     return () => {
-      unsubCreated();
       unsubProcessed();
     };
   }, []);

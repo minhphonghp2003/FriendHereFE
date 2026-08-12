@@ -37,7 +37,7 @@ export default function ChatListPage() {
   const { mutate: createRequest, isLoading: requesting } = useCreateJoinRequest();
   const { mutate: joinGroup, isLoading: joining } = useJoinGroup();
   const { mutate: cancelRequest, isLoading: cancelling } = useCancelJoinRequest();
-  const [pendingRequestIds, setPendingRequestIds] = useState<Record<number, number>>({});
+  const [localPendingIds, setLocalPendingIds] = useState<Set<number>>(new Set());
 
   const inbox = conversations.filter((c) => !c.isArchived);
   const archived = conversations.filter((c) => c.isArchived);
@@ -155,10 +155,8 @@ export default function ChatListPage() {
   const handleJoinGroup = useCallback(async (group: DiscoverableGroupDto) => {
     try {
       if (group.isRestricted) {
-        const requestId = await createRequest(group.id);
-        if (requestId) {
-          setPendingRequestIds((prev) => ({ ...prev, [group.id]: requestId }));
-        }
+        await createRequest(group.id);
+        setLocalPendingIds((prev) => new Set(prev).add(group.id));
         refetchDiscoverable();
         toast.success(`Đã gửi yêu cầu tham gia "${group.name}"`);
       } else {
@@ -172,13 +170,16 @@ export default function ChatListPage() {
   }, [createRequest, joinGroup, refetchDiscoverable]);
 
   const handleCancelRequest = useCallback(async (group: DiscoverableGroupDto) => {
-    const requestId = pendingRequestIds[group.id];
-    if (!requestId) return;
+    const requestId = group.joinRequestId;
+    if (!requestId) {
+      toast.error("Không thể hủy yêu cầu — thiếu ID yêu cầu");
+      return;
+    }
     try {
       await cancelRequest(requestId);
-      setPendingRequestIds((prev) => {
-        const next = { ...prev };
-        delete next[group.id];
+      setLocalPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(group.id);
         return next;
       });
       refetchDiscoverable();
@@ -186,7 +187,7 @@ export default function ChatListPage() {
     } catch (err) {
       toast.error(handleApiError(err as AxiosError).message || "Không thể hủy yêu cầu");
     }
-  }, [pendingRequestIds, cancelRequest, refetchDiscoverable]);
+  }, [cancelRequest, refetchDiscoverable]);
 
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
@@ -349,9 +350,9 @@ export default function ChatListPage() {
               <div className="flex flex-col gap-2">
                 {discoverableGroups.map((group) => {
                   const status = group.joinRequestStatus ?? null;
-                  const isPending = status === JoinRequestStatus.Pending;
-                  const hasRequestId = !!pendingRequestIds[group.id];
-                  const processing = requesting || joining || (hasRequestId && cancelling);
+                  const isPending = status === JoinRequestStatus.Pending || localPendingIds.has(group.id);
+                  const canCancel = isPending && !!group.joinRequestId;
+                  const processing = requesting || joining || (canCancel && cancelling);
                   return (
                     <div key={group.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
@@ -369,23 +370,17 @@ export default function ChatListPage() {
                         <p className="text-xs text-muted-foreground">{group.memberCount} thành viên</p>
                       </div>
                       {isPending ? (
-                        hasRequestId ? (
-                          <button
-                            onClick={() => handleCancelRequest(group)}
-                            disabled={cancelling}
-                            className="shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
-                          >
-                            {cancelling ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              "Hủy yêu cầu"
-                            )}
-                          </button>
-                        ) : (
-                          <span className="shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground">
-                            Đang chờ duyệt
-                          </span>
-                        )
+                        <button
+                          onClick={() => handleCancelRequest(group)}
+                          disabled={cancelling}
+                          className="shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          {cancelling ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Hủy yêu cầu"
+                          )}
+                        </button>
                       ) : (
                         <button
                           onClick={() => handleJoinGroup(group)}

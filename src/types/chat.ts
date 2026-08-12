@@ -151,6 +151,7 @@ export interface DiscoverableGroupDto {
   memberCount: number;
   isRestricted: boolean;
   joinRequestStatus?: number | null;
+  joinRequestId?: number | null;
 }
 
 export interface CreateGroupChatRequest {
