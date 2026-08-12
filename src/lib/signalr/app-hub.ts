@@ -1,7 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto, ConversationUpdatedNotificationDto } from "@/types/chat";
+import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto, ConversationUpdatedNotificationDto, JoinRequestDto, JoinRequestProcessedData } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
 import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
@@ -51,6 +51,30 @@ export type ReceiveChatBlockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveMomentReactedCallback = (data: MomentReactionNotification) => void;
 
+export interface MemberRemovedData {
+  conversationId: number;
+  removedUserId: number;
+  removedUserName: string;
+}
+
+export interface MemberLeftData {
+  conversationId: number;
+  leftUserId: number;
+  leftUserName: string;
+}
+
+export type ReceiveMemberRemovedCallback = (data: MemberRemovedData) => void;
+export type ReceiveMemberLeftCallback = (data: MemberLeftData) => void;
+
+export type ReceiveJoinRequestCreatedCallback = (joinRequest: JoinRequestDto) => void;
+export type ReceiveJoinRequestProcessedCallback = (data: JoinRequestProcessedData) => void;
+
+export interface GroupDeletedNotification {
+  conversationId: number;
+}
+
+export type ReceiveGroupDeletedCallback = (data: GroupDeletedNotification) => void;
+
 export interface FileMarkedSuccessData {
   originalKey: string;
   thumbKey: string;
@@ -86,6 +110,11 @@ class AppHub {
   private receiveCallSignalCallbacks: Set<ReceiveCallSignalCallback> = new Set();
   private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
   private receiveFileMarkedSuccessCallbacks: Set<ReceiveFileMarkedSuccessCallback> = new Set();
+  private receiveMemberRemovedCallbacks: Set<ReceiveMemberRemovedCallback> = new Set();
+  private receiveMemberLeftCallbacks: Set<ReceiveMemberLeftCallback> = new Set();
+  private receiveJoinRequestCreatedCallbacks: Set<ReceiveJoinRequestCreatedCallback> = new Set();
+  private receiveJoinRequestProcessedCallbacks: Set<ReceiveJoinRequestProcessedCallback> = new Set();
+  private receiveGroupDeletedCallbacks: Set<ReceiveGroupDeletedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -200,6 +229,26 @@ class AppHub {
       this.receiveFileMarkedSuccessCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveMemberRemoved", (data: MemberRemovedData) => {
+      this.receiveMemberRemovedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveMemberLeft", (data: MemberLeftData) => {
+      this.receiveMemberLeftCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveJoinRequestCreated", (joinRequest: JoinRequestDto) => {
+      this.receiveJoinRequestCreatedCallbacks.forEach((cb) => cb(joinRequest));
+    });
+
+    this.connection.on("ReceiveJoinRequestProcessed", (data: JoinRequestProcessedData) => {
+      this.receiveJoinRequestProcessedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveGroupDeleted", (data: GroupDeletedNotification) => {
+      this.receiveGroupDeletedCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -253,6 +302,11 @@ class AppHub {
     this.receiveCallSignalCallbacks.clear();
     this.receiveMomentReactedCallbacks.clear();
     this.receiveFileMarkedSuccessCallbacks.clear();
+    this.receiveMemberRemovedCallbacks.clear();
+    this.receiveMemberLeftCallbacks.clear();
+    this.receiveJoinRequestCreatedCallbacks.clear();
+    this.receiveJoinRequestProcessedCallbacks.clear();
+    this.receiveGroupDeletedCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -412,6 +466,31 @@ class AppHub {
   onReceiveFileMarkedSuccess(callback: ReceiveFileMarkedSuccessCallback): () => void {
     this.receiveFileMarkedSuccessCallbacks.add(callback);
     return () => { this.receiveFileMarkedSuccessCallbacks.delete(callback); };
+  }
+
+  onReceiveMemberRemoved(callback: ReceiveMemberRemovedCallback): () => void {
+    this.receiveMemberRemovedCallbacks.add(callback);
+    return () => { this.receiveMemberRemovedCallbacks.delete(callback); };
+  }
+
+  onReceiveMemberLeft(callback: ReceiveMemberLeftCallback): () => void {
+    this.receiveMemberLeftCallbacks.add(callback);
+    return () => { this.receiveMemberLeftCallbacks.delete(callback); };
+  }
+
+  onReceiveJoinRequestCreated(callback: ReceiveJoinRequestCreatedCallback): () => void {
+    this.receiveJoinRequestCreatedCallbacks.add(callback);
+    return () => { this.receiveJoinRequestCreatedCallbacks.delete(callback); };
+  }
+
+  onReceiveJoinRequestProcessed(callback: ReceiveJoinRequestProcessedCallback): () => void {
+    this.receiveJoinRequestProcessedCallbacks.add(callback);
+    return () => { this.receiveJoinRequestProcessedCallbacks.delete(callback); };
+  }
+
+  onReceiveGroupDeleted(callback: ReceiveGroupDeletedCallback): () => void {
+    this.receiveGroupDeletedCallbacks.add(callback);
+    return () => { this.receiveGroupDeletedCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {

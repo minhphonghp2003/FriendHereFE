@@ -22,6 +22,7 @@ export default function NewGroupChatPage() {
   const [friends, setFriends] = useState<FriendshipDto[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [name, setName] = useState("");
+  const [isRestricted, setIsRestricted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function NewGroupChatPage() {
     const parsed = createGroupChatSchema(user.id).safeParse({
       name: name.trim() || undefined,
       memberIds: selectedIds,
+      isRestricted,
     });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ");
@@ -81,6 +83,22 @@ export default function NewGroupChatPage() {
               placeholder="VD: Weekend Trip"
               className="border-border focus:border-ring rounded-lg border bg-transparent px-3 py-2 text-sm outline-none"
             />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-3">
+            <div>
+              <p className="text-sm font-medium">Nhóm riêng tư</p>
+              <p className="text-xs text-muted-foreground">
+                {isRestricted ? "Chủ nhóm duyệt yêu cầu tham gia" : "Ai cũng có thể tham gia"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsRestricted((v) => !v)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${isRestricted ? "bg-blue-600" : "bg-muted"}`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isRestricted ? "translate-x-5" : "translate-x-0.5"}`} />
+            </button>
           </div>
 
           <div className="flex flex-col gap-2">

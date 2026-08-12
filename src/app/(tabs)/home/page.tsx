@@ -4,7 +4,7 @@ import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTheme } from "next-themes";
-import { Map as MapIcon, List } from "lucide-react";
+import { Map as MapIcon, List, RefreshCw, Loader2 } from "lucide-react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
 import { UserLocationList } from "@/components/home/user-location-list";
@@ -14,9 +14,11 @@ import { UserMomentsOverlay } from "@/components/moments/user-moments-overlay";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT } from "@/services/location";
-import { useAppSelector } from "@/store/hooks";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { resetLocation } from "@/store/slices/location-slice";
 import type { LocationDto } from "@/lib/signalr/types";
 import { appHub } from "@/lib/signalr/app-hub";
+import { locationHub } from "@/lib/signalr";
 
 type ViewMode = "map" | "list";
 
@@ -37,6 +39,8 @@ export default function HomePage() {
     userId: number;
     userName: string;
   } | null>(null);
+  const [reloading, setReloading] = useState(false);
+  const dispatch = useAppDispatch();
 
   const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
   const {
@@ -140,6 +144,25 @@ export default function HomePage() {
     setSelectedUserId(null);
   }, []);
 
+  const handleReload = useCallback(async () => {
+    if (reloading) return;
+    setReloading(true);
+    dispatch(resetLocation());
+    try {
+      await locationHub.stop();
+      await locationHub.start();
+      const pos =
+        latitude !== null && longitude !== null
+          ? { latitude, longitude }
+          : undefined;
+      await locationHub.join(pos ? { latitude: pos.latitude, longitude: pos.longitude } : {});
+    } catch (err) {
+      console.error("[Home] Reload error:", err);
+    } finally {
+      setReloading(false);
+    }
+  }, [reloading, dispatch, latitude, longitude]);
+
   const renderMarkerDetail = (isCurrentUser: boolean) => (
     <MarkerDetail
       isCurrentUser={isCurrentUser}
@@ -227,6 +250,18 @@ export default function HomePage() {
             <VisibilityPicker />
             <StatusEditor />
             <button
+              onClick={handleReload}
+              disabled={reloading}
+              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50 disabled:opacity-50"
+            >
+              {reloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Tải lại
+            </button>
+            <button
               onClick={handleToggleView}
               className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
             >
@@ -256,6 +291,18 @@ export default function HomePage() {
         <div className="absolute top-4 right-2 z-40 flex flex-col items-end gap-2">
           <VisibilityPicker />
           <StatusEditor />
+          <button
+            onClick={handleReload}
+            disabled={reloading}
+            className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50 disabled:opacity-50"
+          >
+            {reloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Tải lại
+          </button>
           {!locationDenied && (
             <button
               onClick={handleToggleView}

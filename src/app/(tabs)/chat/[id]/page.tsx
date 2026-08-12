@@ -9,10 +9,11 @@ import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { GroupSettingsDialog } from "@/components/chat/group-settings-dialog";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown, BellOff } from "lucide-react";
+import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown, BellOff, Users, Info } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { toast } from "sonner";
 import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
@@ -80,6 +81,7 @@ export default function ChatScreenPage() {
   const [blockedById, setBlockedById] = useState<number | null>(null);
   const [opponentId, setOpponentId] = useState<number | null>(null);
   const [blocking, setBlocking] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
   const searchParams = useSearchParams();
   const momentIdParam = searchParams.get("momentId") ? Number(searchParams.get("momentId")) : null;
   const [pendingMoment, setPendingMoment] = useState<ImageDto | null>(null);
@@ -316,6 +318,25 @@ export default function ChatScreenPage() {
     });
     return () => { unsubBlocked(); unsubUnblocked(); };
   }, [conversationId, user, opponentId, dispatch]);
+
+  useEffect(() => {
+    const unsubRemoved = appHub.onReceiveMemberRemoved((data) => {
+      if (data.conversationId === conversationId) {
+        router.replace("/chat");
+      }
+    });
+    const unsubLeft = appHub.onReceiveMemberLeft((data) => {
+      if (data.conversationId === conversationId) {
+        router.replace("/chat");
+      }
+    });
+    const unsubGroupDeleted = appHub.onReceiveGroupDeleted((data) => {
+      if (data.conversationId === conversationId) {
+        router.replace("/chat");
+      }
+    });
+    return () => { unsubRemoved(); unsubLeft(); unsubGroupDeleted(); };
+  }, [conversationId, router]);
 
   useEffect(() => {
     if (!loading) {
@@ -863,6 +884,16 @@ export default function ChatScreenPage() {
                 {convOnline ? "Online" : "Offline"}
               </p>
             </div>
+            {!isGroup && opponentId && (
+              <button
+                onClick={() => router.push(`/user/${opponentId}`)}
+                className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+                title="Thông tin"
+                aria-label="Thông tin người dùng"
+              >
+                <Info className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={() => setSearchOpen(true)}
               className="p-2 rounded-full hover:bg-muted text-muted-foreground"
@@ -892,6 +923,16 @@ export default function ChatScreenPage() {
                 </button>
               )
             )}
+            {isGroup && (
+              <button
+                onClick={() => setShowGroupSettings(true)}
+                className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+                title="Thiết lập nhóm"
+                aria-label="Thiết lập nhóm"
+              >
+                <Users className="w-5 h-5" />
+              </button>
+            )}
           </>
         )}
       </div>
@@ -909,7 +950,10 @@ export default function ChatScreenPage() {
                 className={`flex gap-2 select-none ${highlightedMsgId === msg.id ? "rounded-lg ring-2 ring-blue-400" : ""} ${isSystem ? "justify-center" : isMe ? "justify-end" : "justify-start"}`}
               >
                 {!isMe && !isSystem && (
-                  <div className="shrink-0 self-end">
+                  <button
+                    onClick={() => router.push(`/user/${msg.senderId}`)}
+                    className="shrink-0 self-end"
+                  >
                     {msg.senderAvatar?.thumbUrl ? (
                       <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
                     ) : (
@@ -917,10 +961,17 @@ export default function ChatScreenPage() {
                         {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
                       </div>
                     )}
-                  </div>
+                  </button>
                 )}
                 <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
-                  {!isMe && !isSystem && <p className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1">{msg.senderName}</p>}
+                  {!isMe && !isSystem && (
+                    <p
+                      className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1 cursor-pointer hover:underline"
+                      onClick={() => router.push(`/user/${msg.senderId}`)}
+                    >
+                      {msg.senderName}
+                    </p>
+                  )}
                   <MessageBubble
                     msg={msg}
                     isMe={isMe}
@@ -1252,6 +1303,13 @@ export default function ChatScreenPage() {
         momentId={viewMomentId}
         currentUserId={user?.id}
         onClose={() => setViewMomentId(null)}
+      />
+      <GroupSettingsDialog
+        open={showGroupSettings}
+        onOpenChange={setShowGroupSettings}
+        conversation={currentConv ?? null}
+        onNameChanged={(newName) => setConvName(newName)}
+        onExitGroup={() => router.replace("/chat")}
       />
     </div>
   );

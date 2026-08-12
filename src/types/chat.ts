@@ -81,12 +81,14 @@ export interface MessageDto {
   momentThumbnail: ImageDto | null;
   reactions?: MessageReactionDto[] | null;
   status?: number;
+  isMine?: boolean;
 }
 
 export interface ConversationDto {
   id: number | null;
   name: string;
   isDirect: boolean;
+  isRestricted: boolean;
   isMuted: boolean;
   isArchived?: boolean;
   memberCount: number | null;
@@ -98,9 +100,64 @@ export interface ConversationDto {
   lastMessage: MessageDto | null;
 }
 
+export interface ConversationMemberDto {
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  role: number;
+  isOnline: boolean;
+}
+
+export const ConversationMemberRole = {
+  Host: 0,
+  Member: 1,
+} as const;
+
+export interface JoinRequestDto {
+  id: number;
+  conversationId: number;
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  status: number;
+  createdAt: string;
+}
+
+export const JoinRequestStatus = {
+  Pending: 0,
+  Approved: 1,
+  Rejected: 2,
+  Cancelled: 3,
+} as const;
+
+export interface JoinRequestProcessedData {
+  conversationId: number;
+  requestId: number;
+  userId: number;
+  hostUserId: number;
+  result: number;
+  conversationName: string | null;
+}
+
+export const JoinRequestResult = {
+  Approved: 1,
+  Rejected: 2,
+} as const;
+
+export interface DiscoverableGroupDto {
+  id: number;
+  name: string;
+  image: ImageDto | null;
+  memberCount: number;
+  isRestricted: boolean;
+  joinRequestStatus?: number | null;
+  joinRequestId?: number | null;
+}
+
 export interface CreateGroupChatRequest {
   name?: string;
   memberIds: number[];
+  isRestricted?: boolean;
 }
 
 export interface SendMessageRequest {

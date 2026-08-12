@@ -10,7 +10,7 @@ export const useCreateGroupChat = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await createGroupChat(input.name, input.memberIds);
+      const res = await createGroupChat(input.name, input.memberIds, input.isRestricted);
       if (!res.success || !res.data) {
         throw new Error(res.message || "Không thể tạo nhóm chat");
       }
