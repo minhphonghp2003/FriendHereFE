@@ -11,3 +11,4 @@ export { useCancelJoinRequest } from "./use-cancel-join-request";
 export { useConfirmJoinRequest } from "./use-confirm-join-request";
 export { usePendingJoinRequests } from "./use-pending-join-requests";
 export { useDiscoverableGroups } from "./use-discoverable-groups";
+export { useSetGroupRestricted } from "./use-set-group-restricted";

@@ -81,6 +81,7 @@ export interface MessageDto {
   momentThumbnail: ImageDto | null;
   reactions?: MessageReactionDto[] | null;
   status?: number;
+  isMine?: boolean;
 }
 
 export interface ConversationDto {
@@ -154,6 +155,7 @@ export interface DiscoverableGroupDto {
 export interface CreateGroupChatRequest {
   name?: string;
   memberIds: number[];
+  isRestricted?: boolean;
 }
 
 export interface SendMessageRequest {

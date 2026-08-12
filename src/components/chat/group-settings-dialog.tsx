@@ -12,6 +12,7 @@ import {
   useLeaveGroup,
   usePendingJoinRequests,
   useConfirmJoinRequest,
+  useSetGroupRestricted,
 } from "@/hooks/chat";
 import { deleteChat } from "@/services/chat";
 import { getMyFriendships } from "@/services/friendship";
@@ -72,6 +73,7 @@ export function GroupSettingsDialog({
     refetch: refetchJoinRequests,
   } = usePendingJoinRequests(isHost ? conversationId : 0, open);
   const { mutate: confirmRequest } = useConfirmJoinRequest();
+  const { mutate: setRestricted } = useSetGroupRestricted();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedName, setEditedName] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -225,6 +227,19 @@ export function GroupSettingsDialog({
     }
   };
 
+  const handleToggleRestricted = async () => {
+    if (!conversationId) return;
+    const next = !conversation?.isRestricted;
+    dispatch(updateConversationState({ conversationId, patch: { isRestricted: next } }));
+    try {
+      await setRestricted(conversationId, next);
+      toast.success(next ? "Đã bật nhóm riêng tư" : "Đã tắt nhóm riêng tư");
+    } catch (err) {
+      dispatch(updateConversationState({ conversationId, patch: { isRestricted: !next } }));
+      toast.error(handleApiError(err as AxiosError).message || "Không thể cập nhật cài đặt nhóm");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -307,6 +322,24 @@ export function GroupSettingsDialog({
               />
               {nameError && <p className="text-xs text-red-500">{nameError}</p>}
             </div>
+
+            {isHost && (
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-3">
+                <div>
+                  <p className="text-sm font-medium">Nhóm riêng tư</p>
+                  <p className="text-xs text-muted-foreground">
+                    {conversation?.isRestricted ? "Chủ nhóm duyệt yêu cầu tham gia" : "Ai cũng có thể tham gia"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleRestricted}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${conversation?.isRestricted ? "bg-blue-600" : "bg-muted"}`}
+                >
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${conversation?.isRestricted ? "translate-x-5" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">

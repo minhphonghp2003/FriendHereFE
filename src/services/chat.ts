@@ -171,13 +171,14 @@ export async function createConversation(
 
 export async function createGroupChat(
   name: string | undefined,
-  memberIds: number[]
+  memberIds: number[],
+  isRestricted?: boolean
 ): Promise<{
   data: number;
   success: boolean;
   message?: string;
 }> {
-  const res = await httpClient.post("/Chat/group", { name, memberIds });
+  const res = await httpClient.post("/Chat/group", { name, memberIds, isRestricted });
   return res.data;
 }
 
@@ -208,6 +209,14 @@ export async function changeGroupImage(
   fileId: string
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.put(`/Chat/${conversationId}/group/image`, { fileId });
+  return res.data;
+}
+
+export async function setGroupRestricted(
+  conversationId: number,
+  isRestricted: boolean
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.put(`/Chat/${conversationId}/group/restricted`, { isRestricted });
   return res.data;
 }
 
