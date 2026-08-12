@@ -98,6 +98,19 @@ export interface ConversationDto {
   lastMessage: MessageDto | null;
 }
 
+export interface ConversationMemberDto {
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  role: number;
+  isOnline: boolean;
+}
+
+export const ConversationMemberRole = {
+  Host: 0,
+  Member: 1,
+} as const;
+
 export interface CreateGroupChatRequest {
   name?: string;
   memberIds: number[];

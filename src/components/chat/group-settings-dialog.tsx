@@ -3,12 +3,13 @@ import { useRef, useState } from "react";
 import type { AxiosError } from "axios";
 import { useAppDispatch } from "@/store/hooks";
 import { updateConversationState } from "@/store/slices/chat-slice";
-import { useRenameGroupChat, useUpdateGroupImage } from "@/hooks/chat";
+import { useRenameGroupChat, useUpdateGroupImage, useConversationMembers } from "@/hooks/chat";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users } from "lucide-react";
+import { Crown, Loader2, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { ConversationDto } from "@/types/chat";
+import { ConversationMemberRole } from "@/types/chat";
 import { handleApiError } from "@/lib/axios";
 
 interface GroupSettingsDialogProps {
@@ -27,6 +28,12 @@ export function GroupSettingsDialog({
   const dispatch = useAppDispatch();
   const { mutate: renameGroup, isLoading: renaming } = useRenameGroupChat();
   const { mutate: updateImage, isLoading: uploading } = useUpdateGroupImage();
+  const {
+    members,
+    isLoading: loadingMembers,
+    error: membersError,
+    refetch: refetchMembers,
+  } = useConversationMembers(conversation?.id ?? 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedName, setEditedName] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -124,6 +131,65 @@ export function GroupSettingsDialog({
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring"
             />
             {nameError && <p className="text-xs text-red-500">{nameError}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Thành viên ({members.length})</p>
+              <button
+                type="button"
+                onClick={refetchMembers}
+                disabled={loadingMembers}
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
+                aria-label="Tải lại danh sách thành viên"
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingMembers ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-border">
+              {loadingMembers && members.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : membersError ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+                  <p>{membersError.message}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={refetchMembers}>
+                    Thử lại
+                  </Button>
+                </div>
+              ) : members.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Không có thành viên nào</p>
+              ) : (
+                members.map((member) => (
+                  <div key={member.userId} className="flex items-center gap-3 px-3 py-2.5">
+                    <div className="relative shrink-0">
+                      <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                        {member.userImage?.thumbUrl ? (
+                          <img src={member.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          member.userName?.charAt(0)?.toUpperCase() ?? "?"
+                        )}
+                      </div>
+                      {member.isOnline && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="flex items-center gap-1 truncate text-sm font-medium">
+                        <span className="truncate">{member.userName}</span>
+                        {member.role === ConversationMemberRole.Host && (
+                          <Crown className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.role === ConversationMemberRole.Host ? "Chủ nhóm" : member.isOnline ? "Đang hoạt động" : "Ngoại tuyến"}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
         <DialogFooter>

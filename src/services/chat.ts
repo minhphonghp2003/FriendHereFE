@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ConversationDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
+import type { ConversationDto, ConversationMemberDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
 import type { CursorPageResponse } from "@/types/api";
 
 export async function getConversations(prevId?: number | null, take = 20): Promise<
@@ -28,6 +28,17 @@ export async function getConversation(
   message?: string;
 }> {
   const res = await httpClient.get(`/chat/${conversationId}`);
+  return res.data;
+}
+
+export async function getConversationMembers(
+  conversationId: number
+): Promise<{
+  success: boolean;
+  data: ConversationMemberDto[];
+  message?: string;
+}> {
+  const res = await httpClient.get(`/Chat/${conversationId}/members`);
   return res.data;
 }
 
