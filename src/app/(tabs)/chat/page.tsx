@@ -124,7 +124,7 @@ export default function ChatListPage() {
   const handleDelete = useCallback(async (conv: ConversationDto) => {
     const id = conv.id;
     if (!id) return;
-    if (!window.confirm("Xóa cuộc trò chuyện này? Thao tác này chỉ ảnh hưởng đến bạn và không thể hoàn tác.")) {
+    if (!window.confirm("Xóa cuộc trò chuyện? Nếu bạn là chủ nhóm, cuộc trò chuyện sẽ bị xóa vĩnh viễn cho tất cả thành viên. Hành động này không thể hoàn tác.")) {
       setMenuState(null);
       return;
     }

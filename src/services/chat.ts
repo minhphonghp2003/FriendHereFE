@@ -112,6 +112,22 @@ export async function unblockChatUser(
   return res.data;
 }
 
+export async function renameGroupChat(
+  conversationId: number,
+  name: string
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.put(`/Chat/${conversationId}/group/name`, { name });
+  return res.data;
+}
+
+export async function changeGroupImage(
+  conversationId: number,
+  fileId: string
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.put(`/Chat/${conversationId}/group/image`, { fileId });
+  return res.data;
+}
+
 export async function setConversationMuted(
   conversationId: number,
   isMuted: boolean

@@ -11,3 +11,13 @@ export const createGroupChatSchema = (myUserId: number) =>
   });
 
 export type CreateGroupChatFormData = z.infer<ReturnType<typeof createGroupChatSchema>>;
+
+export const renameGroupSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Tên nhóm không được để trống")
+    .max(100, "Tên nhóm tối đa 100 ký tự"),
+});
+
+export type RenameGroupFormData = z.infer<typeof renameGroupSchema>;
