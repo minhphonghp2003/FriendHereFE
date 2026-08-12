@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getPendingJoinRequests } from "@/services/chat";
 import type { JoinRequestDto } from "@/types/chat";
 
-export const usePendingJoinRequests = (conversationId: number) => {
+export const usePendingJoinRequests = (conversationId: number, open?: boolean) => {
   const [requests, setRequests] = useState<JoinRequestDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -15,7 +15,7 @@ export const usePendingJoinRequests = (conversationId: number) => {
   }, []);
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || open === false) return;
     let cancelled = false;
     getPendingJoinRequests(conversationId)
       .then((res) => {
@@ -35,7 +35,7 @@ export const usePendingJoinRequests = (conversationId: number) => {
     return () => {
       cancelled = true;
     };
-  }, [conversationId, refreshKey]);
+  }, [conversationId, refreshKey, open]);
 
   return { requests, isLoading, error, refetch };
 };

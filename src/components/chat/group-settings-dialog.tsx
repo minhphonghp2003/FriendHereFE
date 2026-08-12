@@ -57,7 +57,7 @@ export function GroupSettingsDialog({
     isLoading: loadingMembers,
     error: membersError,
     refetch: refetchMembers,
-  } = useConversationMembers(conversation?.id ?? 0);
+  } = useConversationMembers(conversation?.id ?? 0, open);
   const conversationId = conversation?.id ?? 0;
   const currentUserRole = members.find((m) => m.userId === user?.id)?.role;
   const isHost = currentUserRole === ConversationMemberRole.Host;
@@ -70,7 +70,7 @@ export function GroupSettingsDialog({
     isLoading: loadingJoinRequests,
     error: joinRequestsError,
     refetch: refetchJoinRequests,
-  } = usePendingJoinRequests(isHost ? conversationId : 0);
+  } = usePendingJoinRequests(isHost ? conversationId : 0, open);
   const { mutate: confirmRequest } = useConfirmJoinRequest();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedName, setEditedName] = useState<string | null>(null);

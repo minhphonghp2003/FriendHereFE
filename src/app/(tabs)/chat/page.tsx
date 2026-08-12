@@ -9,7 +9,7 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { MessageCircle, Ban, UserPlus, MoreVertical, BellOff, Bell, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import type { ConversationDto } from "@/types/chat";
-import { getMessagePreview } from "@/types/chat";
+import { getMessagePreview, toChatMessageRenderType } from "@/types/chat";
 import { handleApiError } from "@/lib/axios";
 
 type ChatTab = "all" | "archived";
@@ -142,9 +142,10 @@ export default function ChatListPage() {
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
     const lastPreview = getMessagePreview(conv.lastMessage);
+    const isSystem = conv.lastMessage ? toChatMessageRenderType(conv.lastMessage.type) === "System" : false;
     const preview = !lastPreview
       ? "Chưa có tin nhắn"
-      : !conv.isDirect && conv.lastMessage && conv.lastMessage.senderId !== user?.id
+      : !isSystem && !conv.isDirect && conv.lastMessage && conv.lastMessage.senderId !== user?.id
         ? `${conv.lastMessage.senderName}: ${lastPreview}`
         : lastPreview;
     return (
