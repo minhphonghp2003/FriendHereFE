@@ -67,7 +67,11 @@ export async function leaveGroup(
 
 export async function createJoinRequest(
   conversationId: number
-): Promise<{ data: null; success: boolean; message?: string }> {
+): Promise<{
+  data: { id?: number } | null;
+  success: boolean;
+  message?: string;
+}> {
   const res = await httpClient.post(`/Chat/${conversationId}/join-request`);
   return res.data;
 }

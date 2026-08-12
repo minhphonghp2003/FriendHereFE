@@ -150,6 +150,7 @@ export interface DiscoverableGroupDto {
   image: ImageDto | null;
   memberCount: number;
   isRestricted: boolean;
+  joinRequestStatus?: number | null;
 }
 
 export interface CreateGroupChatRequest {

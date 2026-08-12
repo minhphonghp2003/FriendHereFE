@@ -9,10 +9,10 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { MessageCircle, Ban, UserPlus, MoreVertical, BellOff, Bell, Archive, ArchiveRestore, Trash2, Lock, Loader2, Users } from "lucide-react";
 import type { ConversationDto, DiscoverableGroupDto } from "@/types/chat";
-import { getMessagePreview, toChatMessageRenderType } from "@/types/chat";
+import { getMessagePreview, toChatMessageRenderType, JoinRequestStatus } from "@/types/chat";
 import { handleApiError } from "@/lib/axios";
 import type { AxiosError } from "axios";
-import { useDiscoverableGroups, useCreateJoinRequest, useJoinGroup } from "@/hooks/chat";
+import { useDiscoverableGroups, useCreateJoinRequest, useJoinGroup, useCancelJoinRequest } from "@/hooks/chat";
 
 type ChatTab = "all" | "archived" | "discover";
 
@@ -36,7 +36,8 @@ export default function ChatListPage() {
   const { groups: discoverableGroups, isLoading: loadingDiscoverable, error: discoverableError, refetch: refetchDiscoverable } = useDiscoverableGroups();
   const { mutate: createRequest, isLoading: requesting } = useCreateJoinRequest();
   const { mutate: joinGroup, isLoading: joining } = useJoinGroup();
-  const [processedGroupIds, setProcessedGroupIds] = useState<Set<number>>(new Set());
+  const { mutate: cancelRequest, isLoading: cancelling } = useCancelJoinRequest();
+  const [pendingRequestIds, setPendingRequestIds] = useState<Record<number, number>>({});
 
   const inbox = conversations.filter((c) => !c.isArchived);
   const archived = conversations.filter((c) => c.isArchived);
@@ -154,17 +155,38 @@ export default function ChatListPage() {
   const handleJoinGroup = useCallback(async (group: DiscoverableGroupDto) => {
     try {
       if (group.isRestricted) {
-        await createRequest(group.id);
+        const requestId = await createRequest(group.id);
+        if (requestId) {
+          setPendingRequestIds((prev) => ({ ...prev, [group.id]: requestId }));
+        }
+        refetchDiscoverable();
         toast.success(`Đã gửi yêu cầu tham gia "${group.name}"`);
       } else {
         await joinGroup(group.id);
+        refetchDiscoverable();
         toast.success(`Đã tham gia "${group.name}"`);
       }
-      setProcessedGroupIds((prev) => new Set(prev).add(group.id));
     } catch (err) {
       toast.error(handleApiError(err as AxiosError).message || "Không thể tham gia nhóm");
     }
-  }, [createRequest, joinGroup]);
+  }, [createRequest, joinGroup, refetchDiscoverable]);
+
+  const handleCancelRequest = useCallback(async (group: DiscoverableGroupDto) => {
+    const requestId = pendingRequestIds[group.id];
+    if (!requestId) return;
+    try {
+      await cancelRequest(requestId);
+      setPendingRequestIds((prev) => {
+        const next = { ...prev };
+        delete next[group.id];
+        return next;
+      });
+      refetchDiscoverable();
+      toast.success(`Đã hủy yêu cầu tham gia "${group.name}"`);
+    } catch (err) {
+      toast.error(handleApiError(err as AxiosError).message || "Không thể hủy yêu cầu");
+    }
+  }, [pendingRequestIds, cancelRequest, refetchDiscoverable]);
 
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
@@ -326,8 +348,10 @@ export default function ChatListPage() {
             ) : (
               <div className="flex flex-col gap-2">
                 {discoverableGroups.map((group) => {
-                  const done = processedGroupIds.has(group.id);
-                  const processing = done || requesting || joining;
+                  const status = group.joinRequestStatus ?? null;
+                  const isPending = status === JoinRequestStatus.Pending;
+                  const hasRequestId = !!pendingRequestIds[group.id];
+                  const processing = requesting || joining || (hasRequestId && cancelling);
                   return (
                     <div key={group.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
@@ -344,10 +368,24 @@ export default function ChatListPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">{group.memberCount} thành viên</p>
                       </div>
-                      {done ? (
-                        <span className="shrink-0 text-xs font-medium text-emerald-500">
-                          {group.isRestricted ? "Đã gửi yêu cầu" : "Đã tham gia"}
-                        </span>
+                      {isPending ? (
+                        hasRequestId ? (
+                          <button
+                            onClick={() => handleCancelRequest(group)}
+                            disabled={cancelling}
+                            className="shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
+                          >
+                            {cancelling ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              "Hủy yêu cầu"
+                            )}
+                          </button>
+                        ) : (
+                          <span className="shrink-0 rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground">
+                            Đang chờ duyệt
+                          </span>
+                        )
                       ) : (
                         <button
                           onClick={() => handleJoinGroup(group)}
@@ -357,7 +395,7 @@ export default function ChatListPage() {
                           {processing ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : group.isRestricted ? (
-                            "Yêu cầu"
+                            status === JoinRequestStatus.Rejected ? "Yêu cầu lại" : "Yêu cầu"
                           ) : (
                             "Tham gia"
                           )}
