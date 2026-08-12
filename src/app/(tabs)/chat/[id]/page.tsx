@@ -320,6 +320,20 @@ export default function ChatScreenPage() {
   }, [conversationId, user, opponentId, dispatch]);
 
   useEffect(() => {
+    const unsubRemoved = appHub.onReceiveMemberRemoved((data) => {
+      if (data.conversationId === conversationId) {
+        router.replace("/chat");
+      }
+    });
+    const unsubLeft = appHub.onReceiveMemberLeft((data) => {
+      if (data.conversationId === conversationId) {
+        router.replace("/chat");
+      }
+    });
+    return () => { unsubRemoved(); unsubLeft(); };
+  }, [conversationId, router]);
+
+  useEffect(() => {
     if (!loading) {
       const el = messagesContainerRef.current;
       if (el) el.scrollTo({ top: el.scrollHeight });
@@ -1270,6 +1284,7 @@ export default function ChatScreenPage() {
         onOpenChange={setShowGroupSettings}
         conversation={currentConv ?? null}
         onNameChanged={(newName) => setConvName(newName)}
+        onExitGroup={() => router.replace("/chat")}
       />
     </div>
   );

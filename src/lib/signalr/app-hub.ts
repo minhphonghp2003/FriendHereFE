@@ -51,6 +51,21 @@ export type ReceiveChatBlockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveChatUnblockedCallback = (data: ChatBlockedData) => void;
 export type ReceiveMomentReactedCallback = (data: MomentReactionNotification) => void;
 
+export interface MemberRemovedData {
+  conversationId: number;
+  removedUserId: number;
+  removedUserName: string;
+}
+
+export interface MemberLeftData {
+  conversationId: number;
+  leftUserId: number;
+  leftUserName: string;
+}
+
+export type ReceiveMemberRemovedCallback = (data: MemberRemovedData) => void;
+export type ReceiveMemberLeftCallback = (data: MemberLeftData) => void;
+
 export interface FileMarkedSuccessData {
   originalKey: string;
   thumbKey: string;
@@ -86,6 +101,8 @@ class AppHub {
   private receiveCallSignalCallbacks: Set<ReceiveCallSignalCallback> = new Set();
   private receiveMomentReactedCallbacks: Set<ReceiveMomentReactedCallback> = new Set();
   private receiveFileMarkedSuccessCallbacks: Set<ReceiveFileMarkedSuccessCallback> = new Set();
+  private receiveMemberRemovedCallbacks: Set<ReceiveMemberRemovedCallback> = new Set();
+  private receiveMemberLeftCallbacks: Set<ReceiveMemberLeftCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -200,6 +217,14 @@ class AppHub {
       this.receiveFileMarkedSuccessCallbacks.forEach((cb) => cb(data));
     });
 
+    this.connection.on("ReceiveMemberRemoved", (data: MemberRemovedData) => {
+      this.receiveMemberRemovedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveMemberLeft", (data: MemberLeftData) => {
+      this.receiveMemberLeftCallbacks.forEach((cb) => cb(data));
+    });
+
     this.connection.onclose(() => {
       console.log("[AppHub] Disconnected");
     });
@@ -253,6 +278,8 @@ class AppHub {
     this.receiveCallSignalCallbacks.clear();
     this.receiveMomentReactedCallbacks.clear();
     this.receiveFileMarkedSuccessCallbacks.clear();
+    this.receiveMemberRemovedCallbacks.clear();
+    this.receiveMemberLeftCallbacks.clear();
     const conn = this.connection;
     if (conn) {
       this.connection = null;
@@ -412,6 +439,16 @@ class AppHub {
   onReceiveFileMarkedSuccess(callback: ReceiveFileMarkedSuccessCallback): () => void {
     this.receiveFileMarkedSuccessCallbacks.add(callback);
     return () => { this.receiveFileMarkedSuccessCallbacks.delete(callback); };
+  }
+
+  onReceiveMemberRemoved(callback: ReceiveMemberRemovedCallback): () => void {
+    this.receiveMemberRemovedCallbacks.add(callback);
+    return () => { this.receiveMemberRemovedCallbacks.delete(callback); };
+  }
+
+  onReceiveMemberLeft(callback: ReceiveMemberLeftCallback): () => void {
+    this.receiveMemberLeftCallbacks.add(callback);
+    return () => { this.receiveMemberLeftCallbacks.delete(callback); };
   }
 
   getConnection(): signalR.HubConnection | null {

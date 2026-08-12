@@ -42,6 +42,29 @@ export async function getConversationMembers(
   return res.data;
 }
 
+export async function addGroupMember(
+  conversationId: number,
+  userId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/members`, { userId });
+  return res.data;
+}
+
+export async function removeGroupMember(
+  conversationId: number,
+  userId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.delete(`/Chat/${conversationId}/members/${userId}`);
+  return res.data;
+}
+
+export async function leaveGroup(
+  conversationId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/leave`);
+  return res.data;
+}
+
 export async function getMessages(
   conversationId: number,
   prevId?: number | null,

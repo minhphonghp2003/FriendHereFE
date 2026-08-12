@@ -27,6 +27,7 @@ import {
 import {
   addConversation,
   appendMessage,
+  removeConversation,
   setConversationBlocked,
   setConversationUnblocked,
   updateConversationFromNotification,
@@ -291,6 +292,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         appHub.onReceiveConversationUpdated((data) => {
           if (data.conversationId === activeConversationIdRef.current) return;
           dispatch(updateConversationFromNotification(data));
+        });
+
+        appHub.onReceiveMemberRemoved((data) => {
+          dispatch(removeConversation(data.conversationId));
+        });
+
+        appHub.onReceiveMemberLeft((data) => {
+          dispatch(removeConversation(data.conversationId));
         });
 
         locationHubReadyRef.current = true;
