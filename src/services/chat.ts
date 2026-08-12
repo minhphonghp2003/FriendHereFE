@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ConversationDto, ConversationMemberDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
+import type { ConversationDto, ConversationMemberDto, JoinRequestDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
 import type { CursorPageResponse } from "@/types/api";
 
 export async function getConversations(prevId?: number | null, take = 20): Promise<
@@ -62,6 +62,46 @@ export async function leaveGroup(
   conversationId: number
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/leave`);
+  return res.data;
+}
+
+export async function createJoinRequest(
+  conversationId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/join-request`);
+  return res.data;
+}
+
+export async function joinGroupDirect(
+  conversationId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.post(`/Chat/${conversationId}/join`);
+  return res.data;
+}
+
+export async function cancelJoinRequest(
+  requestId: number
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.delete(`/Chat/join-request/${requestId}`);
+  return res.data;
+}
+
+export async function confirmJoinRequest(
+  requestId: number,
+  isApproved: boolean
+): Promise<{ data: null; success: boolean; message?: string }> {
+  const res = await httpClient.put(`/Chat/join-request/${requestId}`, { isApproved });
+  return res.data;
+}
+
+export async function getPendingJoinRequests(
+  conversationId: number
+): Promise<{
+  success: boolean;
+  data: JoinRequestDto[];
+  message?: string;
+}> {
+  const res = await httpClient.get(`/Chat/${conversationId}/join-requests`);
   return res.data;
 }
 

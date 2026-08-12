@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { LocationProvider } from "@/providers/location-provider";
 import { CallProvider } from "@/providers/call-provider";
+import { JoinRequestNotifications } from "@/components/chat/join-request-notifications";
 import { BottomNav } from "@/components/mobile/bottom-nav";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
@@ -34,6 +35,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 pb-16">{children}</main>
           <BottomNav />
         </div>
+        <JoinRequestNotifications />
         <Dialog open={kicked} onOpenChange={() => {}}>
           <DialogContent showCloseButton={false}>
             <DialogHeader>

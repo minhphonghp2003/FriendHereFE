@@ -112,6 +112,37 @@ export const ConversationMemberRole = {
   Member: 1,
 } as const;
 
+export interface JoinRequestDto {
+  id: number;
+  conversationId: number;
+  userId: number;
+  userName: string;
+  userImage: ImageDto | null;
+  status: number;
+  createdAt: string;
+}
+
+export const JoinRequestStatus = {
+  Pending: 0,
+  Approved: 1,
+  Rejected: 2,
+  Cancelled: 3,
+} as const;
+
+export interface JoinRequestProcessedData {
+  conversationId: number;
+  requestId: number;
+  userId: number;
+  hostUserId: number;
+  result: number;
+  conversationName: string | null;
+}
+
+export const JoinRequestResult = {
+  Approved: 1,
+  Rejected: 2,
+} as const;
+
 export interface CreateGroupChatRequest {
   name?: string;
   memberIds: number[];

@@ -10,6 +10,8 @@ import {
   useAddGroupMember,
   useRemoveGroupMember,
   useLeaveGroup,
+  usePendingJoinRequests,
+  useConfirmJoinRequest,
 } from "@/hooks/chat";
 import { deleteChat } from "@/services/chat";
 import { getMyFriendships } from "@/services/friendship";
@@ -17,10 +19,10 @@ import { isAccepted } from "@/types/friendship";
 import type { FriendshipDto } from "@/types/friendship";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Crown, Loader2, LogOut, RefreshCw, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
+import { Crown, Loader2, LogOut, RefreshCw, Trash2, UserCheck, UserMinus, UserPlus, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/auth-provider";
-import type { ConversationDto, ConversationMemberDto } from "@/types/chat";
+import type { ConversationDto, ConversationMemberDto, JoinRequestDto } from "@/types/chat";
 import { ConversationMemberRole } from "@/types/chat";
 import { handleApiError } from "@/lib/axios";
 
@@ -56,9 +58,20 @@ export function GroupSettingsDialog({
     error: membersError,
     refetch: refetchMembers,
   } = useConversationMembers(conversation?.id ?? 0);
+  const conversationId = conversation?.id ?? 0;
+  const currentUserRole = members.find((m) => m.userId === user?.id)?.role;
+  const isHost = currentUserRole === ConversationMemberRole.Host;
+  const canAddMember = !conversation?.isRestricted || isHost;
   const { mutate: addMember, isLoading: addingMember } = useAddGroupMember();
   const { mutate: removeMember } = useRemoveGroupMember();
   const { mutate: leave, isLoading: leaving } = useLeaveGroup();
+  const {
+    requests: joinRequests,
+    isLoading: loadingJoinRequests,
+    error: joinRequestsError,
+    refetch: refetchJoinRequests,
+  } = usePendingJoinRequests(isHost ? conversationId : 0);
+  const { mutate: confirmRequest } = useConfirmJoinRequest();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedName, setEditedName] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -67,13 +80,9 @@ export function GroupSettingsDialog({
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendsError, setFriendsError] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<number | null>(null);
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
-  const conversationId = conversation?.id ?? 0;
   const name = editedName ?? conversation?.name ?? "";
-  const currentUserRole = members.find((m) => m.userId === user?.id)?.role;
-  const isHost = currentUserRole === ConversationMemberRole.Host;
-  const canAddMember = !conversation?.isRestricted || isHost;
-
   const otherUserId = (f: FriendshipDto) => (user?.id === f.user1Id ? f.user2Id : f.user1Id);
 
   const handleOpenChange = (next: boolean) => {
@@ -195,6 +204,24 @@ export function GroupSettingsDialog({
       toast.success("Đã xóa nhóm");
     } catch (err) {
       toast.error(handleApiError(err as AxiosError).message || "Không thể xóa nhóm");
+    }
+  };
+
+  const handleConfirmJoinRequest = async (req: JoinRequestDto, isApproved: boolean) => {
+    setProcessingRequestId(req.id);
+    try {
+      await confirmRequest(req.id, isApproved);
+      refetchJoinRequests();
+      if (isApproved) refetchMembers();
+      toast.success(
+        isApproved
+          ? `Đã duyệt ${req.userName} vào nhóm`
+          : `Đã từ chối yêu cầu của ${req.userName}`,
+      );
+    } catch (err) {
+      toast.error(handleApiError(err as AxiosError).message || "Không thể xử lý yêu cầu tham gia");
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -359,6 +386,76 @@ export function GroupSettingsDialog({
                 </Button>
               )}
             </div>
+
+            {isHost && conversation?.isRestricted && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Yêu cầu tham gia ({joinRequests.length})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={refetchJoinRequests}
+                    disabled={loadingJoinRequests}
+                    className="rounded-full p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
+                    aria-label="Tải lại yêu cầu tham gia"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingJoinRequests ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                  {loadingJoinRequests && joinRequests.length === 0 ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : joinRequestsError ? (
+                    <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
+                      <p>{joinRequestsError.message}</p>
+                      <Button type="button" variant="outline" size="sm" onClick={refetchJoinRequests}>
+                        Thử lại
+                      </Button>
+                    </div>
+                  ) : joinRequests.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Không có yêu cầu nào</p>
+                  ) : (
+                    joinRequests.map((req) => {
+                      const processing = processingRequestId === req.id;
+                      return (
+                        <div key={req.id} className="flex items-center gap-3 px-3 py-2.5">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                            {req.userImage?.thumbUrl ? (
+                              <img src={req.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              req.userName?.charAt(0)?.toUpperCase() ?? "?"
+                            )}
+                          </div>
+                          <p className="flex-1 truncate text-sm font-medium">{req.userName}</p>
+                          <div className="flex shrink-0 gap-1.5">
+                            <Button
+                              size="sm"
+                              disabled={processing}
+                              onClick={() => handleConfirmJoinRequest(req, true)}
+                            >
+                              {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
+                              Duyệt
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={processing}
+                              onClick={() => handleConfirmJoinRequest(req, false)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Từ chối
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
 
             {!loadingMembers && !membersError && members.length > 0 && (
               <div className="flex flex-col gap-2">
