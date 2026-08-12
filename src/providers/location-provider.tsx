@@ -302,6 +302,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           dispatch(removeConversation(data.conversationId));
         });
 
+        appHub.onReceiveGroupDeleted((data) => {
+          dispatch(removeConversation(data.conversationId));
+        });
+
         locationHubReadyRef.current = true;
         if (geoReadyRef.current || !("geolocation" in navigator)) tryJoin();
       } catch (err) {

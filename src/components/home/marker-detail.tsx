@@ -185,6 +185,11 @@ export const MarkerDetail = ({
     }
   }, [friendship, actionLoading, onFriendshipChange]);
 
+const handleViewProfile = useCallback(() => {
+    if (isCurrentUser || !userDetail) return;
+    router.push(`/user/${userDetail.id}`);
+  }, [isCurrentUser, userDetail, router]);
+
   if (loading) {
     return (
       <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
@@ -304,8 +309,10 @@ export const MarkerDetail = ({
     <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
       <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-zinc-300 dark:bg-zinc-600" />
       <div className="flex items-start gap-3">
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow"
+        <button
+          onClick={handleViewProfile}
+          disabled={isCurrentUser}
+          className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow disabled:cursor-default"
           style={{ backgroundColor: isCurrentUser ? "#3b82f6" : color }}
         >
           {image ? (
@@ -313,8 +320,11 @@ export const MarkerDetail = ({
           ) : (
             <span className="text-lg font-bold text-white">{firstLetter}</span>
           )}
-        </div>
-        <div className="min-w-0 flex-1">
+        </button>
+        <div
+          className={`min-w-0 flex-1 ${isCurrentUser ? "" : "cursor-pointer"}`}
+          onClick={isCurrentUser ? undefined : handleViewProfile}
+        >
           <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
             {name}
             {isCurrentUser && (

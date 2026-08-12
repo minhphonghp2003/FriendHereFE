@@ -1,5 +1,5 @@
 import { httpClient } from "@/lib/axios";
-import type { ConversationDto, ConversationMemberDto, JoinRequestDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
+import type { ConversationDto, ConversationMemberDto, DiscoverableGroupDto, JoinRequestDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
 import type { CursorPageResponse } from "@/types/api";
 
 export async function getConversations(prevId?: number | null, take = 20): Promise<
@@ -102,6 +102,15 @@ export async function getPendingJoinRequests(
   message?: string;
 }> {
   const res = await httpClient.get(`/Chat/${conversationId}/join-requests`);
+  return res.data;
+}
+
+export async function getDiscoverableGroups(): Promise<{
+  success: boolean;
+  data: DiscoverableGroupDto[];
+  message?: string;
+}> {
+  const res = await httpClient.get(`/Chat/discoverable`);
   return res.data;
 }
 

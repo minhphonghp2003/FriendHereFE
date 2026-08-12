@@ -161,6 +161,10 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
     }, 500);
   };
 
+  const handleViewProfile = () => {
+    router.push(`/user/${moment.userId}`);
+  };
+
   const handleSendMessage = async () => {
     if (sendingMessage) return;
     setSendingMessage(true);
@@ -298,7 +302,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
 
         {infoVisible && (
           <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200 absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 cursor-pointer items-center gap-3" onClick={handleViewProfile}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
               {moment.userImage ? (
                 <img
@@ -424,7 +428,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
 
   return (
     <div className="rounded-lg border border-border bg-card">
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex cursor-pointer items-center gap-3 p-3" onClick={handleViewProfile}>
         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
           {moment.userImage ? (
             <img

@@ -143,6 +143,14 @@ export const JoinRequestResult = {
   Rejected: 2,
 } as const;
 
+export interface DiscoverableGroupDto {
+  id: number;
+  name: string;
+  image: ImageDto | null;
+  memberCount: number;
+  isRestricted: boolean;
+}
+
 export interface CreateGroupChatRequest {
   name?: string;
   memberIds: number[];

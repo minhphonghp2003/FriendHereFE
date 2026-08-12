@@ -7,12 +7,19 @@ import { setConversations, addConversations, updateConversationState, removeConv
 import { getConversations, setConversationMuted, setConversationArchived, deleteChat } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { MessageCircle, Ban, UserPlus, MoreVertical, BellOff, Bell, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import type { ConversationDto } from "@/types/chat";
+import { MessageCircle, Ban, UserPlus, MoreVertical, BellOff, Bell, Archive, ArchiveRestore, Trash2, Lock, Loader2, Users } from "lucide-react";
+import type { ConversationDto, DiscoverableGroupDto } from "@/types/chat";
 import { getMessagePreview, toChatMessageRenderType } from "@/types/chat";
 import { handleApiError } from "@/lib/axios";
+import type { AxiosError } from "axios";
+import { useDiscoverableGroups, useCreateJoinRequest, useJoinGroup } from "@/hooks/chat";
 
-type ChatTab = "all" | "archived";
+type ChatTab = "all" | "archived" | "discover";
+
+const getNameDisplay = (name: string) => {
+  const cleaned = name.trim();
+  return cleaned.length > 4 ? cleaned.slice(0, 4) : cleaned;
+};
 
 export default function ChatListPage() {
   const router = useRouter();
@@ -25,6 +32,11 @@ export default function ChatListPage() {
   const [menuState, setMenuState] = useState<{ convId: number; x: number; y: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const prevIdRef = useRef<number | null>(null);
+
+  const { groups: discoverableGroups, isLoading: loadingDiscoverable, error: discoverableError, refetch: refetchDiscoverable } = useDiscoverableGroups();
+  const { mutate: createRequest, isLoading: requesting } = useCreateJoinRequest();
+  const { mutate: joinGroup, isLoading: joining } = useJoinGroup();
+  const [processedGroupIds, setProcessedGroupIds] = useState<Set<number>>(new Set());
 
   const inbox = conversations.filter((c) => !c.isArchived);
   const archived = conversations.filter((c) => c.isArchived);
@@ -138,6 +150,21 @@ export default function ChatListPage() {
       setMenuState(null);
     }
   }, [dispatch]);
+
+  const handleJoinGroup = useCallback(async (group: DiscoverableGroupDto) => {
+    try {
+      if (group.isRestricted) {
+        await createRequest(group.id);
+        toast.success(`Đã gửi yêu cầu tham gia "${group.name}"`);
+      } else {
+        await joinGroup(group.id);
+        toast.success(`Đã tham gia "${group.name}"`);
+      }
+      setProcessedGroupIds((prev) => new Set(prev).add(group.id));
+    } catch (err) {
+      toast.error(handleApiError(err as AxiosError).message || "Không thể tham gia nhóm");
+    }
+  }, [createRequest, joinGroup]);
 
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
@@ -267,21 +294,98 @@ export default function ChatListPage() {
         >
           Đã lưu trữ
         </button>
+        <button
+          onClick={() => { setTab("discover"); setMenuState(null); }}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "discover" ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+        >
+          Khám phá
+        </button>
       </div>
       <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
-        {visible.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-            <MessageCircle className="w-12 h-12 mb-3" />
-            <p className="text-sm">
-              {tab === "all" ? "Chưa có tin nhắn nào" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
-            </p>
-          </div>
-        )}
-        {visible.map((conv) => renderRow(conv))}
-        {loadingMore && (
-          <div className="flex justify-center py-4">
-            <div className="w-5 h-5 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600" />
-          </div>
+        {tab === "discover" ? (
+          <>
+            {loadingDiscoverable && discoverableGroups.length === 0 ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : discoverableError ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <p className="text-sm text-muted-foreground">{discoverableError.message}</p>
+                <button
+                  onClick={refetchDiscoverable}
+                  className="rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : discoverableGroups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+                <Users className="mb-3 h-12 w-12" />
+                <p className="text-sm">Không có nhóm nào để tham gia</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {discoverableGroups.map((group) => {
+                  const done = processedGroupIds.has(group.id);
+                  const processing = done || requesting || joining;
+                  return (
+                    <div key={group.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                        {group.image?.thumbUrl ? (
+                          <img src={group.image.thumbUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          getNameDisplay(group.name)
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                          <span className="truncate">{group.name}</span>
+                          {group.isRestricted && <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{group.memberCount} thành viên</p>
+                      </div>
+                      {done ? (
+                        <span className="shrink-0 text-xs font-medium text-emerald-500">
+                          {group.isRestricted ? "Đã gửi yêu cầu" : "Đã tham gia"}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleJoinGroup(group)}
+                          disabled={processing}
+                          className="shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {processing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : group.isRestricted ? (
+                            "Yêu cầu"
+                          ) : (
+                            "Tham gia"
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {visible.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
+                <MessageCircle className="w-12 h-12 mb-3" />
+                <p className="text-sm">
+                  {tab === "all" ? "Chưa có tin nhắn nào" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
+                </p>
+              </div>
+            )}
+            {visible.map((conv) => renderRow(conv))}
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600" />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
