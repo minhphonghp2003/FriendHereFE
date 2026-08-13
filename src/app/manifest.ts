@@ -38,5 +38,20 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    screenshots: [
+      {
+        src: "/screenshot-mobile.png",
+        sizes: "1080x1920",
+        type: "image/png",
+        label: "FriendHere on mobile",
+      },
+      {
+        src: "/screenshot-wide.png",
+        sizes: "1920x1080",
+        type: "image/png",
+        form_factor: "wide",
+        label: "FriendHere on desktop",
+      },
+    ],
   };
 }
