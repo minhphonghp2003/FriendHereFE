@@ -1,6 +1,6 @@
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { toast } from "sonner";
-import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
+import { TOKEN_KEY, TOKEN_EXPIRES_AT_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
 import { handleApiError } from "./error-handler";
 
 export const setupRequestInterceptor = (instance: AxiosInstance): void => {
@@ -29,6 +29,7 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
         if (typeof window !== "undefined") {
           const hadToken = !!localStorage.getItem(TOKEN_KEY);
           localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
           localStorage.removeItem(USER_ID_KEY);
           localStorage.removeItem(USER_INFO_KEY);
           if (hadToken) {

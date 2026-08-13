@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
+import { TOKEN_KEY, TOKEN_EXPIRES_AT_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
 
 function decodeJWT(token: string) {
   try {
@@ -25,6 +25,7 @@ export default function AuthCallbackPage() {
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+    const expiresAt = params.get("expiresAt");
     const error = params.get("error");
 
     if (error || !token) {
@@ -45,6 +46,7 @@ export default function AuthCallbackPage() {
     };
 
     localStorage.setItem(TOKEN_KEY, token);
+    if (expiresAt) localStorage.setItem(TOKEN_EXPIRES_AT_KEY, expiresAt);
     localStorage.setItem(USER_ID_KEY, String(user.id));
     localStorage.setItem(USER_INFO_KEY, JSON.stringify({ name: user.name, email: user.email }));
 
