@@ -31,12 +31,14 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   return (
     <LocationProvider>
       <CallProvider>
-        <div className="flex h-full flex-col safe-top safe-left safe-right">
-          <main className="flex-1 overflow-y-auto pb-20">
-            {children}
-          </main>
-          <BottomNav />
+        <div className="flex h-full flex-col">
+          <div className="safe-top safe-left safe-right flex-1 overflow-hidden">
+            <main className="h-full overflow-y-auto pb-20">
+              {children}
+            </main>
+          </div>
         </div>
+        <BottomNav />
         <JoinRequestNotifications />
         <Dialog open={kicked} onOpenChange={() => {}}>
           <DialogContent showCloseButton={false}>
