@@ -39,7 +39,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
             paddingRight: "env(safe-area-inset-right)",
           }}
         >
-          <main className="flex-1 overflow-y-auto" style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }}>
+          <main className="flex-1 overflow-y-auto pb-20">
             {children}
           </main>
           <BottomNav />
