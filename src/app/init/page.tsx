@@ -12,6 +12,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { env } from "@/config/env";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { PwaInstallButton } from "@/components/pwa-install-button";
 
 function GoogleIcon() {
   return (
@@ -102,36 +103,20 @@ export default function InitPage() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-10">
       <div className="fixed right-4 top-4 z-50">
         <ThemeToggle />
       </div>
 
-      {/* Hero */}
-      <div className="relative h-[42vh] w-full overflow-hidden">
-        {/* Replace this image with your own generated hero */}
-        <Image
-          src="/images/login-hero.webp"
-          alt="LiveBuddy Hero"
-          fill
-          priority
-          className="object-cover"
-        />
-
-        {/* Gradient for smooth transition */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background" />
-      </div>
-
-      {/* Content */}
-      <div className="-mt-8 flex flex-1 flex-col rounded-t-[32px] bg-background px-6 pt-8 pb-10">
-        <div className="mb-8 text-center">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center">
           <Image
             src="/images/logo.webp"
             alt={env.NEXT_PUBLIC_APP_NAME}
-            width={64}
-            height={64}
+            width={192}
+            height={192}
             priority
-            className="mx-auto mb-4"
+            className="mx-auto mb-6"
           />
 
           <h1 className="text-3xl font-bold tracking-tight">
@@ -168,7 +153,7 @@ export default function InitPage() {
             </div>
           </div>
 
-          <Link href="/login">
+          <Link href="/login" className="block">
             <Button
               variant="outline"
               className="h-12 w-full rounded-xl gap-3"
@@ -187,6 +172,10 @@ export default function InitPage() {
               Đăng ký
             </Link>
           </p>
+        </div>
+
+        <div className="flex justify-center pt-2">
+          <PwaInstallButton />
         </div>
       </div>
     </div>
