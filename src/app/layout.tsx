@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
 
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AuthProvider>
           </ReduxProvider>
           <Toaster position="top-right" richColors />
+          <ServiceWorkerRegister />
         </ThemeProvider>
         {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
