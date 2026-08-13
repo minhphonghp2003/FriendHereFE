@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
+
 import { useAuth } from "@/providers/auth-provider";
 import { register as apiRegister } from "@/services/auth";
 
@@ -47,6 +49,8 @@ export default function RegisterPage() {
         age: Number(form.age),
         genderId: Number(form.genderId),
       });
+
+      localStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expiresAt);
 
       login(
         {
