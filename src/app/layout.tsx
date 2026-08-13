@@ -35,7 +35,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          themes={["light", "dark"]}
         >
           <ReduxProvider>
             <AuthProvider>

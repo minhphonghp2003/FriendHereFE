@@ -16,8 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload, Moon, Users, UserPlus } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload, Users, UserPlus } from "lucide-react";
 import { PwaInstallRow } from "@/components/pwa-install-button";
 import type { User as UserType } from "@/types/user";
 import type { FriendshipDto } from "@/types/friendship";
@@ -202,12 +201,6 @@ export default function SettingsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="flex w-full items-center gap-4 p-4">
-            <Moon className="h-5 w-5 text-muted-foreground" />
-            <span className="flex-1">Chế độ tối</span>
-            <ThemeToggle />
-          </div>
-          <Separator />
           <PwaInstallRow />
         </CardContent>
       </Card>
