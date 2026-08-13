@@ -13,7 +13,13 @@ export default function MomentsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="fixed inset-x-0 bottom-16 top-0 z-40 flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-x-0 z-40 flex flex-col overflow-hidden"
+      style={{
+        top: "env(safe-area-inset-top)",
+        bottom: "calc(4rem + env(safe-area-inset-bottom))",
+      }}
+    >
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h1 className="text-2xl font-bold">Khoảnh khắc</h1>
         <Button size="sm" onClick={() => setShowCreate(true)}>

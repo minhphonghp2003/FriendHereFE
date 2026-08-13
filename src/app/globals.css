@@ -127,14 +127,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100%;
   }
   /* Safe area helpers for iOS PWA */
-  .ios-fill {
-    height: 100vh;
-    height: 100dvh;
-  }
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
