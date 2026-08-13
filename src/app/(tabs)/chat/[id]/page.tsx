@@ -846,7 +846,13 @@ export default function ChatScreenPage() {
   const actionTop = Math.max(actionPad, Math.min(actionPos.y, window.innerHeight - actionPopupHeight - actionPad));
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-hidden pb-16">
+    <div
+      className="fixed inset-x-0 z-40 flex flex-col overflow-hidden"
+      style={{
+        top: "env(safe-area-inset-top)",
+        bottom: "calc(4rem + env(safe-area-inset-bottom))",
+      }}
+    >
       <div className="flex items-center gap-3 p-3 border-b border-border">
         <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded">
           <ArrowLeft className="w-5 h-5" />
