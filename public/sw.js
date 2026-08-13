@@ -1,7 +1,7 @@
-// Basic service worker for PWA support
-// Handles app shell caching and offline fallback
-
-const CACHE_NAME = "friendhere-v1";
+// Service worker with auto-update support
+// Bump CACHE_VERSION when you want to force a full refresh
+const CACHE_VERSION = "1";
+const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/init";
 
 self.addEventListener("install", (event) => {
@@ -15,34 +15,46 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       )
     )
   );
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
-  // Skip non-GET requests
   if (event.request.method !== "GET") return;
 
-  // Skip cross-origin requests (API calls, images, etc.)
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first strategy for navigation requests, fall back to cache/offline
+  // Network-first for navigation requests — ensures users get fresh HTML
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(event.request).then(
-          (response) => response ?? caches.match(OFFLINE_URL)
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request).then(
+            (response) => response ?? caches.match(OFFLINE_URL)
+          )
         )
-      )
     );
     return;
   }
 
-  // Stale-while-revalidate for other static assets
+  // Stale-while-revalidate for static assets
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetchPromise = fetch(event.request)
