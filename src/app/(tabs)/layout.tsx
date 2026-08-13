@@ -31,7 +31,14 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   return (
     <LocationProvider>
       <CallProvider>
-        <div className="flex h-dvh flex-col">
+        <div
+          className="flex flex-col ios-fill"
+          style={{
+            paddingTop: "env(safe-area-inset-top)",
+            paddingLeft: "env(safe-area-inset-left)",
+            paddingRight: "env(safe-area-inset-right)",
+          }}
+        >
           <main className="flex-1 overflow-y-auto" style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }}>
             {children}
           </main>
