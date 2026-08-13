@@ -12,6 +12,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { env } from "@/config/env";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { PwaInstallButton } from "@/components/pwa-install-button";
 
 function GoogleIcon() {
   return (
@@ -171,6 +172,10 @@ export default function InitPage() {
               Đăng ký
             </Link>
           </p>
+        </div>
+
+        <div className="flex justify-center pt-2">
+          <PwaInstallButton />
         </div>
       </div>
     </div>
