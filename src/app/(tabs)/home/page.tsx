@@ -200,7 +200,7 @@ export default function HomePage() {
 
     return (
       <>
-        <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem)" }}>
+        <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))" }}>
           <APIProvider apiKey={apiKey}>
             <Map
               key={mapColorScheme}

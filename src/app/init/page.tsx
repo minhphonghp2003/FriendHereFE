@@ -11,7 +11,6 @@ import { useAuth } from "@/providers/auth-provider";
 
 import { env } from "@/config/env";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PwaInstallButton } from "@/components/pwa-install-button";
 
 function GoogleIcon() {
@@ -104,10 +103,6 @@ export default function InitPage() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-10">
-      <div className="fixed right-4 top-4 z-50">
-        <ThemeToggle />
-      </div>
-
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <Image
