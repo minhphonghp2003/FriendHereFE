@@ -31,8 +31,10 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   return (
     <LocationProvider>
       <CallProvider>
-        <div className="flex min-h-dvh flex-col">
-          <main className="flex-1 pb-16">{children}</main>
+        <div className="flex h-dvh flex-col">
+          <main className="flex-1 overflow-y-auto" style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }}>
+            {children}
+          </main>
           <BottomNav />
         </div>
         <JoinRequestNotifications />
