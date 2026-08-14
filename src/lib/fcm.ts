@@ -95,7 +95,15 @@ let cachedToken: string | null = null;
 type TokenListener = (token: string) => void;
 const tokenListeners = new Set<TokenListener>();
 
-/** Subscribe to FCM token rotations (fires with the new token). */
+/**
+ * Subscribe to FCM token rotation AND any token change observed through
+ * getFcmToken. The PushProvider forwards each rotation to
+ * PUT /api/Auth/fcm-token.
+ *
+ * Note: the web SDK has no onTokenRefresh (native SDKs only) — rotation is
+ * detected by re-calling getToken() (PushProvider does this on foreground
+ * and auth changes) and comparing against the cached value here.
+ */
 export function onFcmTokenRefresh(listener: TokenListener): () => void {
   tokenListeners.add(listener);
   return () => tokenListeners.delete(listener);

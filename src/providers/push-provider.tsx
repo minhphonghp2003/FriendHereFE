@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * PushProvider — wires FCM push notifications to the app lifecycle:
+ * PushProvider — wires FCM push notifications to the app lifecycle
+ * (BE contract: docs/fcm-push-notifications.md):
  *
- * 1. On login (auth state present): resolve the FCM token without prompting
- *    (only if permission was already granted) and sync it to the BE.
- * 2. On token rotation (onFcmTokenRefresh): re-sync via
- *    PUT /api/Auth/fcm-token (requires auth → interceptor adds the JWT).
- * 3. Foreground pushes (onForegroundMessage): render in-app toasts; the SW
- *    skips system notifications while the page is visible (see sw.js).
- * 4. On logout: invalidate the local FCM token (BE keeps the last known
- *    token; a fresh login on this device overwrites it anyway).
+ * 1. Startup: resolve the FCM token and keep it in memory (no prompt —
+ *    only when permission was already granted).
+ * 2. Login/register: pages attach `fcmToken` to the auth request body.
+ * 3. Token rotation + post-grant: sync via PUT /api/Auth/fcm-token
+ *    whenever the token changes while authenticated (debounced), and
+ *    re-check when the app returns to the foreground.
+ * 4. Foreground pushes: the SW forwards payloads via postMessage; chat
+ *    renders an in-app toast, calls are handled live by SignalR.
+ * 5. Logout: invalidate the local token (next login re-registers it).
  *
  * Dev note: the service worker only registers in production, so FCM is
  * effectively production-only on the web (getToken needs the SW).
@@ -33,7 +35,13 @@ const SYNC_DEBOUNCE_MS = 2000;
 export function PushProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
 
-  // Sync token → BE whenever it (re)appears while authenticated.
+  // Checklist item 1 — at startup: prime the in-memory token (no prompt).
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    getFcmToken().catch(() => {});
+  }, []);
+
+  // Checklist item 3 — sync token → BE on login / rotation / foreground.
   useEffect(() => {
     if (!isAuthenticated || !isFirebaseConfigured()) return;
 
@@ -41,7 +49,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
     let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
     const syncToken = (token: string) => {
-      if (disposed) return;
+      if (disposed || !token) return;
       // Debounce: rotation + foreground fetch can both fire in quick succession.
       if (syncTimer) clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
@@ -56,10 +64,24 @@ export function PushProvider({ children }: { children: ReactNode }) {
       if (token) syncToken(token);
     });
 
+    // onNewToken (rotation) → PUT immediately.
     const unsubscribe = onFcmTokenRefresh(syncToken);
+
+    // App returned to foreground — token may have rotated while hidden
+    // (BE doc lists foreground as a PUT trigger).
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        getFcmToken().then(({ token }) => {
+          if (token) syncToken(token);
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       disposed = true;
       unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibility);
       if (syncTimer) clearTimeout(syncTimer);
     };
   }, [isAuthenticated]);
@@ -81,7 +103,8 @@ export function PushProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Invalidate the local token on logout.
+  // Invalidate the local token on logout (next login re-registers it —
+  // BE is single-device-per-user, newest login wins).
   useEffect(() => {
     if (isAuthenticated) return;
     deleteFcmToken().catch(() => {});
