@@ -23,7 +23,21 @@ export const setupResponseInterceptor = (instance: AxiosInstance): void => {
     (response: AxiosResponse) => response,
     async (error: AxiosError) => {
       const originalRequest = error.config as
-        (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+        (InternalAxiosRequestConfig & { _retry?: boolean; _offlineQueued?: boolean }) | undefined;
+
+      // A mutation that was queued while offline — inform the user without
+      // showing a scary error toast; the request will sync automatically.
+      if (originalRequest?._offlineQueued || error.code === "ERR_OFFLINE_QUEUED") {
+        toast.info("You're offline — action queued and will sync automatically.");
+        return Promise.reject(error);
+      }
+
+      // Network failure while offline (e.g. no cached GET available).
+      // The offline banner already communicates the state, so skip the toast.
+      if (error.code === "ERR_NETWORK" && typeof navigator !== "undefined" && !navigator.onLine) {
+        return Promise.reject(error);
+      }
+
       if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
         originalRequest._retry = true;
         if (typeof window !== "undefined") {
