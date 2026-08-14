@@ -24,6 +24,7 @@ import {
   type Messaging,
 } from "firebase/messaging";
 import { env } from "@/config/env";
+import { updateFcmToken } from "@/services/auth";
 import {
   PUSH_TYPE,
   SW_COMMAND,
@@ -162,6 +163,30 @@ export async function getFcmToken(
  */
 export function getCachedFcmToken(): string | null {
   return cachedToken;
+}
+
+/**
+ * Called AFTER a successful login/register: obtain the FCM token (prompting
+ * for notification permission if the user hasn't granted it yet) and sync it
+ * to the BE via PUT /api/Auth/fcm-token.
+ *
+ * This is the reliable path for first-time users who have no token at the
+ * moment they log in (the login body's fcmToken is best-effort only).
+ * Best-effort: never throws; failures are logged.
+ */
+export async function syncFcmTokenAfterAuth(): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const { token } = await getFcmToken({ prompt: true });
+    if (token) {
+      console.log("[fcm] Syncing FCM token to BE:", token);
+      await updateFcmToken(token);
+    } else {
+      console.warn("[fcm] No FCM token obtained after auth (permission denied/unavailable?)");
+    }
+  } catch (err) {
+    console.warn("[fcm] Failed to sync token after auth:", err);
+  }
 }
 
 /** Invalidate the current FCM token (call on logout). */

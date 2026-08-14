@@ -13,7 +13,7 @@ import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
 
 import { useAuth } from "@/providers/auth-provider";
 import { login as apiLogin } from "@/services/auth";
-import { getCachedFcmToken, getFcmToken } from "@/lib/fcm";
+import { getCachedFcmToken, getFcmToken, syncFcmTokenAfterAuth } from "@/lib/fcm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,6 +53,11 @@ export default function LoginPage() {
         },
         result.token,
       );
+
+      // Obtain the FCM token (prompts for permission if needed) and register
+      // it via PUT /fcm-token — the reliable path for first-time users.
+      // Best-effort; never blocks the redirect.
+      void syncFcmTokenAfterAuth();
 
       router.replace("/home");
     } catch (err) {
