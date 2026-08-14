@@ -15,7 +15,6 @@ export const LoadingVideo = ({ className, size = "md" }: LoadingVideoProps) => {
   return (
     <video
       className={cn(sizeClasses[size], "object-contain", className)}
-      src="/loading.webm"
       autoPlay
       loop
       muted
@@ -24,6 +23,9 @@ export const LoadingVideo = ({ className, size = "md" }: LoadingVideoProps) => {
       preload="auto"
       role="status"
       aria-label="Loading"
-    />
+    >
+      <source src="/loading.mp4" type="video/mp4" />
+      <source src="/loading.webm" type="video/webm" />
+    </video>
   );
 };
