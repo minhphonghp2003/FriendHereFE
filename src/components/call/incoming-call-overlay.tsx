@@ -10,6 +10,8 @@ interface Props {
 }
 
 export const IncomingCallOverlay = ({ peer, onAccept, onReject }: Props) => {
+  const isVideo = peer.hasVideo ?? false;
+
   return (
     <div className="fixed inset-0 z-[75] flex flex-col items-center justify-between bg-black/90 p-8">
       <div className="flex flex-col items-center gap-5 pt-16">
@@ -25,7 +27,7 @@ export const IncomingCallOverlay = ({ peer, onAccept, onReject }: Props) => {
         </div>
         <div className="text-center">
           <p className="text-2xl font-semibold text-white">{peer.name}</p>
-          <p className="mt-1 text-sm text-white/70">Cuộc gọi đến...</p>
+          <p className="mt-1 text-sm text-white/70">{isVideo ? "Video call" : "Voice call"}</p>
         </div>
       </div>
       <div className="flex items-center gap-16 pb-16">

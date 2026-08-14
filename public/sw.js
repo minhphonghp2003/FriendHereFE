@@ -227,22 +227,21 @@ async function showChatNotification(data) {
 async function showCallNotification(data) {
   const callId = String(data.callId ?? "");
   const callerName = String(data.callerName ?? "Unknown caller");
-  const hasVideo = String(data.hasVideo ?? "false") === "true";
+  const hasVideo = String(data.hasVideo ?? "false") === "true" || data.hasVideo === true;
   const tag = `${CALL_TAG_PREFIX}${callId}`;
 
   await self.registration.showNotification(
-    `Incoming ${hasVideo ? "video" : "voice"} call`,
+    hasVideo ? "⭐ Incoming video call" : "📞 Incoming call",
     {
       body: `${callerName} is calling…`,
       icon: data.callerAvatar ? String(data.callerAvatar) : "/icon-192x192.png",
       badge: "/favicon-32x32.png",
       tag,
-      // Keep on screen until answered/dismissed (desktop; Android ignores).
       requireInteraction: true,
       vibrate: [500, 300, 500],
       data: {
+        deepLink: "/home",
         type: PUSH_TYPE.CALL_INCOMING,
-        deepLink: `/home`,
         callId,
       },
     },
@@ -250,9 +249,7 @@ async function showCallNotification(data) {
 
   // Best-effort auto-dismiss after the ring window elapses.
   setTimeout(() => {
-    self.registration.getNotifications({ tag }).then((list) => {
-      list.forEach((n) => n.close());
-    });
+    self.registration.getNotifications({ tag }).then((list) => list.forEach((n) => n.close()));
   }, CALL_RING_TIMEOUT_MS);
 }
 

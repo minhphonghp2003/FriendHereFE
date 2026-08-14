@@ -347,9 +347,9 @@ class AppHub {
     await this.connection.invoke("Typing", conversationId, isTyping);
   }
 
-  async call(targetUserId: number): Promise<void> {
+  async call(targetUserId: number, hasVideo?: boolean): Promise<void> {
     if (!this.connection) throw new Error("AppHub not connected");
-    await this.connection.invoke("Call", { targetUserId });
+    await this.connection.invoke("Call", { targetUserId, hasVideo });
   }
 
   async sendCallSignal(dto: CallSignalDto): Promise<void> {

@@ -15,12 +15,17 @@ import { IncomingCallOverlay } from "@/components/call/incoming-call-overlay";
 import { OutgoingCallOverlay } from "@/components/call/outgoing-call-overlay";
 import { ActiveCallOverlay } from "@/components/call/active-call-overlay";
 import type { ImageDto } from "@/types/chat";
-import type { CallPeer, CallSignalData } from "@/types/call";
+import type { CallPeer, CallSignalData, IncomingCallData } from "@/types/call";
 
 type CallStatus = "idle" | "incoming" | "outgoing" | "active";
 
 interface CallContextValue {
-  startCall: (targetUserId: number, name?: string, image?: ImageDto | null) => void;
+  startCall: (
+    targetUserId: number,
+    name?: string,
+    image?: ImageDto | null,
+    hasVideo?: boolean,
+  ) => void;
 }
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -125,9 +130,14 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const startCall = useCallback(
-    async (targetUserId: number, name = "", image: ImageDto | null = null) => {
+    async (
+      targetUserId: number,
+      name = "",
+      image: ImageDto | null = null,
+      hasVideo = true,
+    ) => {
       if (statusRef.current !== "idle") return;
-      const newPeer: CallPeer = { userId: targetUserId, name, image };
+      const newPeer: CallPeer = { userId: targetUserId, name, image, hasVideo };
       peerRef.current = newPeer;
       setPeer(newPeer);
       setStatus("outgoing");
@@ -136,7 +146,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         const stream = await getLocalMedia();
         const pc = createPeer(targetUserId);
         addLocalTracks(pc, stream);
-        await appHub.call(targetUserId);
+        await appHub.call(targetUserId, hasVideo);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await appHub.sendCallSignal({
@@ -229,6 +239,8 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         userId: data.callerUserId,
         name: data.callerName,
         image: data.callerImage,
+        callId: data.callId,
+        hasVideo: data.hasVideo,
       };
       peerRef.current = newPeer;
       setPeer(newPeer);

@@ -46,7 +46,7 @@ export interface ChatMessagePushData {
   sentAt: string;
 }
 
-export interface CallIncomingPushData {
+export interface IncomingCallPushData {
   type: typeof PUSH_TYPE.CALL_INCOMING;
   /** Unique call id — used to tag/cancel the ringing notification */
   callId: string;
@@ -69,7 +69,7 @@ export interface CallEndedPushData {
   reason: CallEndedReason;
 }
 
-export type PushPayloadData = ChatMessagePushData | CallIncomingPushData | CallEndedPushData;
+export type PushPayloadData = ChatMessagePushData | IncomingCallPushData | CallEndedPushData;
 
 /** Message posted by the SW to a window client when a notification is clicked */
 export const SW_MESSAGE = {
