@@ -1,6 +1,7 @@
 import axios from "axios";
 import { env } from "@/config/env";
 import { API_TIMEOUT } from "@/constants";
+import { offlineFirstAdapter } from "@/lib/offline";
 import { setupRequestInterceptor, setupResponseInterceptor } from "./interceptors";
 
 const httpClient = axios.create({
@@ -9,6 +10,7 @@ const httpClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  adapter: offlineFirstAdapter,
 });
 
 setupRequestInterceptor(httpClient);

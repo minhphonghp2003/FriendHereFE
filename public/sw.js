@@ -1,13 +1,32 @@
 // Service worker with auto-update support
 // Bump CACHE_VERSION when you want to force a full refresh
-const CACHE_VERSION = "1";
+const CACHE_VERSION = "2";
 const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
-const OFFLINE_URL = "/init";
+const OFFLINE_URL = "/offline";
+
+// App-shell routes to pre-cache at install so navigation works offline.
+const PRECACHE_ROUTES = [
+  "/init",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/home",
+  "/chat",
+  "/moments",
+  "/timelines",
+  "/settings",
+  "/offline",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
-  );
+  const precache = caches
+    .open(CACHE_NAME)
+    .then((cache) =>
+      // Use allSettled so one failed route doesn't break the whole install.
+      Promise.allSettled(PRECACHE_ROUTES.map((route) => cache.add(route))),
+    );
+  event.waitUntil(precache);
   self.skipWaiting();
 });
 
@@ -17,9 +36,9 @@ self.addEventListener("activate", (event) => {
       Promise.all(
         keys
           .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
+          .map((key) => caches.delete(key)),
+      ),
+    ),
   );
   self.clients.claim();
 });
@@ -36,7 +55,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for navigation requests — ensures users get fresh HTML
+  // Network-first for navigation requests — ensures users get fresh HTML,
+  // falling back to cache then the offline page when unreachable.
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
@@ -46,10 +66,13 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() =>
-          caches.match(event.request).then(
-            (response) => response ?? caches.match(OFFLINE_URL)
-          )
-        )
+          caches
+            .match(event.request)
+            .then(
+              (response) =>
+                response ?? caches.match(OFFLINE_URL),
+            ),
+        ),
     );
     return;
   }
@@ -67,6 +90,6 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() => cached);
       return cached ?? fetchPromise;
-    })
+    }),
   );
 });
