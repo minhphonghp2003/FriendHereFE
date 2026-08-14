@@ -13,6 +13,7 @@ import { getMessagePreview, toChatMessageRenderType, JoinRequestStatus } from "@
 import { handleApiError } from "@/lib/axios";
 import type { AxiosError } from "axios";
 import { useDiscoverableGroups, useCreateJoinRequest, useJoinGroup, useCancelJoinRequest } from "@/hooks/chat";
+import { LoadingVideo } from "@/components/common/loading-video";
 
 type ChatTab = "all" | "archived" | "discover";
 
@@ -277,17 +278,11 @@ export default function ChatListPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2 p-4">
-        <h1 className="text-2xl font-bold mb-2">Tin nhắn</h1>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 animate-pulse">
-            <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
-              <div className="h-3 w-40 bg-zinc-200 dark:bg-zinc-700 rounded" />
-            </div>
-          </div>
-        ))}
+      <div className="flex h-full flex-col">
+        <h1 className="p-4 pb-0 text-2xl font-bold">Tin nhắn</h1>
+        <div className="flex flex-1 items-center justify-center">
+          <LoadingVideo size="md" />
+        </div>
       </div>
     );
   }
@@ -329,7 +324,7 @@ export default function ChatListPage() {
           <>
             {loadingDiscoverable && discoverableGroups.length === 0 ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <LoadingVideo size="sm" />
               </div>
             ) : discoverableError ? (
               <div className="flex flex-col items-center gap-3 py-16 text-center">

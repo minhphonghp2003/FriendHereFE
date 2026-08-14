@@ -1,9 +1,9 @@
-import { LoadingSpinner } from "./loading-spinner";
+import { LoadingVideo } from "./loading-video";
 
 export const LoadingPage = () => {
   return (
-    <div className="flex min-h-dvh items-center justify-center">
-      <LoadingSpinner size="lg" />
+    <div className="flex min-h-dvh items-center justify-center safe-top safe-bottom">
+      <LoadingVideo size="lg" />
     </div>
   );
 };

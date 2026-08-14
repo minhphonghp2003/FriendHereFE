@@ -1,6 +1,6 @@
 // Service worker with auto-update support
 // Bump CACHE_VERSION when you want to force a full refresh
-const CACHE_VERSION = "2";
+const CACHE_VERSION = "6";
 const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
@@ -19,12 +19,17 @@ const PRECACHE_ROUTES = [
   "/offline",
 ];
 
+// Static assets to pre-cache (branding + loading video).
+const PRECACHE_ASSETS = ["/loading.webm"];
+
 self.addEventListener("install", (event) => {
   const precache = caches
     .open(CACHE_NAME)
     .then((cache) =>
       // Use allSettled so one failed route doesn't break the whole install.
-      Promise.allSettled(PRECACHE_ROUTES.map((route) => cache.add(route))),
+      Promise.allSettled(
+        [...PRECACHE_ROUTES, ...PRECACHE_ASSETS].map((route) => cache.add(route)),
+      ),
     );
   event.waitUntil(precache);
   self.skipWaiting();

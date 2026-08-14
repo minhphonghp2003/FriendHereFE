@@ -11,6 +11,7 @@ import { UserLocationList } from "@/components/home/user-location-list";
 import { VisibilityPicker } from "@/components/home/visibility-picker";
 import { StatusEditor } from "@/components/home/status-editor";
 import { UserMomentsOverlay } from "@/components/moments/user-moments-overlay";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { useUser, useCurrentUser } from "@/hooks/users/use-users";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT } from "@/services/location";
@@ -192,7 +193,7 @@ export default function HomePage() {
       return (
         <>
           <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+            <LoadingVideo size="md" />
           </div>
         </>
       );
@@ -315,7 +316,7 @@ export default function HomePage() {
         </div>
         {loadingActiveUsers ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+            <LoadingVideo size="md" />
           </div>
         ) : (
           <UserLocationList
