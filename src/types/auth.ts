@@ -1,6 +1,8 @@
 export interface LoginInput {
   email: string;
   password: string;
+  /** FCM device token (optional) — server stores/updates it for push. */
+  fcmToken?: string;
 }
 
 export interface RegisterInput {
@@ -9,6 +11,8 @@ export interface RegisterInput {
   password: string;
   age: number;
   genderId: number;
+  /** FCM device token (optional) — send right after signup to enable push. */
+  fcmToken?: string;
 }
 
 export interface AuthResponse {

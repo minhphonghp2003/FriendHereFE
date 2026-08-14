@@ -13,6 +13,7 @@ import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
 
 import { useAuth } from "@/providers/auth-provider";
 import { login as apiLogin } from "@/services/auth";
+import { getCachedFcmToken } from "@/lib/fcm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +34,12 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const result = await apiLogin(form);
+      // Include the FCM token if permission was granted on a previous visit
+      // (never prompts here — the post-login banner handles that).
+      const fcmToken = getCachedFcmToken() ?? undefined;
+      const result = await apiLogin(
+        fcmToken ? { ...form, fcmToken } : form,
+      );
 
       localStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expiresAt);
 

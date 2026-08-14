@@ -12,6 +12,15 @@ export const register = async (input: RegisterInput): Promise<AuthResponse> => {
   return data.data;
 };
 
+/**
+ * PUT /api/Auth/fcm-token — sync the FCM device token for the logged-in
+ * user. Call whenever Firebase rotates the token (onTokenRefresh) or after
+ * permission is granted post-login. Requires Bearer auth.
+ */
+export const updateFcmToken = async (fcmToken: string): Promise<void> => {
+  await httpClient.put<ApiResponse<null>>("/Auth/fcm-token", { fcmToken });
+};
+
 export const logoutApi = async (): Promise<void> => {
   await httpClient.post("/auth/logout");
 };

@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
+import { PushProvider } from "@/providers/push-provider";
 import { OfflineProvider } from "@/providers/offline-provider";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
@@ -61,10 +62,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <ReduxProvider>
             <AuthProvider>
-              <OfflineProvider>
-                <OfflineBanner />
-                {children}
-              </OfflineProvider>
+              <PushProvider>
+                <OfflineProvider>
+                  <OfflineBanner />
+                  {children}
+                </OfflineProvider>
+              </PushProvider>
             </AuthProvider>
           </ReduxProvider>
           <Toaster position="top-right" richColors />
