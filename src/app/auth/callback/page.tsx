@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { TOKEN_KEY, TOKEN_EXPIRES_AT_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
+import { LoadingVideo } from "@/components/common/loading-video";
 
 function decodeJWT(token: string) {
   try {
@@ -56,7 +57,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center safe-top safe-bottom">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <LoadingVideo size="md" />
     </div>
   );
 }

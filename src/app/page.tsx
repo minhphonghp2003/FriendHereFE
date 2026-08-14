@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { USER_ID_KEY } from "@/constants";
+import { LoadingVideo } from "@/components/common/loading-video";
 
 export default function RootPage() {
   const router = useRouter();
@@ -17,8 +18,8 @@ export default function RootPage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-600" />
+    <div className="flex min-h-dvh items-center justify-center safe-top safe-bottom">
+      <LoadingVideo size="lg" />
     </div>
   );
 }

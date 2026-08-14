@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { MomentCard } from "./moment-card";
 import { useFeedMoments } from "@/hooks/moments";
 
@@ -63,7 +64,7 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
   if (moments.length === 0 && isLoading) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LoadingVideo size="md" />
       </div>
     );
   }

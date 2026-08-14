@@ -7,6 +7,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useTimeline, useTimelineMoments, useDeleteTimeline } from "@/hooks/timelines";
 import { TimelineRoute } from "@/components/timelines/timeline-route";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { Button } from "@/components/ui/button";
 
 const PAGE_TAKE = 20;
@@ -138,7 +139,7 @@ export default function TimelineDetailPage() {
           </div>
         ) : momentsLoading ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            <LoadingVideo size="md" />
           </div>
         ) : moments.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">

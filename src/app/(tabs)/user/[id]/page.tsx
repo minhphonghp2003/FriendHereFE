@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/users/use-users";
 import { useUserMoments } from "@/hooks/moments/use-user-moments";
 import { useAuth } from "@/providers/auth-provider";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { getOpponentConversation } from "@/services/chat";
 import { isVideoUrl } from "@/types/chat";
 import type { MomentDto } from "@/types/moment";
@@ -45,7 +46,7 @@ export default function UserProfilePage() {
   if (isLoading) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LoadingVideo size="md" />
       </div>
     );
   }

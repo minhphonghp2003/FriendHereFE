@@ -10,6 +10,7 @@ import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { GroupSettingsDialog } from "@/components/chat/group-settings-dialog";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
@@ -811,7 +812,7 @@ export default function ChatScreenPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
-        <div className="w-6 h-6 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600" />
+        <LoadingVideo size="md" />
       </div>
     );
   }

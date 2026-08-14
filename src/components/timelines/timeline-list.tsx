@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { TimelineCard } from "./timeline-card";
 import { useTimelines } from "@/hooks/timelines";
 
@@ -36,6 +37,14 @@ export const TimelineList = ({ userId = null, currentUserId, onChanged }: Timeli
         <Button variant="outline" size="sm" onClick={refetch} className="mt-2">
           Thử lại
         </Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoadingVideo size="md" />
       </div>
     );
   }
