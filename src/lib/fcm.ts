@@ -24,6 +24,7 @@ import {
   type Messaging,
 } from "firebase/messaging";
 import { env } from "@/config/env";
+import { updateFcmToken } from "@/services/auth";
 import {
   PUSH_TYPE,
   SW_COMMAND,
@@ -95,7 +96,15 @@ let cachedToken: string | null = null;
 type TokenListener = (token: string) => void;
 const tokenListeners = new Set<TokenListener>();
 
-/** Subscribe to FCM token rotations (fires with the new token). */
+/**
+ * Subscribe to FCM token rotation AND any token change observed through
+ * getFcmToken. The PushProvider forwards each rotation to
+ * PUT /api/Auth/fcm-token.
+ *
+ * Note: the web SDK has no onTokenRefresh (native SDKs only) — rotation is
+ * detected by re-calling getToken() (PushProvider does this on foreground
+ * and auth changes) and comparing against the cached value here.
+ */
 export function onFcmTokenRefresh(listener: TokenListener): () => void {
   tokenListeners.add(listener);
   return () => tokenListeners.delete(listener);
@@ -149,11 +158,27 @@ export async function getFcmToken(
 }
 
 /**
- * Return the cached token without touching Firebase — for including in
- * login/register bodies when permission was already granted earlier.
+ * Called AFTER a successful login/register: obtain the FCM token (prompting
+ * for notification permission if the user hasn't granted it yet) and sync it
+ * to the BE via PUT /api/Auth/fcm-token.
+ *
+ * This is the reliable path for first-time users who have no token at the
+ * moment they log in (the login body's fcmToken is best-effort only).
+ * Best-effort: never throws; failures are logged.
  */
-export function getCachedFcmToken(): string | null {
-  return cachedToken;
+export async function syncFcmTokenAfterAuth(): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  try {
+    const { token } = await getFcmToken({ prompt: true });
+    if (token) {
+      console.log("[fcm] Syncing FCM token to BE:", token);
+      await updateFcmToken(token);
+    } else {
+      console.warn("[fcm] No FCM token obtained after auth (permission denied/unavailable?)");
+    }
+  } catch (err) {
+    console.warn("[fcm] Failed to sync token after auth:", err);
+  }
 }
 
 /** Invalidate the current FCM token (call on logout). */
