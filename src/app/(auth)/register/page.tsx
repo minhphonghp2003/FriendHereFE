@@ -13,7 +13,7 @@ import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
 
 import { useAuth } from "@/providers/auth-provider";
 import { register as apiRegister } from "@/services/auth";
-import { getCachedFcmToken, getFcmToken, syncFcmTokenAfterAuth } from "@/lib/fcm";
+import { syncFcmTokenAfterAuth } from "@/lib/fcm";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -43,17 +43,12 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      // Attach the FCM token when notification permission was already
-      // granted. Never prompts — explicit user action handles that later.
-      const fcmToken =
-        getCachedFcmToken() ?? (await getFcmToken()).token ?? undefined;
       const result = await apiRegister({
         name: form.name,
         email: form.email,
         password: form.password,
         age: Number(form.age),
         genderId: Number(form.genderId),
-        ...(fcmToken ? { fcmToken } : {}),
       });
 
       localStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expiresAt);

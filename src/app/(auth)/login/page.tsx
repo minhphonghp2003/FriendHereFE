@@ -13,7 +13,7 @@ import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
 
 import { useAuth } from "@/providers/auth-provider";
 import { login as apiLogin } from "@/services/auth";
-import { getCachedFcmToken, getFcmToken, syncFcmTokenAfterAuth } from "@/lib/fcm";
+import { syncFcmTokenAfterAuth } from "@/lib/fcm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,14 +34,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Attach the FCM token when notification permission was already
-      // granted (e.g. returning user). Never prompts — the browser prompt
-      // only happens via explicit user action after login.
-      const fcmToken =
-        getCachedFcmToken() ?? (await getFcmToken()).token ?? undefined;
-      const result = await apiLogin(
-        fcmToken ? { ...form, fcmToken } : form,
-      );
+      const result = await apiLogin(form);
 
       localStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expiresAt);
 

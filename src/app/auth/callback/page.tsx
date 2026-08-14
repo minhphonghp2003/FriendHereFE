@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { TOKEN_KEY, TOKEN_EXPIRES_AT_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
 import { LoadingVideo } from "@/components/common/loading-video";
+import { syncFcmTokenAfterAuth } from "@/lib/fcm";
 
 function decodeJWT(token: string) {
   try {
@@ -52,6 +53,11 @@ export default function AuthCallbackPage() {
     localStorage.setItem(USER_INFO_KEY, JSON.stringify({ name: user.name, email: user.email }));
 
     login(user, token);
+
+    // OAuth login doesn't carry an fcmToken — register the device token via
+    // PUT /fcm-token (prompts for notification permission if needed).
+    void syncFcmTokenAfterAuth();
+
     router.replace("/home");
   }, [router, login]);
 

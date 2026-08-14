@@ -158,14 +158,6 @@ export async function getFcmToken(
 }
 
 /**
- * Return the cached token without touching Firebase — for including in
- * login/register bodies when permission was already granted earlier.
- */
-export function getCachedFcmToken(): string | null {
-  return cachedToken;
-}
-
-/**
  * Called AFTER a successful login/register: obtain the FCM token (prompting
  * for notification permission if the user hasn't granted it yet) and sync it
  * to the BE via PUT /api/Auth/fcm-token.
