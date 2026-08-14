@@ -1,6 +1,6 @@
 // Service worker with auto-update support
 // Bump CACHE_VERSION when you want to force a full refresh
-const CACHE_VERSION = "6";
+const CACHE_VERSION = "7";
 const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
@@ -20,7 +20,7 @@ const PRECACHE_ROUTES = [
 ];
 
 // Static assets to pre-cache (branding + loading video).
-const PRECACHE_ASSETS = ["/loading.webm"];
+const PRECACHE_ASSETS = ["/loading.mp4", "/loading.webm"];
 
 self.addEventListener("install", (event) => {
   const precache = caches
