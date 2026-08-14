@@ -112,21 +112,27 @@ rejected from another device, call timed out, or was missed.
 
 ---
 
-## Device token registration (auth API — pending)
+## Device token registration (Auth API — implemented)
 
-Expected endpoints (BE to implement; FE wiring comes with the auth changes):
+The FE registers/syncs device tokens through the auth endpoints
+(base `/api/Auth`, camelCase JSON, standard envelope):
 
-```
-PUT  /api/notifications/device-tokens/{token}     # register/refresh (idempotent)
-DELETE /api/notifications/device-tokens/{token}   # on logout / token invalidation
-```
+| When | Call |
+|---|---|
+| Login (`POST /Auth/login`) | Optional `fcmToken` field in body (sent when permission was already granted) |
+| Register (`POST /Auth/register`) | Optional `fcmToken` field in body |
+| Token rotation / granted post-login (`PUT /Auth/fcm-token`) ⭐ | `{ "fcmToken": "..." }` with `Authorization: Bearer <jwt>` |
+| OAuth callback (`/auth/callback`) | `PUT /Auth/fcm-token` after the JWT is stored |
 
-- `PUT` should upsert by `(userId, token)` and store platform info if
-  available (e.g. `platform: "web"`).
-- FCM may rotate tokens; treat repeated `PUT` of a changed token as a refresh.
-- Return `404` (or just 204 silently) on `DELETE` for unknown tokens.
-- On send, drop tokens that return `UNREGISTERED` (HTTP 404 from FCM) and
-  delete them from the DB.
+Behavior notes (from the BE contract):
+
+- Login with a new `fcmToken` **overwrites** the old one (single device per
+  user — newest login wins).
+- Omitting `fcmToken` on login leaves the stored token unchanged.
+- `PUT /fcm-token` errors: `401` missing/invalid JWT · `404` user not found ·
+  `400` empty token / > 500 chars.
+- FE treats registration as best-effort: failures are logged, never block
+  login/chat.
 
 ## Delivery suppression
 
@@ -136,9 +142,10 @@ To avoid double-notifying users with the app open (SignalR connected):
   `OnDisconnectedAsync` on the App hub).
 - Only send FCM to users with **zero** live connections — or, if per-device
   granularity is desired later, per-device presence.
-- Always send `call.incoming` regardless of connection state **only if** the
-  BE can't tell that a connection belongs to the same device; otherwise
-  suppress there too (the ringing overlay is in-app).
+- With the single-device-per-user model (login overwrites the token), there
+  is exactly one target token per user; sending while the user has a live
+  App hub connection is redundant for chat. Calls ring in-app via the
+  `ReceiveCall` hub event.
 
 ## Security notes
 

@@ -1,18 +1,15 @@
 /**
  * Firebase Cloud Messaging client utilities.
  *
- * STATUS: groundwork only — NOT wired into the app yet.
+ * - `getFcmToken({ prompt })` resolves the FCM device token. Never prompts
+ *   by default; prompting must come from explicit user action.
+ * - `onFcmTokenRefresh(cb)` fires when Firebase rotates the token (the
+ *   PushProvider syncs it to the BE via PUT /api/Auth/fcm-token).
+ * - `deleteFcmToken()` on logout.
  *
- * The backend auth API changes for FCM token registration are pending; until
- * then nothing here is imported by app code. Intended wiring (once BE ships):
- *
- *   1. <PushProvider> (or reuse the auth provider) calls `initFirebase()`
- *      then `requestNotificationPermission()` → `getFcmToken()` on login.
- *   2. POST the token to the BE endpoint from docs/fcm-push-notifications.md
- *      (PUT /api/notifications/device-tokens/{token}).
- *   3. `onForegroundMessage()` handles messages while the app is focused
- *      (data-only pushes do NOT auto-display in this case).
- *   4. `deleteFcmToken()` on logout so the BE can stop targeting this device.
+ * Foreground pushes arrive via postMessage from the SW (public/sw.js) —
+ * the SW intercepts the `push` event before FCM's own onMessage could,
+ * so firebase/messaging's onMessage is intentionally unused.
  *
  * Background handling (app closed/backgrounded) lives entirely in the
  * service worker: public/sw.js — `push` + `notificationclick` events.
@@ -24,7 +21,6 @@ import {
   getMessaging,
   getToken,
   isSupported,
-  onMessage,
   type Messaging,
 } from "firebase/messaging";
 import { env } from "@/config/env";
@@ -93,9 +89,43 @@ export interface FcmTokenResult {
   permission: NotificationPermission;
 }
 
-/** Get (or create) the FCM device token for this browser. */
-export async function getFcmToken(): Promise<FcmTokenResult> {
-  const permission = await requestNotificationPermission();
+/** Token fetched by the most recent successful getFcmToken (memory only). */
+let cachedToken: string | null = null;
+
+type TokenListener = (token: string) => void;
+const tokenListeners = new Set<TokenListener>();
+
+/** Subscribe to FCM token rotations (fires with the new token). */
+export function onFcmTokenRefresh(listener: TokenListener): () => void {
+  tokenListeners.add(listener);
+  return () => tokenListeners.delete(listener);
+}
+
+function notifyTokenListeners(token: string): void {
+  tokenListeners.forEach((listener) => {
+    try {
+      listener(token);
+    } catch (err) {
+      console.warn("[fcm] token listener failed:", err);
+    }
+  });
+}
+
+/**
+ * Get (or create) the FCM device token for this browser.
+ *
+ * @param options.prompt When false (default) never shows the browser
+ *   permission prompt — returns null while permission is "default". Set
+ *   true only from explicit user action (post-login banner/button).
+ */
+export async function getFcmToken(
+  options: { prompt?: boolean; notify?: boolean } = {},
+): Promise<FcmTokenResult> {
+  const permission = options.prompt
+    ? await requestNotificationPermission()
+    : typeof Notification !== "undefined"
+      ? Notification.permission
+      : "denied";
   if (permission !== "granted") return { token: null, permission };
 
   const messaging = await getFcmMessaging();
@@ -107,6 +137,10 @@ export async function getFcmToken(): Promise<FcmTokenResult> {
       vapidKey: env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || undefined,
       serviceWorkerRegistration: sw ?? undefined,
     });
+    if (token !== cachedToken) {
+      cachedToken = token;
+      if (options.notify !== false) notifyTokenListeners(token);
+    }
     return { token, permission };
   } catch (err) {
     console.warn("[fcm] Failed to get token:", err);
@@ -114,8 +148,17 @@ export async function getFcmToken(): Promise<FcmTokenResult> {
   }
 }
 
+/**
+ * Return the cached token without touching Firebase — for including in
+ * login/register bodies when permission was already granted earlier.
+ */
+export function getCachedFcmToken(): string | null {
+  return cachedToken;
+}
+
 /** Invalidate the current FCM token (call on logout). */
 export async function deleteFcmToken(): Promise<void> {
+  cachedToken = null;
   const messaging = await getFcmMessaging();
   if (!messaging) return;
   try {
@@ -123,30 +166,6 @@ export async function deleteFcmToken(): Promise<void> {
   } catch (err) {
     console.warn("[fcm] Failed to delete token:", err);
   }
-}
-
-/**
- * Handle data-only pushes while the app is in the FOREGROUND.
- * The SW never fires for foreground pushes bound via getToken, so the page
- * must render in-app UI (toast) itself.
- */
-export function onForegroundMessage(
-  handler: (data: PushPayloadData | undefined) => void,
-): () => void {
-  let unsubscribe: (() => void) | null = null;
-  let cancelled = false;
-
-  getFcmMessaging().then((messaging) => {
-    if (!messaging || cancelled) return;
-    unsubscribe = onMessage(messaging, (payload) =>
-      handler(payload.data as PushPayloadData | undefined),
-    );
-  });
-
-  return () => {
-    cancelled = true;
-    unsubscribe?.();
-  };
 }
 
 /**

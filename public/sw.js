@@ -147,20 +147,39 @@ self.addEventListener("push", (event) => {
   const data = payload.data ?? payload;
   const type = String(data.type ?? "");
 
-  switch (type) {
-    case PUSH_TYPE.CHAT_MESSAGE:
-      event.waitUntil(showChatNotification(data));
-      break;
-    case PUSH_TYPE.CALL_INCOMING:
-      event.waitUntil(showCallNotification(data));
-      break;
-    case PUSH_TYPE.CALL_ENDED:
-      event.waitUntil(dismissCallNotification(data));
-      break;
-    default:
-      // Unknown type — show nothing (silently ignore).
-      break;
-  }
+  event.waitUntil(
+    (async () => {
+      // App is open and focused — forward to the page for in-app UI
+      // (toasts / live call overlays) instead of a system notification.
+      // Handled by src/providers/push-provider.tsx via postMessage.
+      const clientList = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      const visibleClient = clientList.find(
+        (client) => client.visibilityState === "visible" && client.focused,
+      );
+      if (visibleClient) {
+        visibleClient.postMessage({ type: "PUSH_DATA", data });
+        return;
+      }
+
+      switch (type) {
+        case PUSH_TYPE.CHAT_MESSAGE:
+          await showChatNotification(data);
+          break;
+        case PUSH_TYPE.CALL_INCOMING:
+          await showCallNotification(data);
+          break;
+        case PUSH_TYPE.CALL_ENDED:
+          await dismissCallNotification(data);
+          break;
+        default:
+          // Unknown type — show nothing (silently ignore).
+          break;
+      }
+    })(),
+  );
 });
 
 /**
