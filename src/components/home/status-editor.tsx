@@ -97,7 +97,7 @@ export const StatusEditor = () => {
               <button
                 onClick={handleClear}
                 disabled={saving}
-                className="flex-1 rounded-lg bg-zinc-200 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-300 disabled:opacity-50"
+                className="flex-1 rounded-lg border border-zinc-200 bg-white py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
               >
                 Xóa
               </button>

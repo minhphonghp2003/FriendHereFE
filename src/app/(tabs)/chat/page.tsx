@@ -293,7 +293,7 @@ export default function ChatListPage() {
             <div className="flex shrink-0 items-center gap-2">
               {conv.isBlocked && <Ban className="h-3.5 w-3.5 shrink-0 text-red-500" />}
               {(conv.unreadCount ?? 0) > 0 && (
-                <span className="min-w-[1.25rem] rounded-full bg-blue-600 px-1.5 py-0.5 text-center text-xs text-white">
+                <span className="bg-primary min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-xs text-white">
                   {conv.unreadCount}
                 </span>
               )}
@@ -390,7 +390,7 @@ export default function ChatListPage() {
             setTab("all");
             setMenuState(null);
           }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "all" ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "all" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
           Tất cả
         </button>
@@ -399,7 +399,7 @@ export default function ChatListPage() {
             setTab("archived");
             setMenuState(null);
           }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "archived" ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "archived" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
           Đã lưu trữ
         </button>
@@ -408,7 +408,7 @@ export default function ChatListPage() {
             setTab("discover");
             setMenuState(null);
           }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "discover" ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "discover" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
           Khám phá
         </button>
@@ -425,7 +425,7 @@ export default function ChatListPage() {
                 <p className="text-muted-foreground text-sm">{discoverableError.message}</p>
                 <button
                   onClick={refetchDiscoverable}
-                  className="rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  className="bg-success hover:bg-success/90 text-success-foreground rounded-full px-4 py-1.5 text-sm font-medium"
                 >
                   Thử lại
                 </button>
@@ -486,7 +486,7 @@ export default function ChatListPage() {
                         <button
                           onClick={() => handleJoinGroup(group)}
                           disabled={processing}
-                          className="shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                          className="bg-success hover:bg-success/90 text-success-foreground shrink-0 rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-50"
                         >
                           {processing ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

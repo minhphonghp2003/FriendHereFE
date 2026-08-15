@@ -106,7 +106,7 @@ export default function UserProfilePage() {
           {!isSelf && (
             <button
               onClick={handleMessage}
-              className="flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="bg-success hover:bg-success/90 text-success-foreground flex items-center gap-2 rounded-full px-6 py-2 text-sm font-medium"
             >
               <MessageCircle className="h-4 w-4" />
               Nhắn tin
