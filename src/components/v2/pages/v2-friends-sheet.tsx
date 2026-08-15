@@ -54,7 +54,9 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
   const openSheet = useCallback(() => {
     setSheetHeight(maxSheetHeight);
     setIsSheetOpen(true);
-    // Opening the sheet dismisses any open modal + moves the nav button down
+    // Opening the sheet dismisses any open modal + moves the nav button down.
+    // NOTE: we dispatch "v2:close-modals" — the sheet itself must NOT react to
+    // that event (only to "v2:force-close-sheet"), or it would close itself.
     window.dispatchEvent(new Event("v2:close-modals"));
     window.dispatchEvent(new Event("v2:sheet-open"));
     onSheetOpen?.();
@@ -66,11 +68,12 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
     window.dispatchEvent(new Event("v2:sheet-close"));
   }, []);
 
-  // Close the sheet whenever all v2 modals are force-closed (e.g. kicked)
+  // Force-close (e.g. kicked) — a dedicated event so opening the sheet (which
+  // broadcasts v2:close-modals to dismiss dialogs) never closes itself.
   useEffect(() => {
     const handler = () => closeSheet();
-    window.addEventListener("v2:close-modals", handler);
-    return () => window.removeEventListener("v2:close-modals", handler);
+    window.addEventListener("v2:force-close-sheet", handler);
+    return () => window.removeEventListener("v2:force-close-sheet", handler);
   }, [closeSheet]);
 
   // ---- Handle drag gestures ----

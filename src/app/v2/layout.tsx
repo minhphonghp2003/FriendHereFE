@@ -39,10 +39,11 @@ export default function V2Layout({ children }: V2LayoutProps) {
     }
   }, [isAuthenticated, router]);
 
-  // When kicked: close every open v2 modal — the session is over
+  // When kicked: close every open v2 modal + the nearby sheet — session is over
   useEffect(() => {
     if (kicked) {
       window.dispatchEvent(new Event("v2:close-modals"));
+      window.dispatchEvent(new Event("v2:force-close-sheet"));
     }
   }, [kicked]);
 
