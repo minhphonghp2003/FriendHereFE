@@ -1156,7 +1156,7 @@ export default function ChatScreenPage() {
       {searchMode && (
         <button
           onClick={reloadToLatest}
-          className="absolute right-4 bottom-24 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-blue-700"
+          className="bg-primary hover:bg-primary/90 absolute right-4 bottom-24 z-30 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg transition-transform hover:scale-105"
           title="Quay lại tin nhắn mới nhất"
           aria-label="Quay lại tin nhắn mới nhất"
         >
@@ -1394,7 +1394,7 @@ export default function ChatScreenPage() {
             <button
               onClick={handleSend}
               disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending}
-              className="rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="bg-primary hover:bg-primary/90 rounded-full p-2 text-white disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </button>

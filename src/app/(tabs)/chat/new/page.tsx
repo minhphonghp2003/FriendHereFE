@@ -113,7 +113,7 @@ export default function NewChatPage() {
           <button
             onClick={handleSend}
             disabled={(!input.trim() && !pendingMoment) || sending}
-            className="rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 rounded-full p-2 text-white disabled:opacity-50"
           >
             Gửi
           </button>
