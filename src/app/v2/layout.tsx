@@ -47,6 +47,8 @@ export default function V2Layout({ children }: V2LayoutProps) {
             padding: 0;
           }
 
+          /* Disable pinch/double-tap page zoom (map/image still zoom via their own
+             gesture handling). maximumScale=1 in the viewport covers iOS Safari. */
           .v2-app {
             display: flex;
             flex-direction: column;
@@ -55,6 +57,15 @@ export default function V2Layout({ children }: V2LayoutProps) {
             overflow: hidden;
             position: relative;
             background: #000;
+            touch-action: pan-x pan-y;
+            overscroll-behavior: none;
+          }
+
+          /* Prevent iOS auto-zoom when focusing inputs (needs >= 16px font) */
+          .v2-app input,
+          .v2-app textarea,
+          .v2-app select {
+            font-size: 16px;
           }
 
           .v2-content {
@@ -73,6 +84,13 @@ export default function V2Layout({ children }: V2LayoutProps) {
 
           .v2-content::-webkit-scrollbar {
             display: none;
+          }
+
+          /* Keep pinch-zoom enabled inside map & image surfaces */
+          .v2-app .gm-style,
+          .v2-app [data-slot="dialog-content"] img,
+          .v2-app img.zoomable {
+            touch-action: auto;
           }
         `}</style>
       </CallProvider>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
+import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { useAuth } from "@/providers/auth-provider";
 import { toast } from "sonner";
 import type { MomentDto } from "@/types/moment";
@@ -22,12 +23,22 @@ export function V2MomentsFeed() {
   } = useFeedMoments(10);
   const { mutate: createMoment, isLoading: isCreating } = useCreateMoment();
   
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const createModal = useV2Modal("moments-create");
+  const detailModal = useV2Modal("moments-detail");
   const [selectedMoment, setSelectedMoment] = useState<MomentDto | null>(null);
   const [newMomentMedia, setNewMomentMedia] = useState<File | null>(null);
   const [newMomentCaption, setNewMomentCaption] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const openCreateDialog = () => {
+    createModal.open();
+  };
+
+  const openMomentDetail = (moment: MomentDto) => {
+    setSelectedMoment(moment);
+    detailModal.open();
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,7 +66,7 @@ export function V2MomentsFeed() {
       
       setNewMomentMedia(null);
       setNewMomentCaption("");
-      setShowCreateDialog(false);
+      createModal.close();
       
       // Reload moments
       await getMoments();
@@ -127,7 +138,7 @@ export function V2MomentsFeed() {
                 <div
                   key={moment.id}
                   className="moment-card"
-                  onClick={() => setSelectedMoment(moment)}
+                  onClick={() => openMomentDetail(moment)}
                 >
                   <div className="moment-media">
                     {media.type === "image" ? (
@@ -181,7 +192,7 @@ export function V2MomentsFeed() {
       {/* Floating Action Button */}
       <button
         className="create-moment-btn"
-        onClick={() => setShowCreateDialog(true)}
+        onClick={openCreateDialog}
         aria-label="Create new moment"
       >
         <div className="create-btn-content">
@@ -190,7 +201,7 @@ export function V2MomentsFeed() {
       </button>
 
       {/* Create Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      <Dialog open={createModal.isOpen} onOpenChange={(open) => !open && createModal.close()}>
         <DialogContent className="create-moment-dialog v2-native-sheet" showCloseButton={false}>
           <div className="create-dialog-content">
             <div className="create-dialog-body">
@@ -265,7 +276,7 @@ export function V2MomentsFeed() {
 
       {/* Moment Detail Modal */}
       {selectedMoment && (
-        <Dialog open={!!selectedMoment} onOpenChange={() => setSelectedMoment(null)}>
+        <Dialog open={detailModal.isOpen && !!selectedMoment} onOpenChange={(open) => !open && detailModal.close()}>
           <DialogContent className="moment-detail-dialog" showCloseButton={false}>
             <div className="moment-detail-content">
               <div className="detail-media">

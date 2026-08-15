@@ -32,13 +32,16 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap, onSheetOp
   const openSheet = () => {
     setSheetHeight(maxSheetHeight);
     setIsSheetOpen(true);
-    // Opening the sheet dismisses any open modal behind it
+    // Opening the sheet dismisses any open modal + moves the nav button down
+    window.dispatchEvent(new Event("v2:close-modals"));
+    window.dispatchEvent(new Event("v2:sheet-open"));
     onSheetOpen?.();
   };
 
   const closeSheet = () => {
     setSheetHeight(minSheetHeight);
     setIsSheetOpen(false);
+    window.dispatchEvent(new Event("v2:sheet-close"));
   };
 
   const handleTouchStart = (e: TouchEvent) => {
@@ -49,27 +52,48 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap, onSheetOp
 
   const handleTouchMove = (e: TouchEvent) => {
     if (!isDragging) return;
-    
+
     const currentY = e.targetTouches[0].clientY;
     setTouchCurrent(currentY);
-    
+
     const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 667;
     const newHeight = windowHeight - currentY;
-    
+
     const constrainedHeight = Math.max(minSheetHeight, Math.min(maxSheetHeight, newHeight));
     setSheetHeight(constrainedHeight);
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    
+
     const midpoint = (maxSheetHeight + minSheetHeight) / 2;
-    
+
     if (sheetHeight > midpoint) {
       openSheet();
     } else {
       closeSheet();
     }
+  };
+
+  // Content-area drag: only take over when the list is scrolled to the top AND
+  // the finger moves down — otherwise let the list scroll natively.
+  const contentTouchStart = (e: TouchEvent) => {
+    const scrollEl = (e.currentTarget as HTMLElement).querySelector(".friends-scroll");
+    const atTop = !scrollEl || scrollEl.scrollTop <= 0;
+    if (atTop) {
+      handleTouchStart(e);
+    }
+  };
+
+  const contentTouchMove = (e: TouchEvent) => {
+    if (!isDragging) return;
+    // If content was scrolled during the drag, stop dragging and let it scroll
+    const scrollEl = (e.currentTarget as HTMLElement).querySelector(".friends-scroll");
+    if (scrollEl && scrollEl.scrollTop > 0) {
+      setIsDragging(false);
+      return;
+    }
+    handleTouchMove(e);
   };
 
   const toggleSheet = () => {
@@ -156,14 +180,19 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap, onSheetOp
           </div>
         </div>
 
-        {/* Sheet Content — fades in as the sheet is swiped up */}
+        {/* Sheet Content — fades in as the sheet is swiped up.
+            Draggable from anywhere: when the list is at its top, dragging down
+            collapses the sheet instead of scrolling. */}
         <div
-          className="sheet-content"
+          className="sheet-content sheet-content-draggable"
           style={{
             opacity: openProgress,
             transition: isDragging ? 'none' : 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             pointerEvents: openProgress < 0.5 ? 'none' : 'auto',
           }}
+          onTouchStart={contentTouchStart}
+          onTouchMove={contentTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <div className="friends-scroll">
             {nearbyFriends.map((friend) => (

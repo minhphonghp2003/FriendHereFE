@@ -10,6 +10,7 @@ import { V2FriendsSheet } from "./v2-friends-sheet";
 import { Check, Pencil, X as XIcon } from "lucide-react";
 import { V2LocationSettingsDialog } from "./v2-location-settings-dialog";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
+import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { LOCATION_SORT } from "@/services/location";
 import { locationHub } from "@/lib/signalr";
 import { setMyStatus } from "@/store/slices/location-slice";
@@ -50,15 +51,23 @@ export function V2LocationPage() {
     refetch: refetchActiveUsers,
   } = useActiveUsers(20, LOCATION_SORT.Distance);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
 
-  // User detail modal (unified V2 dialog fetches its own user data)
+  // Modals registered in the global single-active manager
+  const userDetailModal = useV2Modal("location-user-detail");
+  const locSettingsModal = useV2Modal("location-settings");
+
+  // User detail target (unified V2 dialog fetches its own user data)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const selectedLocation = locations.find((l) => l.userId === selectedUserId);
   const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
+
+  const openUserDetail = (userId: number) => {
+    setSelectedUserId(userId);
+    userDetailModal.open();
+  };
 
   const position =
     latitude !== null && longitude !== null
@@ -160,7 +169,8 @@ export function V2LocationPage() {
               colorScheme={mapColorScheme}
             >
             <MapAutoCenter position={position} />
-            {/* Render friend locations (excluding me) using v1's Redux store */}
+            {/* Render friend locations (excluding me) using v1's Redux store.
+                Moment thumbs stay visible but open the user detail (not the moment). */}
             {locations
               .filter((location) => location.userId !== user?.id)
               .map((location) => (
@@ -177,7 +187,8 @@ export function V2LocationPage() {
                   moments={location.moments}
                   moving={false}
                   size={56}
-                  onClick={() => setSelectedUserId(location.userId)}
+                  onClick={() => openUserDetail(location.userId)}
+                  onMomentClick={() => openUserDetail(location.userId)}
                 />
               ))}
 
@@ -191,7 +202,9 @@ export function V2LocationPage() {
                 battery={myBattery}
                 status={myDisplayStatus}
                 size={56}
-                onClick={() => setSelectedUserId(user?.id ?? null)}
+                onClick={() => openUserDetail(user?.id ?? 0)}
+                moments={myLocation?.moments ?? null}
+                onMomentClick={() => openUserDetail(user?.id ?? 0)}
                 statusActions={
                   statusEditorOpen ? undefined : (
                     <>
@@ -273,39 +286,40 @@ export function V2LocationPage() {
       <V2FriendsSheet
         nearbyFriends={nearbyFriends}
         myLocation={position}
-        onUserTap={(userId) => setSelectedUserId(userId)}
+        onUserTap={openUserDetail}
         onSheetOpen={() => {
-          // Opening the nearby sheet dismisses all open modals
-          setSelectedUserId(null);
-          setSettingsOpen(false);
+          // The sheet broadcasts v2:close-modals globally;
+          // also reset local (non-modal) state here
           setStatusEditorOpen(false);
-          window.dispatchEvent(new Event("v2:close-modals"));
         }}
       />
-      <V2LocationSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <V2LocationSettingsDialog
+        open={locSettingsModal.isOpen}
+        onOpenChange={(open) => !open && locSettingsModal.close()}
+      />
 
       {/* User detail modal — unified V2 component (my profile OR other user w/ v1 actions) */}
       <V2UserDetailDialog
         userId={
-          selectedUserId === null
+          !userDetailModal.isOpen
             ? null
             : selectedUserId === user?.id
               ? "me"
               : selectedUserId
         }
-        onClose={() => setSelectedUserId(null)}
+        onClose={() => userDetailModal.close()}
         battery={
-          selectedUserId !== null && selectedUserId !== user?.id
+          userDetailModal.isOpen && selectedUserId !== user?.id
             ? (selectedActive?.battery ?? selectedLocation?.battery ?? null)
             : null
         }
         status={
-          selectedUserId !== null && selectedUserId !== user?.id
+          userDetailModal.isOpen && selectedUserId !== user?.id
             ? (selectedActive?.status ?? selectedLocation?.status ?? null)
             : null
         }
         distance={
-          selectedUserId !== null && selectedUserId !== user?.id
+          userDetailModal.isOpen && selectedUserId !== user?.id
             ? (selectedActive?.distance ?? null)
             : null
         }

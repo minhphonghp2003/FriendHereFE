@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Camera } from "lucide-react";
 
@@ -12,6 +13,20 @@ export function V2ToggleNav() {
   const Icon = isHome ? Camera : Home;
   const label = isHome ? "Moments" : "Home";
 
+  // Move down (out of the way) while the nearby sheet is open
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setSheetOpen(true);
+    const close = () => setSheetOpen(false);
+    window.addEventListener("v2:sheet-open", open);
+    window.addEventListener("v2:sheet-close", close);
+    return () => {
+      window.removeEventListener("v2:sheet-open", open);
+      window.removeEventListener("v2:sheet-close", close);
+    };
+  }, []);
+
   const handleToggle = () => {
     router.push(targetRoute);
   };
@@ -20,7 +35,7 @@ export function V2ToggleNav() {
     <>
       <button 
         onClick={handleToggle}
-        className={`v2-toggle-btn ${isHome ? '' : 'toggle-moments-active'}`}
+        className={`v2-toggle-btn ${isHome ? '' : 'toggle-moments-active'} ${sheetOpen ? 'sheet-open' : ''}`}
         aria-label={`Go to ${label}`}
       >
         <div className="toggle-icon-wrapper">
@@ -44,6 +59,14 @@ export function V2ToggleNav() {
           background: none;
           cursor: pointer;
           animation: toggle-float-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+        }
+
+        /* Slide down + fade when the nearby sheet is open */
+        .v2-toggle-btn.sheet-open {
+          bottom: -100px;
+          opacity: 0;
+          pointer-events: none;
         }
 
         @keyframes toggle-float-in {

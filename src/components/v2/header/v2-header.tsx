@@ -1,37 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
+import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
-
-/** Fired when the nearby sheet opens — all v2 modals should close */
-export const V2_CLOSE_MODALS_EVENT = "v2:close-modals";
 
 type ActiveDialog = "chat" | "settings" | "profile" | null;
 
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const { data: currentUser } = useCurrentUser();
-  // Single active modal: only one dialog open at a time
-  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Close all modals when the nearby sheet opens
-  useEffect(() => {
-    const closeAll = () => setActiveDialog(null);
-    window.addEventListener(V2_CLOSE_MODALS_EVENT, closeAll);
-    return () => window.removeEventListener(V2_CLOSE_MODALS_EVENT, closeAll);
-  }, []);
+  // Single active modal across the whole v2 app
+  const chatModal = useV2Modal("header-chat");
+  const settingsModal = useV2Modal("header-settings");
+  const profileModal = useV2Modal("header-profile");
 
-  // Toggle: tapping the active button closes it; tapping another swaps dialogs
-  const toggleDialog = (dialog: Exclude<ActiveDialog, null>) => {
-    setActiveDialog((current) => (current === dialog ? null : dialog));
+  const activeDialog: ActiveDialog = chatModal.isOpen
+    ? "chat"
+    : settingsModal.isOpen
+      ? "settings"
+      : profileModal.isOpen
+        ? "profile"
+        : null;
+
+  const toggleDialog = (modal: { open: () => void; close: () => void; isOpen: boolean }) => {
+    if (modal.isOpen) {
+      modal.close();
+    } else {
+      modal.open(); // opening one closes the others automatically
+    }
   };
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const displayName = currentUser?.name || authUser?.name || "User";
   const email = currentUser?.email || authUser?.email || "";
@@ -64,10 +70,10 @@ export function V2Header() {
       <header className="v2-header">
         <div className="header-left">
           <button
-            className="user-avatar-section"
-            onClick={() => toggleDialog("profile")}
+            className={`user-avatar-section ${activeDialog === "profile" ? "header-btn-active" : ""}`}
+            onClick={() => toggleDialog(profileModal)}
             aria-label="Open profile"
-            aria-expanded={activeDialog === "profile"}
+            aria-expanded={profileModal.isOpen}
           >
             <div className="user-avatar">
               {avatarThumb ? (
@@ -95,10 +101,10 @@ export function V2Header() {
             />
           </button>
           <button
-            onClick={() => toggleDialog("chat")}
-            className={`header-float-btn ${activeDialog === "chat" ? 'header-btn-active' : ''}`}
+            onClick={() => toggleDialog(chatModal)}
+            className={`header-float-btn ${chatModal.isOpen ? 'header-btn-active' : ''}`}
             aria-label="Chat"
-            aria-expanded={activeDialog === "chat"}
+            aria-expanded={chatModal.isOpen}
           >
             <MessageCircle className="header-float-icon" fill="currentColor" />
             {unreadCount > 0 && (
@@ -106,21 +112,21 @@ export function V2Header() {
             )}
           </button>
           <button
-            onClick={() => toggleDialog("settings")}
-            className={`header-float-btn ${activeDialog === "settings" ? 'header-btn-active' : ''}`}
+            onClick={() => toggleDialog(settingsModal)}
+            className={`header-float-btn ${settingsModal.isOpen ? 'header-btn-active' : ''}`}
             aria-label="Settings"
-            aria-expanded={activeDialog === "settings"}
+            aria-expanded={settingsModal.isOpen}
           >
             <Settings className="header-float-icon" fill="currentColor" />
           </button>
         </div>
       </header>
 
-      <V2ChatDialog open={activeDialog === "chat"} onOpenChange={(open) => !open && setActiveDialog(null)} />
-      <V2SettingsDialog open={activeDialog === "settings"} onOpenChange={(open) => !open && setActiveDialog(null)} />
+      <V2ChatDialog open={chatModal.isOpen} onOpenChange={(open) => !open && chatModal.close()} />
+      <V2SettingsDialog open={settingsModal.isOpen} onOpenChange={(open) => !open && settingsModal.close()} />
       <V2UserDetailDialog
-        userId={activeDialog === "profile" ? "me" : null}
-        onClose={() => setActiveDialog(null)}
+        userId={profileModal.isOpen ? "me" : null}
+        onClose={() => profileModal.close()}
       />
 
       <style jsx global>{`
