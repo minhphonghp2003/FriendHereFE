@@ -83,14 +83,14 @@ export function V2FriendsSheet() {
   return (
     <>
       {/* Drag Handle Button */}
-      <button 
+      {/* <button 
         className="sheet-trigger-btn"
         onClick={toggleSheet}
         aria-label="Toggle friends list"
       >
         <Users className="trigger-icon" />
         <span className="trigger-count">{locations.length}</span>
-      </button>
+      </button> */}
 
       {/* Bottom Sheet */}
       <div 
