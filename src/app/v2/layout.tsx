@@ -39,12 +39,19 @@ export default function V2Layout({ children }: V2LayoutProps) {
     }
   }, [isAuthenticated, router]);
 
+  // When kicked: close every open v2 modal — the session is over
+  useEffect(() => {
+    if (kicked) {
+      window.dispatchEvent(new Event("v2:close-modals"));
+    }
+  }, [kicked]);
+
   if (!isAuthenticated) return null;
 
   return (
     <LocationProvider>
       <CallProvider>
-        <div className="v2-app v2-theme">
+        <div className={`v2-app v2-theme ${kicked ? "v2-app-blocked" : ""}`}>
           <V2Header />
           <main className="v2-content">
             {children}
@@ -76,6 +83,18 @@ export default function V2Layout({ children }: V2LayoutProps) {
             height: 100%;
             margin: 0;
             padding: 0;
+          }
+
+          /* Kicked state: freeze the entire app shell — header, nav button,
+             map, sheet all become untouchable. The kicked dialog lives in a
+             portal on <body> (outside .v2-app) so it stays fully interactive. */
+          .v2-app-blocked {
+            pointer-events: none !important;
+            filter: grayscale(0.4);
+          }
+
+          .v2-app-blocked * {
+            pointer-events: none !important;
           }
 
           /* Kicked dialog must float above EVERYTHING (moments overlay z-70,

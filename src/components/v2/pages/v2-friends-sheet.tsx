@@ -66,6 +66,13 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
     window.dispatchEvent(new Event("v2:sheet-close"));
   }, []);
 
+  // Close the sheet whenever all v2 modals are force-closed (e.g. kicked)
+  useEffect(() => {
+    const handler = () => closeSheet();
+    window.addEventListener("v2:close-modals", handler);
+    return () => window.removeEventListener("v2:close-modals", handler);
+  }, [closeSheet]);
+
   // ---- Handle drag gestures ----
   const handleTouchStart = (e: TouchEvent) => {
     gestureRef.current = { startY: e.targetTouches[0].clientY, dragging: true };
