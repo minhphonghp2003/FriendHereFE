@@ -1,22 +1,33 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Camera, Plus, X, Heart, MessageCircle, Share2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useMoments, type Moment } from "@/hooks/use-moments";
+import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
+import { useAuth } from "@/providers/auth-provider";
 import { toast } from "sonner";
+import type { MomentDto } from "@/types/moment";
 
 export function V2MomentsFeed() {
-  const { moments, isLoading, getMoments, createMoment, likeMoment } = useMoments();
+  const { user } = useAuth();
+  const {
+    data: moments,
+    isLoading,
+    refetch: getMoments,
+    loadMore,
+    hasMore,
+  } = useFeedMoments(10);
+  const { mutate: createMoment, isLoading: isCreating } = useCreateMoment();
+  
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
+  const [selectedMoment, setSelectedMoment] = useState<MomentDto | null>(null);
   const [newMomentMedia, setNewMomentMedia] = useState<File | null>(null);
   const [newMomentCaption, setNewMomentCaption] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,8 +43,6 @@ export function V2MomentsFeed() {
     }
 
     try {
-      setIsUploading(true);
-      
       const isVideo = newMomentMedia.type.startsWith("video/");
       await createMoment({
         caption: newMomentCaption || undefined,
@@ -55,22 +64,41 @@ export function V2MomentsFeed() {
     } catch (error) {
       console.error("Failed to create moment:", error);
       toast.error("Failed to create moment");
-    } finally {
-      setIsUploading(false);
     }
   };
 
-  const handleLikeMoment = async (momentId: number) => {
-    try {
-      await likeMoment(momentId);
-    } catch (error) {
-      console.error("Failed to like moment:", error);
-      toast.error("Failed to like moment");
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || !hasMore || isLoading) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      loadMore();
     }
+  }, [hasMore, isLoading, loadMore]);
+
+  const getMomentMedia = (moment: MomentDto) => {
+    if (moment.video?.originalUrl) {
+      return {
+        type: "video" as const,
+        url: moment.video.originalUrl,
+      };
+    }
+    if (moment.images[0]?.originalUrl) {
+      return {
+        type: "image" as const,
+        url: moment.images[0].originalUrl,
+      };
+    }
+    return null;
+  };
+
+  const getMomentStats = (moment: MomentDto) => {
+    const reactions = moment.reactions?.length ?? 0;
+    const isLiked = moment.reactions?.some((r) => r.userId === user?.id) ?? false;
+    return { reactions, isLiked };
   };
 
   return (
-    <div className="v2-moments-container">
+    <div className="v2-moments-container" ref={scrollRef} onScroll={handleScroll}>
       {/* Header */}
       <div className="moments-header">
         <h1 className="moments-title">Moments</h1>
@@ -81,58 +109,63 @@ export function V2MomentsFeed() {
 
       {/* Moments Grid */}
       <div className="moments-content">
-        {isLoading ? (
+        {isLoading && moments.length === 0 ? (
           <div className="moments-loading">
             <div className="loading-spinner" />
             <p className="loading-text">Loading moments...</p>
           </div>
         ) : moments.length > 0 ? (
           <div className="moments-grid">
-            {moments.map((moment) => (
-              <div
-                key={moment.id}
-                className="moment-card"
-                onClick={() => setSelectedMoment(moment)}
-              >
-                <div className="moment-media">
-                  {moment.mediaType === "image" ? (
-                    <img
-                      src={moment.mediaUrl}
-                      alt={moment.caption || "Moment"}
-                      className="moment-image"
-                    />
-                  ) : (
-                    <video
-                      src={moment.mediaUrl}
-                      className="moment-video"
-                      muted
-                      loop
-                      playsInline
-                    />
-                  )}
-                  
-                  <div className="moment-user-overlay">
-                    <span className="moment-user-initial">
-                      {moment.userName?.charAt(0) || "?"}
-                    </span>
-                  </div>
+            {moments.map((moment) => {
+              const media = getMomentMedia(moment);
+              if (!media) return null;
+              
+              const stats = getMomentStats(moment);
+              const initials = moment.userName?.charAt(0) || "?";
+              
+              return (
+                <div
+                  key={moment.id}
+                  className="moment-card"
+                  onClick={() => setSelectedMoment(moment)}
+                >
+                  <div className="moment-media">
+                    {media.type === "image" ? (
+                      <img
+                        src={media.url}
+                        alt={moment.caption || "Moment"}
+                        className="moment-image"
+                      />
+                    ) : (
+                      <video
+                        src={media.url}
+                        className="moment-video"
+                        muted
+                        loop
+                        playsInline
+                      />
+                    )}
+                    
+                    <div className="moment-user-overlay">
+                      <span className="moment-user-initial">{initials}</span>
+                    </div>
 
-                  <div className="moment-stats">
-                    {moment.isLiked && (
-                      <div className="moment-stat-item liked">
-                        <Heart className="moment-stat-icon" fill="white" />
-                      </div>
-                    )}
-                    {(moment.comments || 0) > 0 && (
-                      <div className="moment-stat-item">
-                        <MessageCircle className="moment-stat-icon" />
-                        <span>{moment.comments}</span>
-                      </div>
-                    )}
+                    <div className="moment-stats">
+                      {stats.isLiked && (
+                        <div className="moment-stat-item liked">
+                          <Heart className="moment-stat-icon" fill="white" />
+                        </div>
+                      )}
+                      {stats.reactions > 0 && (
+                        <div className="moment-stat-item">
+                          <span>{stats.reactions}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="moments-empty">
@@ -230,10 +263,10 @@ export function V2MomentsFeed() {
 
                 <Button
                   onClick={handleCreateMoment}
-                  disabled={!newMomentMedia || isUploading}
+                  disabled={!newMomentMedia || isCreating}
                   className="submit-btn"
                 >
-                  {isUploading ? "Sharing..." : "Share Moment"}
+                  {isCreating ? "Sharing..." : "Share Moment"}
                 </Button>
               </div>
             </div>
@@ -247,20 +280,24 @@ export function V2MomentsFeed() {
           <DialogContent className="moment-detail-dialog">
             <div className="moment-detail-content">
               <div className="detail-media">
-                {selectedMoment.mediaType === "image" ? (
-                  <img
-                    src={selectedMoment.mediaUrl}
-                    alt={selectedMoment.caption || "Moment"}
-                    className="detail-image"
-                  />
-                ) : (
-                  <video
-                    src={selectedMoment.mediaUrl}
-                    className="detail-video"
-                    controls
-                    autoPlay
-                  />
-                )}
+                {(() => {
+                  const media = getMomentMedia(selectedMoment);
+                  if (!media) return null;
+                  return media.type === "image" ? (
+                    <img
+                      src={media.url}
+                      alt={selectedMoment.caption || "Moment"}
+                      className="detail-image"
+                    />
+                  ) : (
+                    <video
+                      src={media.url}
+                      className="detail-video"
+                      controls
+                      autoPlay
+                    />
+                  );
+                })()}
               </div>
 
               <div className="detail-info">
@@ -281,27 +318,22 @@ export function V2MomentsFeed() {
                 )}
 
                 <div className="detail-actions">
-                  <button
-                    className="detail-action-btn"
-                    onClick={() => handleLikeMoment(selectedMoment.id)}
-                    aria-label="Like moment"
-                  >
+                  <div className="detail-action-btn">
                     <Heart
                       className={cn(
                         "action-icon",
-                        selectedMoment.isLiked && "liked"
+                        getMomentStats(selectedMoment).isLiked && "liked"
                       )}
-                      fill={selectedMoment.isLiked ? "white" : "none"}
+                      fill={getMomentStats(selectedMoment).isLiked ? "white" : "none"}
                     />
-                    <span>{selectedMoment.likes || 0}</span>
-                  </button>
+                    <span>{getMomentStats(selectedMoment).reactions}</span>
+                  </div>
 
                   <button
                     className="detail-action-btn"
                     aria-label="Comment"
                   >
                     <MessageCircle className="action-icon" />
-                    <span>{selectedMoment.comments || 0}</span>
                   </button>
 
                   <button

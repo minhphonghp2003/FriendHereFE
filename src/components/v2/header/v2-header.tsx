@@ -10,6 +10,7 @@ import { V2ProfileDialog } from "@/components/v2/dialogs/v2-profile-dialog";
 
 export function V2Header() {
   const user = useSelector((state: RootState) => state.auth.user);
+  const conversations = useSelector((state: RootState) => state.chat.conversations);
   const [chatOpen, setChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -21,6 +22,9 @@ export function V2Header() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  // Calculate total unread count across all conversations
+  const unreadCount = conversations.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0);
 
   return (
     <>
@@ -36,24 +40,29 @@ export function V2Header() {
         </div>
         <div className="header-right">
           <button 
-            onClick={() => setChatOpen(true)}
+            onClick={() => setChatOpen(!chatOpen)}
             className={`header-chat-btn ${chatOpen ? 'header-btn-active' : ''}`}
             aria-label="Chat"
+            aria-expanded={chatOpen}
           >
             <MessageCircle className="chat-icon" />
-            <span className="chat-badge">3</span>
+            {unreadCount > 0 && (
+              <span className="chat-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
           </button>
           <button 
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => setSettingsOpen(!settingsOpen)}
             className={`header-icon-btn ${settingsOpen ? 'header-btn-active' : ''}`}
             aria-label="Settings"
+            aria-expanded={settingsOpen}
           >
             <Settings className="header-icon" />
           </button>
           <button 
-            onClick={() => setProfileOpen(true)}
+            onClick={() => setProfileOpen(!profileOpen)}
             className={`header-icon-btn ${profileOpen ? 'header-btn-active' : ''}`}
             aria-label="Profile"
+            aria-expanded={profileOpen}
           >
             <User className="header-icon" />
           </button>
@@ -165,8 +174,9 @@ export function V2Header() {
           border: 1px solid rgba(43, 176, 175, 0.3);
           border-radius: 50%;
           color: #2BB0AF;
-          text-decoration: none;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          padding: 0;
         }
 
         .header-chat-btn:hover {
@@ -214,6 +224,7 @@ export function V2Header() {
           color: rgba(255, 255, 255, 0.7);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
+          padding: 0;
         }
 
         .header-icon-btn:hover {
