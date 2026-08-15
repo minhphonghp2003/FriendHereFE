@@ -12,9 +12,11 @@ interface V2FriendsSheetProps {
   myLocation: { lat: number; lng: number } | undefined;
   /** Open the unified user detail dialog (same as marker tap) */
   onUserTap?: (userId: number) => void;
+  /** Called when the sheet opens — parent should close any open modals */
+  onSheetOpen?: () => void;
 }
 
-export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2FriendsSheetProps) {
+export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap, onSheetOpen }: V2FriendsSheetProps) {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(80);
@@ -26,6 +28,18 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2Frien
   
   const maxSheetHeight = typeof window !== 'undefined' ? window.innerHeight - 100 : 400;
   const minSheetHeight = 80;
+
+  const openSheet = () => {
+    setSheetHeight(maxSheetHeight);
+    setIsSheetOpen(true);
+    // Opening the sheet dismisses any open modal behind it
+    onSheetOpen?.();
+  };
+
+  const closeSheet = () => {
+    setSheetHeight(minSheetHeight);
+    setIsSheetOpen(false);
+  };
 
   const handleTouchStart = (e: TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);
@@ -52,21 +66,17 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2Frien
     const midpoint = (maxSheetHeight + minSheetHeight) / 2;
     
     if (sheetHeight > midpoint) {
-      setSheetHeight(maxSheetHeight);
-      setIsSheetOpen(true);
+      openSheet();
     } else {
-      setSheetHeight(minSheetHeight);
-      setIsSheetOpen(false);
+      closeSheet();
     }
   };
 
   const toggleSheet = () => {
     if (isSheetOpen) {
-      setSheetHeight(minSheetHeight);
-      setIsSheetOpen(false);
+      closeSheet();
     } else {
-      setSheetHeight(maxSheetHeight);
-      setIsSheetOpen(true);
+      openSheet();
     }
   };
 
@@ -232,7 +242,7 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2Frien
           position: fixed;
           bottom: 100px;
           left: 20px;
-          z-index: 2500;
+          z-index: 40;
           width: 56px;
           height: 56px;
           display: flex;
@@ -280,13 +290,14 @@ export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2Frien
           transform: scale(0.95);
         }
 
-        /* Bottom Sheet */
+        /* Bottom Sheet — z-index 40: below shadcn dialogs (z-50) so user detail
+           modals render above the sheet, but above the map */
         .location-bottom-sheet {
           position: fixed;
           left: 0;
           right: 0;
           bottom: 0;
-          z-index: 2500;
+          z-index: 40;
           background: rgba(20, 20, 20, 0.92);
           backdrop-filter: blur(30px);
           -webkit-backdrop-filter: blur(30px);

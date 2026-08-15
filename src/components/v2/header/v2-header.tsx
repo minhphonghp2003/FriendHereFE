@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
@@ -8,6 +8,9 @@ import { useCurrentUser } from "@/hooks/users/use-users";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
+
+/** Fired when the nearby sheet opens — all v2 modals should close */
+export const V2_CLOSE_MODALS_EVENT = "v2:close-modals";
 
 type ActiveDialog = "chat" | "settings" | "profile" | null;
 
@@ -17,6 +20,13 @@ export function V2Header() {
   // Single active modal: only one dialog open at a time
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Close all modals when the nearby sheet opens
+  useEffect(() => {
+    const closeAll = () => setActiveDialog(null);
+    window.addEventListener(V2_CLOSE_MODALS_EVENT, closeAll);
+    return () => window.removeEventListener(V2_CLOSE_MODALS_EVENT, closeAll);
+  }, []);
 
   // Toggle: tapping the active button closes it; tapping another swaps dialogs
   const toggleDialog = (dialog: Exclude<ActiveDialog, null>) => {

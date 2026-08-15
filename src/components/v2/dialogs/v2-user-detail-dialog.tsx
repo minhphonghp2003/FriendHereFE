@@ -15,6 +15,7 @@ import {
   Tag,
   MessageCircle,
   Pencil,
+  ChevronLeft,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -73,15 +74,27 @@ export function V2UserDetailDialog({
   const router = useRouter();
   const reduxUser = useSelector((state: RootState) => state.auth.user);
 
-  const isMe = userId === "me";
-  const otherId = typeof userId === "number" ? userId : null;
+  // Internal navigation: when viewing another user from inside my profile
+  const [viewingUserId, setViewingUserId] = useState<number | null>(null);
+
+  // Reset internal navigation whenever the dialog closes or the target changes
+  useEffect(() => {
+    if (userId === null) setViewingUserId(null);
+  }, [userId]);
+
+  // The user this dialog currently shows
+  const effectiveUserId: "me" | number | null =
+    viewingUserId !== null ? viewingUserId : userId;
+
+  const isMe = effectiveUserId === "me";
+  const otherId = typeof effectiveUserId === "number" ? effectiveUserId : null;
 
   // ---- User detail (v1 useUser pattern, inline) ----
   const [userDetail, setUserDetail] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
 
   const fetchUserDetail = useCallback(async () => {
-    if (userId === null) return;
+    if (effectiveUserId === null) return;
     setLoadingUser(true);
     try {
       const u = isMe ? await getCurrentUser() : await getUserById(otherId!);
@@ -91,12 +104,12 @@ export function V2UserDetailDialog({
     } finally {
       setLoadingUser(false);
     }
-  }, [userId, isMe, otherId]);
+  }, [effectiveUserId, isMe, otherId]);
 
   useEffect(() => {
     setUserDetail(null);
-    if (userId !== null) fetchUserDetail();
-  }, [userId, fetchUserDetail]);
+    if (effectiveUserId !== null) fetchUserDetail();
+  }, [effectiveUserId, fetchUserDetail]);
 
   // ---- My profile editing ----
   const [isEditing, setIsEditing] = useState(false);
@@ -218,9 +231,9 @@ export function V2UserDetailDialog({
   }, []);
 
   useEffect(() => {
-    if (userId === "me") fetchFriendships();
+    if (effectiveUserId === "me") fetchFriendships();
     else setTypePickerId(null);
-  }, [userId, fetchFriendships]);
+  }, [effectiveUserId, fetchFriendships]);
 
   const incomingRequests = friendships.filter(
     (f) => isPending(f) && f.requestedById !== reduxUser?.id,
@@ -254,6 +267,16 @@ export function V2UserDetailDialog({
     } finally {
       setProcessingId(null);
     }
+  };
+
+  // v1 pattern: opponent id from a friendship record
+  const getOpponentId = (f: FriendshipDto): number =>
+    f.user1Id === reduxUser?.id ? f.user2Id : f.user1Id;
+
+  // Navigate inside this dialog to a friend's info
+  const handleViewFriend = (f: FriendshipDto) => {
+    setTypePickerId(null);
+    setViewingUserId(getOpponentId(f));
   };
 
   const name_display = userDetail?.name ?? (isMe ? reduxUser?.name : null) ?? "Unknown";
@@ -375,6 +398,18 @@ export function V2UserDetailDialog({
             </div>
           ) : (
             <>
+              {/* Back to my profile (when viewing another user from inside it) */}
+              {viewingUserId !== null && (
+                <button
+                  onClick={() => setViewingUserId(null)}
+                  className="vud-back-btn"
+                  aria-label="Back to my profile"
+                >
+                  <ChevronLeft className="vud-back-icon" />
+                  My Profile
+                </button>
+              )}
+
               {/* Profile header */}
               <div className="profile-header">
                 <div className="profile-avatar-section">
@@ -519,13 +554,19 @@ export function V2UserDetailDialog({
                           const typePickerOpen = typePickerId === f.id;
                           return (
                             <div key={f.id} className="pf-row">
-                              {renderFriendRow(f)}
-                              <div className="pf-row-info">
-                                <span className="pf-row-name">{f.otherUserName}</span>
-                                <span className="pf-row-sub">
-                                  {FRIENDSHIP_TYPE_LABELS[currentType]}
-                                </span>
-                              </div>
+                              <button
+                                className="pf-row-tap"
+                                onClick={() => handleViewFriend(f)}
+                                aria-label={`View ${f.otherUserName}`}
+                              >
+                                {renderFriendRow(f)}
+                                <div className="pf-row-info">
+                                  <span className="pf-row-name">{f.otherUserName}</span>
+                                  <span className="pf-row-sub">
+                                    {FRIENDSHIP_TYPE_LABELS[currentType]}
+                                  </span>
+                                </div>
+                              </button>
                               <div className="pf-row-actions">
                                 <button
                                   onClick={() => setTypePickerId(typePickerOpen ? null : f.id)}
@@ -594,14 +635,20 @@ export function V2UserDetailDialog({
                           {incomingRequests.length}
                         </span>
                       </p>
-                      <div className="pf-list">
+                       <div className="pf-list">
                         {incomingRequests.map((f) => (
                           <div key={f.id} className="pf-row">
-                            {renderFriendRow(f)}
-                            <div className="pf-row-info">
-                              <span className="pf-row-name">{f.otherUserName}</span>
-                              <span className="pf-row-sub">wants to be your friend</span>
-                            </div>
+                            <button
+                              className="pf-row-tap"
+                              onClick={() => handleViewFriend(f)}
+                              aria-label={`View ${f.otherUserName}`}
+                            >
+                              {renderFriendRow(f)}
+                              <div className="pf-row-info">
+                                <span className="pf-row-name">{f.otherUserName}</span>
+                                <span className="pf-row-sub">wants to be your friend</span>
+                              </div>
+                            </button>
                             <div className="pf-row-actions">
                               <button
                                 onClick={() =>
@@ -636,14 +683,20 @@ export function V2UserDetailDialog({
                         Sent requests
                         <span className="pf-section-count">{myRequests.length}</span>
                       </p>
-                      <div className="pf-list">
+                       <div className="pf-list">
                         {myRequests.map((f) => (
                           <div key={f.id} className="pf-row">
-                            {renderFriendRow(f)}
-                            <div className="pf-row-info">
-                              <span className="pf-row-name">{f.otherUserName}</span>
-                              <span className="pf-row-sub">waiting for response</span>
-                            </div>
+                            <button
+                              className="pf-row-tap"
+                              onClick={() => handleViewFriend(f)}
+                              aria-label={`View ${f.otherUserName}`}
+                            >
+                              {renderFriendRow(f)}
+                              <div className="pf-row-info">
+                                <span className="pf-row-name">{f.otherUserName}</span>
+                                <span className="pf-row-sub">waiting for response</span>
+                              </div>
+                            </button>
                             <div className="pf-row-actions">
                               <button
                                 onClick={() =>
@@ -668,6 +721,30 @@ export function V2UserDetailDialog({
         </div>
 
         <style jsx global>{`
+          .vud-back-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #2BB0AF;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0 0 12px;
+            margin: 0;
+            align-self: flex-start;
+          }
+
+          .vud-back-btn:active {
+            opacity: 0.7;
+          }
+
+          .vud-back-icon {
+            width: 16px;
+            height: 16px;
+          }
+
           .vud-loading {
             display: flex;
             align-items: center;
@@ -1053,6 +1130,23 @@ export function V2UserDetailDialog({
             color: white;
             font-weight: 700;
             font-size: 14px;
+          }
+
+          .pf-row-tap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            text-align: left;
+          }
+
+          .pf-row-tap:active {
+            opacity: 0.7;
           }
 
           .pf-row-info {

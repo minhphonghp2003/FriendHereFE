@@ -274,6 +274,13 @@ export function V2LocationPage() {
         nearbyFriends={nearbyFriends}
         myLocation={position}
         onUserTap={(userId) => setSelectedUserId(userId)}
+        onSheetOpen={() => {
+          // Opening the nearby sheet dismisses all open modals
+          setSelectedUserId(null);
+          setSettingsOpen(false);
+          setStatusEditorOpen(false);
+          window.dispatchEvent(new Event("v2:close-modals"));
+        }}
       />
       <V2LocationSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
