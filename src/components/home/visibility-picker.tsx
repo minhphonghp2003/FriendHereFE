@@ -45,7 +45,7 @@ export const VisibilityPicker = () => {
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
       >
-        <Eye className="h-3.5 w-3.5" />
+        <Eye className="h-3.5 w-3.5 text-[#2BB0AF]" />
         {currentLabel}
       </button>
       {open && (
@@ -58,7 +58,7 @@ export const VisibilityPicker = () => {
                 key={value}
                 onClick={() => handleSelect(numericValue as LocationVisibilityValue)}
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium ${
-                  active ? "bg-blue-50 text-blue-600" : "text-zinc-700 hover:bg-zinc-50"
+                  active ? "bg-primary/10 text-primary" : "text-zinc-700 hover:bg-zinc-50"
                 }`}
               >
                 {label}

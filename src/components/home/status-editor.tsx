@@ -79,7 +79,7 @@ export const StatusEditor = () => {
               if (e.key === "Escape") setOpen(false);
             }}
             placeholder="VD: Đang đi làm, Đừng làm phiền"
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-700 outline-none focus:border-blue-500"
+            className="focus:border-primary focus:ring-primary w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-700 outline-none focus:ring-1"
           />
           <div className="mt-1 text-right text-[10px] text-zinc-400">
             {value.length}/{STATUS_MAX_LENGTH}
@@ -88,7 +88,7 @@ export const StatusEditor = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className="bg-primary hover:bg-primary/90 flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
               <Check className="h-3 w-3" />
               Lưu
@@ -97,7 +97,7 @@ export const StatusEditor = () => {
               <button
                 onClick={handleClear}
                 disabled={saving}
-                className="flex-1 rounded-lg bg-zinc-200 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-300 disabled:opacity-50"
+                className="flex-1 rounded-lg border border-zinc-200 bg-white py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
               >
                 Xóa
               </button>

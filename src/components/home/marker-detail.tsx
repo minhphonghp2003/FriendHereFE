@@ -266,7 +266,7 @@ export const MarkerDetail = ({
         <button
           onClick={handleSendFriendRequest}
           disabled={actionLoading}
-          className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="bg-success text-success-foreground hover:bg-success/90 flex-1 rounded-lg py-2 text-sm font-medium disabled:opacity-50"
         >
           {actionLoading ? "..." : "Kết bạn"}
         </button>
@@ -281,7 +281,7 @@ export const MarkerDetail = ({
             <button
               onClick={handleAccept}
               disabled={actionLoading}
-              className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="bg-success text-success-foreground hover:bg-success/90 flex-1 rounded-lg py-2 text-sm font-medium disabled:opacity-50"
             >
               Chấp nhận
             </button>
