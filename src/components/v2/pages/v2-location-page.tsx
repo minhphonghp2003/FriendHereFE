@@ -44,12 +44,8 @@ export function V2LocationPage() {
   const myBattery = useAppSelector((s) => s.location.battery);
   const user = useAppSelector((s) => s.auth.user);
 
-  // Use v1's useActiveUsers hook for friend nearby data
-  const {
-    data: activeUsers,
-    isLoading: loadingActiveUsers,
-    refetch: refetchActiveUsers,
-  } = useActiveUsers(20, LOCATION_SORT.Distance);
+  // Active users from v1 service (used for user-detail context: battery/status/distance)
+  const { data: activeUsers } = useActiveUsers(20, LOCATION_SORT.Distance);
 
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
@@ -107,9 +103,6 @@ export function V2LocationPage() {
       document.removeEventListener("touchstart", onDown);
     };
   }, [statusEditorOpen]);
-
-  // Filter out current user from nearby friends
-  const nearbyFriends = activeUsers.filter((u) => u.userId !== user?.id);
 
   // v1 logic (StatusEditor): save/clear status via locationHub
   const handleSaveStatus = async () => {
@@ -284,8 +277,6 @@ export function V2LocationPage() {
       )}
 
       <V2FriendsSheet
-        nearbyFriends={nearbyFriends}
-        myLocation={position}
         onUserTap={openUserDetail}
         onSheetOpen={() => {
           // The sheet broadcasts v2:close-modals globally;
