@@ -32,22 +32,20 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="flex min-h-dvh flex-col bg-background safe-top safe-bottom">
+    <main className="bg-background safe-top safe-bottom flex min-h-dvh flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
         <Link
           href="/login"
-          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground mb-10 inline-flex items-center gap-2 text-sm transition"
         >
           <ArrowLeft className="size-4" />
           Quay lại đăng nhập
         </Link>
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Quên mật khẩu
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight">Quên mật khẩu</h1>
 
-          <p className="mt-3 text-muted-foreground">
+          <p className="text-muted-foreground mt-3">
             Nhập email của bạn và chúng tôi sẽ gửi link đặt lại mật khẩu.
           </p>
         </div>
@@ -58,7 +56,7 @@ export default function ForgotPasswordPage() {
 
             <h2 className="text-xl font-semibold">Đã gửi email</h2>
 
-            <p className="mt-2 text-muted-foreground">
+            <p className="text-muted-foreground mt-2">
               Kiểm tra hộp thư của bạn để nhận link đặt lại mật khẩu.
             </p>
           </div>
@@ -79,7 +77,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {error && (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-3 text-sm">
                   {error}
                 </div>
               )}
@@ -94,12 +92,9 @@ export default function ForgotPasswordPage() {
                 {isLoading ? "Đang gửi..." : "Gửi link đặt lại"}
               </Button>
 
-              <p className="mt-6 text-center text-sm text-muted-foreground">
+              <p className="text-muted-foreground mt-6 text-center text-sm">
                 Nhớ mật khẩu?{" "}
-                <Link
-                  href="/login"
-                  className="font-semibold text-primary hover:underline"
-                >
+                <Link href="/login" className="text-primary font-semibold hover:underline">
                   Đăng nhập
                 </Link>
               </p>

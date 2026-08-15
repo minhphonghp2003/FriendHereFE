@@ -218,7 +218,9 @@ export const getMessagePreview = (msg: MessageDto | null): string => {
 
   if (msg.attachments && msg.attachments.length > 0) {
     const hasVideo = msg.attachments.some((a) => isVideoUrl(a.originalUrl));
-    return hasVideo ? "[Video]" : `[Hình ảnh${msg.attachments.length > 1 ? ` (${msg.attachments.length})` : ""}]`;
+    return hasVideo
+      ? "[Video]"
+      : `[Hình ảnh${msg.attachments.length > 1 ? ` (${msg.attachments.length})` : ""}]`;
   }
   return "";
 };

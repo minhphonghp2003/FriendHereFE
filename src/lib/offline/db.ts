@@ -89,11 +89,7 @@ export function dbGetAll<T>(storeName: string): Promise<T[]> {
   return run<T[]>(storeName, "readonly", (store) => store.getAll() as IDBRequest<T[]>);
 }
 
-export function dbPut(
-  storeName: string,
-  value: unknown,
-  key?: IDBValidKey,
-): Promise<void> {
+export function dbPut(storeName: string, value: unknown, key?: IDBValidKey): Promise<void> {
   if (!isAvailable()) return Promise.resolve();
   return run(storeName, "readwrite", (store) =>
     key !== undefined ? store.put(value, key) : store.put(value),
@@ -102,9 +98,7 @@ export function dbPut(
 
 export function dbDelete(storeName: string, key: IDBValidKey): Promise<void> {
   if (!isAvailable()) return Promise.resolve();
-  return run(storeName, "readwrite", (store) => store.delete(key)).then(
-    () => undefined,
-  );
+  return run(storeName, "readwrite", (store) => store.delete(key)).then(() => undefined);
 }
 
 export function dbCount(storeName: string): Promise<number> {

@@ -19,9 +19,15 @@ export const IncomingCallOverlay = ({ peer, onAccept, onReject }: Props) => {
           <div className="absolute inset-0 animate-ping rounded-full bg-white/20" />
           <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-2 ring-white/60">
             {peer.image?.originalUrl ? (
-              <img src={peer.image.originalUrl} alt={peer.name} className="h-full w-full object-cover" />
+              <img
+                src={peer.image.originalUrl}
+                alt={peer.name}
+                className="h-full w-full object-cover"
+              />
             ) : (
-              <span className="text-4xl font-bold text-white">{peer.name?.charAt(0)?.toUpperCase() ?? "?"}</span>
+              <span className="text-4xl font-bold text-white">
+                {peer.name?.charAt(0)?.toUpperCase() ?? "?"}
+              </span>
             )}
           </div>
         </div>

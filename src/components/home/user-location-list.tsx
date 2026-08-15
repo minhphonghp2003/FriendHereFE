@@ -63,7 +63,9 @@ export const UserLocationList = ({
           <div className="h-8 w-8 rounded-full border-2 border-zinc-300" />
         </div>
         <p className="mt-4 text-sm text-zinc-500">No one is nearby right now</p>
-        <p className="mt-1 text-xs text-zinc-400">Users will appear here when they&apos;re online</p>
+        <p className="mt-1 text-xs text-zinc-400">
+          Users will appear here when they&apos;re online
+        </p>
       </div>
     );
   }
@@ -72,12 +74,19 @@ export const UserLocationList = ({
     <div className="flex h-full flex-col">
       <div className="border-b border-zinc-100 px-4 py-3">
         <h2 className="text-sm font-semibold text-zinc-700">People Nearby</h2>
-        <p className="text-xs text-zinc-400">{users.length} user{users.length > 1 ? "s" : ""} online</p>
+        <p className="text-xs text-zinc-400">
+          {users.length} user{users.length > 1 ? "s" : ""} online
+        </p>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-3">
           {users.map((loc) => (
-            <UserBubble key={loc.userId} location={loc} currentUser={currentUser} onClick={onUserClick} />
+            <UserBubble
+              key={loc.userId}
+              location={loc}
+              currentUser={currentUser}
+              onClick={onUserClick}
+            />
           ))}
         </div>
         {hasMore && (
@@ -98,9 +107,14 @@ export const UserBubbleOverlay = ({ users, currentUser, onUserClick }: UserLocat
   if (users.length === 0) return null;
 
   return (
-    <div className="absolute right-2 top-4 z-30 flex flex-col gap-2">
+    <div className="absolute top-4 right-2 z-30 flex flex-col gap-2">
       {users.map((loc) => (
-        <MiniBubble key={loc.userId} location={loc} currentUser={currentUser} onClick={onUserClick} />
+        <MiniBubble
+          key={loc.userId}
+          location={loc}
+          currentUser={currentUser}
+          onClick={onUserClick}
+        />
       ))}
     </div>
   );

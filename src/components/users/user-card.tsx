@@ -14,9 +14,7 @@ export const UserCard = ({ user, onDelete }: UserCardProps) => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{user.name}</CardTitle>
-        <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">
-          User
-        </span>
+        <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-800">User</span>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-zinc-500">{user.email}</p>

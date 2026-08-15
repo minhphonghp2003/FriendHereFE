@@ -23,7 +23,9 @@ export function OfflineBanner() {
         ) : (
           <>
             <RefreshCw className="size-3.5 shrink-0 animate-spin" />
-            <span>Syncing {pendingCount} pending change{pendingCount === 1 ? "" : "s"}…</span>
+            <span>
+              Syncing {pendingCount} pending change{pendingCount === 1 ? "" : "s"}…
+            </span>
           </>
         )}
       </div>

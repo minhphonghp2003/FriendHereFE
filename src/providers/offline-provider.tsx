@@ -48,7 +48,9 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
   // Track outbox size.
   useEffect(() => {
     const refresh = () => {
-      countOutbox().then(setPendingCount).catch(() => {});
+      countOutbox()
+        .then(setPendingCount)
+        .catch(() => {});
     };
     refresh();
     const unsubscribe = subscribeOutboxChange(refresh);
@@ -65,9 +67,7 @@ export function OfflineProvider({ children }: OfflineProviderProps) {
   }, [isOnline]);
 
   return (
-    <OfflineContext.Provider value={{ isOnline, pendingCount }}>
-      {children}
-    </OfflineContext.Provider>
+    <OfflineContext.Provider value={{ isOnline, pendingCount }}>{children}</OfflineContext.Provider>
   );
 }
 

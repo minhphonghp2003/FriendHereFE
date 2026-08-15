@@ -36,10 +36,14 @@ export default function UserProfilePage() {
       if (res.data) {
         router.push(`/chat/${res.data}`);
       } else {
-        router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`);
+        router.push(
+          `/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
+        );
       }
     } catch {
-      router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`);
+      router.push(
+        `/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
+      );
     }
   }, [userId, userProfile, router]);
 
@@ -54,13 +58,13 @@ export default function UserProfilePage() {
   if (!userProfile) {
     return (
       <div className="flex h-[calc(100dvh-4rem)] flex-col">
-        <div className="flex items-center gap-3 border-b border-border p-3">
-          <button onClick={() => router.back()} className="rounded p-1 hover:bg-muted">
+        <div className="border-border flex items-center gap-3 border-b p-3">
+          <button onClick={() => router.back()} className="hover:bg-muted rounded p-1">
             <ArrowLeft className="h-5 w-5" />
           </button>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-muted-foreground">Không tìm thấy người dùng</p>
+          <p className="text-muted-foreground text-sm">Không tìm thấy người dùng</p>
         </div>
       </div>
     );
@@ -70,8 +74,8 @@ export default function UserProfilePage() {
 
   return (
     <div className="flex h-[calc(100dvh-4rem)] flex-col overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-border p-3">
-        <button onClick={() => router.back()} className="rounded p-1 hover:bg-muted">
+      <div className="border-border flex items-center gap-3 border-b p-3">
+        <button onClick={() => router.back()} className="hover:bg-muted rounded p-1">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <p className="flex-1 truncate font-semibold">
@@ -81,11 +85,11 @@ export default function UserProfilePage() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col items-center gap-3 p-6">
-          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-muted">
+          <div className="bg-muted flex h-20 w-20 items-center justify-center overflow-hidden rounded-full">
             {avatar ? (
               <img src={avatar} alt={userProfile.name} className="h-full w-full object-cover" />
             ) : (
-              <span className="text-2xl font-bold text-muted-foreground">
+              <span className="text-muted-foreground text-2xl font-bold">
                 {userProfile.name?.charAt(0)?.toUpperCase() ?? "?"}
               </span>
             )}
@@ -93,10 +97,10 @@ export default function UserProfilePage() {
           <div className="text-center">
             <p className="text-lg font-semibold">{userProfile.name}</p>
             {userProfile.email && (
-              <p className="text-sm text-muted-foreground">{userProfile.email}</p>
+              <p className="text-muted-foreground text-sm">{userProfile.email}</p>
             )}
             {userProfile.age != null && (
-              <p className="text-sm text-muted-foreground">{userProfile.age} tuổi</p>
+              <p className="text-muted-foreground text-sm">{userProfile.age} tuổi</p>
             )}
           </div>
           {!isSelf && (
@@ -110,14 +114,14 @@ export default function UserProfilePage() {
           )}
         </div>
 
-        <div className="border-t border-border px-4 py-3">
-          <p className="mb-3 text-sm font-medium text-muted-foreground">Khoảnh khắc</p>
+        <div className="border-border border-t px-4 py-3">
+          <p className="text-muted-foreground mb-3 text-sm font-medium">Khoảnh khắc</p>
           {loadingMoments && moments.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
             </div>
           ) : moments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
               <ImageIcon className="mb-2 h-10 w-10" />
               <p className="text-sm">Chưa có khoảnh khắc nào</p>
             </div>
@@ -132,7 +136,7 @@ export default function UserProfilePage() {
                     <button
                       key={moment.id}
                       onClick={() => setViewMomentId(moment.id)}
-                      className="relative aspect-square overflow-hidden rounded-md bg-muted"
+                      className="bg-muted relative aspect-square overflow-hidden rounded-md"
                     >
                       {thumb ? (
                         <img
@@ -143,11 +147,11 @@ export default function UserProfilePage() {
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          <ImageIcon className="text-muted-foreground h-6 w-6" />
                         </div>
                       )}
                       {hasVideo && (
-                        <span className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60">
+                        <span className="absolute right-1 bottom-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60">
                           <span className="ml-0.5 h-0 w-0 border-y-[4px] border-l-[6px] border-y-transparent border-l-white" />
                         </span>
                       )}
@@ -160,7 +164,7 @@ export default function UserProfilePage() {
                   <button
                     onClick={loadMore}
                     disabled={isLoadingMore}
-                    className="rounded-full bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/70 disabled:opacity-50"
+                    className="bg-muted text-muted-foreground hover:bg-muted/70 rounded-full px-4 py-1.5 text-xs font-medium disabled:opacity-50"
                   >
                     {isLoadingMore ? "Đang tải..." : "Xem thêm"}
                   </button>

@@ -1,14 +1,28 @@
 import * as signalR from "@microsoft/signalr";
 import { env } from "@/config/env";
 import { TOKEN_KEY } from "@/constants";
-import type { MessageDto, ConversationDto, SendMessageRequest, AddMessageReactionRequest, MessageReactionNotificationDto, MessageReactionRemovedNotificationDto, MessageReadNotificationDto, ConversationUpdatedNotificationDto, JoinRequestDto, JoinRequestProcessedData } from "@/types/chat";
+import type {
+  MessageDto,
+  ConversationDto,
+  SendMessageRequest,
+  AddMessageReactionRequest,
+  MessageReactionNotificationDto,
+  MessageReactionRemovedNotificationDto,
+  MessageReadNotificationDto,
+  ConversationUpdatedNotificationDto,
+  JoinRequestDto,
+  JoinRequestProcessedData,
+} from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
 import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
 
 export type KickedCallback = () => void;
 export type ReceiveMessageCallback = (message: MessageDto) => void;
-export type ReceiveNewConversationCallback = (conversation: ConversationDto, initialMessage: MessageDto) => void;
+export type ReceiveNewConversationCallback = (
+  conversation: ConversationDto,
+  initialMessage: MessageDto,
+) => void;
 export type ReceiveFriendshipCreatedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipAcceptedCallback = (dto: FriendshipDto) => void;
 export type ReceiveFriendshipBlockedCallback = (dto: FriendshipDto) => void;
@@ -28,7 +42,9 @@ export interface DeleteMessageRequest {
 export type ReceiveMessageEditedCallback = (message: MessageDto) => void;
 export type ReceiveMessageDeletedCallback = (messageId: number) => void;
 export type ReceiveMessageReactedCallback = (data: MessageReactionNotificationDto) => void;
-export type ReceiveMessageReactedRemovedCallback = (data: MessageReactionRemovedNotificationDto) => void;
+export type ReceiveMessageReactedRemovedCallback = (
+  data: MessageReactionRemovedNotificationDto,
+) => void;
 export type ReceiveMessagesReadCallback = (data: MessageReadNotificationDto) => void;
 export type ReceiveConversationUpdatedCallback = (data: ConversationUpdatedNotificationDto) => void;
 
@@ -95,7 +111,8 @@ class AppHub {
   private receiveMessageEditedCallbacks: Set<ReceiveMessageEditedCallback> = new Set();
   private receiveMessageDeletedCallbacks: Set<ReceiveMessageDeletedCallback> = new Set();
   private receiveMessageReactedCallbacks: Set<ReceiveMessageReactedCallback> = new Set();
-  private receiveMessageReactedRemovedCallbacks: Set<ReceiveMessageReactedRemovedCallback> = new Set();
+  private receiveMessageReactedRemovedCallbacks: Set<ReceiveMessageReactedRemovedCallback> =
+    new Set();
   private receiveMessagesReadCallbacks: Set<ReceiveMessagesReadCallback> = new Set();
   private receiveConversationUpdatedCallbacks: Set<ReceiveConversationUpdatedCallback> = new Set();
   private receiveNewConversationCallback: ReceiveNewConversationCallback | null = null;
@@ -113,7 +130,8 @@ class AppHub {
   private receiveMemberRemovedCallbacks: Set<ReceiveMemberRemovedCallback> = new Set();
   private receiveMemberLeftCallbacks: Set<ReceiveMemberLeftCallback> = new Set();
   private receiveJoinRequestCreatedCallbacks: Set<ReceiveJoinRequestCreatedCallback> = new Set();
-  private receiveJoinRequestProcessedCallbacks: Set<ReceiveJoinRequestProcessedCallback> = new Set();
+  private receiveJoinRequestProcessedCallbacks: Set<ReceiveJoinRequestProcessedCallback> =
+    new Set();
   private receiveGroupDeletedCallbacks: Set<ReceiveGroupDeletedCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
@@ -129,8 +147,7 @@ class AppHub {
       this.connection = null;
       try {
         await oldConnection.stop();
-      } catch {
-      }
+      } catch {}
     }
 
     if (myEpoch !== this.epoch) return;
@@ -169,9 +186,12 @@ class AppHub {
       this.receiveMessageReactedCallbacks.forEach((cb) => cb(data));
     });
 
-    this.connection.on("ReceiveMessageReactedRemoved", (data: MessageReactionRemovedNotificationDto) => {
-      this.receiveMessageReactedRemovedCallbacks.forEach((cb) => cb(data));
-    });
+    this.connection.on(
+      "ReceiveMessageReactedRemoved",
+      (data: MessageReactionRemovedNotificationDto) => {
+        this.receiveMessageReactedRemovedCallbacks.forEach((cb) => cb(data));
+      },
+    );
 
     this.connection.on("ReceiveMessagesRead", (data: MessageReadNotificationDto) => {
       this.receiveMessagesReadCallbacks.forEach((cb) => cb(data));
@@ -181,9 +201,12 @@ class AppHub {
       this.receiveConversationUpdatedCallbacks.forEach((cb) => cb(data));
     });
 
-    this.connection.on("ReceiveNewConversation", (conversation: ConversationDto, initialMessage: MessageDto) => {
-      this.receiveNewConversationCallback?.(conversation, initialMessage);
-    });
+    this.connection.on(
+      "ReceiveNewConversation",
+      (conversation: ConversationDto, initialMessage: MessageDto) => {
+        this.receiveNewConversationCallback?.(conversation, initialMessage);
+      },
+    );
 
     this.connection.on("ReceiveFriendshipCreated", (dto: FriendshipDto) => {
       this.receiveFriendshipCreatedCallbacks.forEach((cb) => cb(dto));
@@ -262,7 +285,7 @@ class AppHub {
       for (const convId of this.joinedConversations) {
         try {
           await this.connection?.invoke("JoinConversation", convId);
-        } catch { }
+        } catch {}
       }
     });
 
@@ -312,8 +335,7 @@ class AppHub {
       this.connection = null;
       try {
         await conn.stop();
-      } catch {
-      }
+      } catch {}
     }
   }
 
@@ -376,37 +398,51 @@ class AppHub {
 
   onReceiveMessage(callback: ReceiveMessageCallback): () => void {
     this.receiveMessageCallbacks.add(callback);
-    return () => { this.receiveMessageCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessageCallbacks.delete(callback);
+    };
   }
 
   onReceiveMessageEdited(callback: ReceiveMessageEditedCallback): () => void {
     this.receiveMessageEditedCallbacks.add(callback);
-    return () => { this.receiveMessageEditedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessageEditedCallbacks.delete(callback);
+    };
   }
 
   onReceiveMessageDeleted(callback: ReceiveMessageDeletedCallback): () => void {
     this.receiveMessageDeletedCallbacks.add(callback);
-    return () => { this.receiveMessageDeletedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessageDeletedCallbacks.delete(callback);
+    };
   }
 
   onReceiveMessageReacted(callback: ReceiveMessageReactedCallback): () => void {
     this.receiveMessageReactedCallbacks.add(callback);
-    return () => { this.receiveMessageReactedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessageReactedCallbacks.delete(callback);
+    };
   }
 
   onReceiveMessageReactedRemoved(callback: ReceiveMessageReactedRemovedCallback): () => void {
     this.receiveMessageReactedRemovedCallbacks.add(callback);
-    return () => { this.receiveMessageReactedRemovedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessageReactedRemovedCallbacks.delete(callback);
+    };
   }
 
   onReceiveMessagesRead(callback: ReceiveMessagesReadCallback): () => void {
     this.receiveMessagesReadCallbacks.add(callback);
-    return () => { this.receiveMessagesReadCallbacks.delete(callback); };
+    return () => {
+      this.receiveMessagesReadCallbacks.delete(callback);
+    };
   }
 
   onReceiveConversationUpdated(callback: ReceiveConversationUpdatedCallback): () => void {
     this.receiveConversationUpdatedCallbacks.add(callback);
-    return () => { this.receiveConversationUpdatedCallbacks.delete(callback); };
+    return () => {
+      this.receiveConversationUpdatedCallbacks.delete(callback);
+    };
   }
 
   onReceiveNewConversation(callback: ReceiveNewConversationCallback): void {
@@ -415,82 +451,114 @@ class AppHub {
 
   onReceiveFriendshipCreated(callback: ReceiveFriendshipCreatedCallback): () => void {
     this.receiveFriendshipCreatedCallbacks.add(callback);
-    return () => { this.receiveFriendshipCreatedCallbacks.delete(callback); };
+    return () => {
+      this.receiveFriendshipCreatedCallbacks.delete(callback);
+    };
   }
 
   onReceiveFriendshipAccepted(callback: ReceiveFriendshipAcceptedCallback): () => void {
     this.receiveFriendshipAcceptedCallbacks.add(callback);
-    return () => { this.receiveFriendshipAcceptedCallbacks.delete(callback); };
+    return () => {
+      this.receiveFriendshipAcceptedCallbacks.delete(callback);
+    };
   }
 
   onReceiveFriendshipBlocked(callback: ReceiveFriendshipBlockedCallback): () => void {
     this.receiveFriendshipBlockedCallbacks.add(callback);
-    return () => { this.receiveFriendshipBlockedCallbacks.delete(callback); };
+    return () => {
+      this.receiveFriendshipBlockedCallbacks.delete(callback);
+    };
   }
 
   onReceiveFriendshipUnblocked(callback: ReceiveFriendshipUnblockedCallback): () => void {
     this.receiveFriendshipUnblockedCallbacks.add(callback);
-    return () => { this.receiveFriendshipUnblockedCallbacks.delete(callback); };
+    return () => {
+      this.receiveFriendshipUnblockedCallbacks.delete(callback);
+    };
   }
 
   onReceiveChatBlocked(callback: ReceiveChatBlockedCallback): () => void {
     this.receiveChatBlockedCallbacks.add(callback);
-    return () => { this.receiveChatBlockedCallbacks.delete(callback); };
+    return () => {
+      this.receiveChatBlockedCallbacks.delete(callback);
+    };
   }
 
   onReceiveChatUnblocked(callback: ReceiveChatUnblockedCallback): () => void {
     this.receiveChatUnblockedCallbacks.add(callback);
-    return () => { this.receiveChatUnblockedCallbacks.delete(callback); };
+    return () => {
+      this.receiveChatUnblockedCallbacks.delete(callback);
+    };
   }
 
   onReceiveTyping(callback: ReceiveTypingCallback): () => void {
     this.receiveTypingCallbacks.add(callback);
-    return () => { this.receiveTypingCallbacks.delete(callback); };
+    return () => {
+      this.receiveTypingCallbacks.delete(callback);
+    };
   }
 
   onReceiveCall(callback: ReceiveCallCallback): () => void {
     this.receiveCallCallbacks.add(callback);
-    return () => { this.receiveCallCallbacks.delete(callback); };
+    return () => {
+      this.receiveCallCallbacks.delete(callback);
+    };
   }
 
   onReceiveCallSignal(callback: ReceiveCallSignalCallback): () => void {
     this.receiveCallSignalCallbacks.add(callback);
-    return () => { this.receiveCallSignalCallbacks.delete(callback); };
+    return () => {
+      this.receiveCallSignalCallbacks.delete(callback);
+    };
   }
 
   onReceiveMomentReacted(callback: ReceiveMomentReactedCallback): () => void {
     this.receiveMomentReactedCallbacks.add(callback);
-    return () => { this.receiveMomentReactedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMomentReactedCallbacks.delete(callback);
+    };
   }
 
   onReceiveFileMarkedSuccess(callback: ReceiveFileMarkedSuccessCallback): () => void {
     this.receiveFileMarkedSuccessCallbacks.add(callback);
-    return () => { this.receiveFileMarkedSuccessCallbacks.delete(callback); };
+    return () => {
+      this.receiveFileMarkedSuccessCallbacks.delete(callback);
+    };
   }
 
   onReceiveMemberRemoved(callback: ReceiveMemberRemovedCallback): () => void {
     this.receiveMemberRemovedCallbacks.add(callback);
-    return () => { this.receiveMemberRemovedCallbacks.delete(callback); };
+    return () => {
+      this.receiveMemberRemovedCallbacks.delete(callback);
+    };
   }
 
   onReceiveMemberLeft(callback: ReceiveMemberLeftCallback): () => void {
     this.receiveMemberLeftCallbacks.add(callback);
-    return () => { this.receiveMemberLeftCallbacks.delete(callback); };
+    return () => {
+      this.receiveMemberLeftCallbacks.delete(callback);
+    };
   }
 
   onReceiveJoinRequestCreated(callback: ReceiveJoinRequestCreatedCallback): () => void {
     this.receiveJoinRequestCreatedCallbacks.add(callback);
-    return () => { this.receiveJoinRequestCreatedCallbacks.delete(callback); };
+    return () => {
+      this.receiveJoinRequestCreatedCallbacks.delete(callback);
+    };
   }
 
   onReceiveJoinRequestProcessed(callback: ReceiveJoinRequestProcessedCallback): () => void {
     this.receiveJoinRequestProcessedCallbacks.add(callback);
-    return () => { this.receiveJoinRequestProcessedCallbacks.delete(callback); };
+    return () => {
+      this.receiveJoinRequestProcessedCallbacks.delete(callback);
+    };
   }
 
   onReceiveGroupDeleted(callback: ReceiveGroupDeletedCallback): () => void {
     this.receiveGroupDeletedCallbacks.add(callback);
-    return () => { this.receiveGroupDeletedCallbacks.delete(callback); };
+    return () => {
+      this.receiveGroupDeletedCallbacks.delete(callback);
+    };
   }
 
   getConnection(): signalR.HubConnection | null {

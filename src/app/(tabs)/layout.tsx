@@ -10,7 +10,14 @@ import { BottomNav } from "@/components/mobile/bottom-nav";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { useAppSelector } from "@/store/hooks";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
@@ -33,9 +40,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
       <CallProvider>
         <div className="flex h-full flex-col">
           <div className="safe-top safe-left safe-right flex-1 overflow-hidden">
-            <main className="h-full overflow-y-auto pb-20">
-              {children}
-            </main>
+            <main className="h-full overflow-y-auto pb-20">{children}</main>
           </div>
         </div>
         <BottomNav />

@@ -87,11 +87,14 @@ export const MomentImageCarousel = ({
   };
 
   const translateX = isDragging
-    ? ((offsetX / (containerRef.current?.offsetWidth || 1)) - currentIndex) * (100 / images.length)
+    ? (offsetX / (containerRef.current?.offsetWidth || 1) - currentIndex) * (100 / images.length)
     : -currentIndex * (100 / images.length);
 
   return (
-    <div ref={containerRef} className={`relative overflow-hidden bg-black ${fullscreen ? "h-full w-full" : "aspect-square w-full"}`}>
+    <div
+      ref={containerRef}
+      className={`relative overflow-hidden bg-black ${fullscreen ? "h-full w-full" : "aspect-square w-full"}`}
+    >
       <div
         className="flex h-full"
         style={{
@@ -122,7 +125,9 @@ export const MomentImageCarousel = ({
         ))}
       </div>
       {images.length > 1 && showInfo && (
-        <div className={`animate-in fade-in-0 duration-200 absolute left-1/2 flex -translate-x-1/2 gap-1 ${fullscreen ? "bottom-20" : "bottom-2"}`}>
+        <div
+          className={`animate-in fade-in-0 absolute left-1/2 flex -translate-x-1/2 gap-1 duration-200 ${fullscreen ? "bottom-20" : "bottom-2"}`}
+        >
           {images.map((_, i) => (
             <div
               key={i}

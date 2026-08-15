@@ -23,27 +23,27 @@ import {
 const IOS_INSTRUCTIONS = (
   <ol className="space-y-3 text-sm">
     <li className="flex items-start gap-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+      <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
         1
       </span>
       <span className="flex items-center gap-1.5">
         Nhấn nút
-        <Share className="inline size-4 text-primary" />
+        <Share className="text-primary inline size-4" />
         Share ở thanh công cụ Safari.
       </span>
     </li>
     <li className="flex items-start gap-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+      <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
         2
       </span>
       <span className="flex items-center gap-1.5">
         Chọn
-        <Plus className="inline size-4 text-primary" />
+        <Plus className="text-primary inline size-4" />
         &ldquo;Thêm vào Màn hình chính&rdquo;.
       </span>
     </li>
     <li className="flex items-start gap-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+      <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
         3
       </span>
       <span>Nhấn &ldquo;Thêm&rdquo; để hoàn tất.</span>
@@ -100,15 +100,13 @@ export function PwaInstallButton() {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 text-muted-foreground"
+          className="text-muted-foreground gap-1.5"
           onClick={handleInstall}
         >
           <Download className="size-4" />
           Cài đặt ứng dụng
         </Button>
-        {isIOS && (
-          <IOSInstallDialog open={showIOSDialog} onOpenChange={setShowIOSDialog} />
-        )}
+        {isIOS && <IOSInstallDialog open={showIOSDialog} onOpenChange={setShowIOSDialog} />}
       </>
     );
   }
@@ -117,19 +115,13 @@ export function PwaInstallButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground"
-          />
-        }
+        render={<Button variant="ghost" size="sm" className="text-muted-foreground gap-1.5" />}
       >
         <Download className="size-4" />
         Cài đặt ứng dụng
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center">
-        <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+        <DropdownMenuItem disabled className="text-muted-foreground text-xs">
           Trình duyệt chưa hỗ trợ cài đặt nhanh. Hãy thử lại sau.
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -159,15 +151,13 @@ export function PwaInstallRow() {
     <>
       <button
         onClick={handleInstall}
-        className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50"
+        className="hover:bg-muted/50 flex w-full items-center gap-4 p-4 text-left"
       >
-        <Download className="h-5 w-5 text-muted-foreground" />
+        <Download className="text-muted-foreground h-5 w-5" />
         <span className="flex-1">Cài đặt ứng dụng</span>
         <span className="text-muted-foreground">›</span>
       </button>
-      {isIOS && (
-        <IOSInstallDialog open={showIOSDialog} onOpenChange={setShowIOSDialog} />
-      )}
+      {isIOS && <IOSInstallDialog open={showIOSDialog} onOpenChange={setShowIOSDialog} />}
     </>
   );
 }

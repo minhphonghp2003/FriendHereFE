@@ -36,8 +36,7 @@ export async function flushOutbox(client: AxiosInstance): Promise<void> {
           await removeFromOutbox(item.id);
         }
       } catch (error) {
-        const hasResponse =
-          axios.isAxiosError(error) && error.response !== undefined;
+        const hasResponse = axios.isAxiosError(error) && error.response !== undefined;
 
         if (hasResponse) {
           // Server responded (even with an error) → don't retry.

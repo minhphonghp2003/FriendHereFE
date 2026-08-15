@@ -76,30 +76,25 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-dvh flex-col bg-background safe-top safe-bottom">
+    <main className="bg-background safe-top safe-bottom flex min-h-dvh flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
         <Link
           href="/init"
-          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground mb-10 inline-flex items-center gap-2 text-sm transition"
         >
           <ArrowLeft className="size-4" />
           Quay lại
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Tạo tài khoản
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight">Tạo tài khoản</h1>
 
-          <p className="mt-3 text-muted-foreground">
+          <p className="text-muted-foreground mt-3">
             Tham gia LiveBuddy và bắt đầu khám phá bạn bè xung quanh bạn.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
           <div className="space-y-5">
             <div className="space-y-2">
               <Label>Tên</Label>
@@ -162,7 +157,7 @@ export default function RegisterPage() {
                 <Label>Giới tính</Label>
 
                 <select
-                  className="flex h-12 w-full items-center rounded-xl border border-border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="border-border bg-background ring-offset-background focus:ring-ring flex h-12 w-full items-center rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   value={form.genderId}
                   onChange={(e) =>
                     setForm((x) => ({
@@ -218,27 +213,20 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-3 text-sm">
                 {error}
               </div>
             )}
           </div>
 
           <div className="mt-auto pt-8">
-            <Button
-              type="submit"
-              className="h-12 w-full rounded-xl text-base"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={isLoading}>
               {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
             </Button>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-6 text-center text-sm">
               Đã có tài khoản?{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-primary hover:underline"
-              >
+              <Link href="/login" className="text-primary font-semibold hover:underline">
                 Đăng nhập
               </Link>
             </p>

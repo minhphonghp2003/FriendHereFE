@@ -76,7 +76,9 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
 
   const toggleExcluded = (friendUserId: number) => {
     setExcludedIds((prev) =>
-      prev.includes(friendUserId) ? prev.filter((id) => id !== friendUserId) : [...prev, friendUserId]
+      prev.includes(friendUserId)
+        ? prev.filter((id) => id !== friendUserId)
+        : [...prev, friendUserId],
     );
   };
 
@@ -178,7 +180,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
             <Label htmlFor="moment-visibility">Ai có thể xem</Label>
             <select
               id="moment-visibility"
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              className="border-border bg-background rounded-md border px-3 py-2 text-sm"
               value={visibility}
               onChange={(e) => handleVisibilityChange(e.target.value as MomentVisibility)}
             >
@@ -233,7 +235,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
                           : "border-border hover:bg-muted"
                       }`}
                     >
-                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                      <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-bold">
                         {f.otherUserImage ? (
                           <img
                             src={f.otherUserImage.thumbUrl}
@@ -244,7 +246,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
                           getNameDisplay(f.otherUserName)
                         )}
                       </div>
-                      <span className="max-w-12 truncate text-[10px] text-muted-foreground">
+                      <span className="text-muted-foreground max-w-12 truncate text-[10px]">
                         {getNameDisplay(f.otherUserName)}
                       </span>
                     </button>
@@ -257,9 +259,14 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setMediaType("images"); removeVideo(); }}
+              onClick={() => {
+                setMediaType("images");
+                removeVideo();
+              }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm ${
-                mediaType === "images" ? "border-primary bg-primary/10 text-primary" : "border-border"
+                mediaType === "images"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border"
               }`}
             >
               <ImagePlus className="h-4 w-4" />
@@ -267,9 +274,15 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
             </button>
             <button
               type="button"
-              onClick={() => { setMediaType("video"); setImages([]); setPreviews([]); }}
+              onClick={() => {
+                setMediaType("video");
+                setImages([]);
+                setPreviews([]);
+              }}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm ${
-                mediaType === "video" ? "border-primary bg-primary/10 text-primary" : "border-border"
+                mediaType === "video"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border"
               }`}
             >
               <Video className="h-4 w-4" />
@@ -286,7 +299,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
                     <img src={preview} alt="" className="h-full w-full rounded-md object-cover" />
                     <button
                       onClick={() => removeImage(i)}
-                      className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground"
+                      className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 rounded-full p-0.5"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -295,9 +308,9 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
                 {images.length < 10 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex h-20 w-20 items-center justify-center rounded-md border-2 border-dashed border-border hover:border-primary"
+                    className="border-border hover:border-primary flex h-20 w-20 items-center justify-center rounded-md border-2 border-dashed"
                   >
-                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                    <ImagePlus className="text-muted-foreground h-6 w-6" />
                   </button>
                 )}
               </div>
@@ -317,14 +330,10 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
               <Label>Video</Label>
               {videoPreview ? (
                 <div className="relative">
-                  <video
-                    src={videoPreview}
-                    controls
-                    className="max-h-60 w-full rounded-md"
-                  />
+                  <video src={videoPreview} controls className="max-h-60 w-full rounded-md" />
                   <button
                     onClick={removeVideo}
-                    className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground"
+                    className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 rounded-full p-0.5"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -332,9 +341,9 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
               ) : (
                 <button
                   onClick={() => videoInputRef.current?.click()}
-                  className="flex h-40 items-center justify-center rounded-md border-2 border-dashed border-border hover:border-primary"
+                  className="border-border hover:border-primary flex h-40 items-center justify-center rounded-md border-2 border-dashed"
                 >
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <div className="text-muted-foreground flex flex-col items-center gap-2">
                     <Video className="h-8 w-8" />
                     <span className="text-xs">Chọn video</span>
                   </div>
@@ -350,7 +359,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
             </div>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
 
         <DialogFooter>
@@ -358,9 +367,7 @@ export const CreateMomentDialog = ({ open, onOpenChange, onCreated }: CreateMome
             Hủy
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isLoading ? "Đang tạo..." : "Đăng"}
           </Button>
         </DialogFooter>

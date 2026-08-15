@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 import type { AxiosError } from "axios";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useConfirmJoinRequest } from "@/hooks/chat";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -60,7 +66,12 @@ export function JoinRequestNotifications() {
   };
 
   return (
-    <Dialog open={requests.length > 0} onOpenChange={(next) => { if (!next) setRequests([]); }}>
+    <Dialog
+      open={requests.length > 0}
+      onOpenChange={(next) => {
+        if (!next) setRequests([]);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Yêu cầu tham gia nhóm</DialogTitle>
@@ -69,26 +80,42 @@ export function JoinRequestNotifications() {
           {requests.map((req) => {
             const processing = processingId === req.id;
             return (
-              <div key={req.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+              <div
+                key={req.id}
+                className="border-border flex items-center gap-3 rounded-lg border p-3"
+              >
+                <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold">
                   {req.userImage?.thumbUrl ? (
-                    <img src={req.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={req.userImage.thumbUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     getNameDisplay(req.userName ?? "")
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{req.userName}</p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="text-muted-foreground truncate text-xs">
                     muốn tham gia {groupName(req.conversationId)}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   <Button size="sm" disabled={processing} onClick={() => handleConfirm(req, true)}>
-                    {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    {processing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
                     Duyệt
                   </Button>
-                  <Button size="sm" variant="outline" disabled={processing} onClick={() => handleConfirm(req, false)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={processing}
+                    onClick={() => handleConfirm(req, false)}
+                  >
                     <X className="h-3.5 w-3.5" />
                     Từ chối
                   </Button>
@@ -108,7 +135,12 @@ export function JoinRequestNotifications() {
           })}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" className="w-full" onClick={() => setRequests([])}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setRequests([])}
+          >
             Đóng
           </Button>
         </DialogFooter>

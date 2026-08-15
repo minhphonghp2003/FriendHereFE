@@ -11,10 +11,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setMyVisibility } from "@/store/slices/location-slice";
 import { locationHub } from "@/lib/signalr";
 
-const VISIBILITY_OPTIONS = Object.entries(LOCATION_VISIBILITY_LABELS) as [
-  string,
-  string,
-][];
+const VISIBILITY_OPTIONS = Object.entries(LOCATION_VISIBILITY_LABELS) as [string, string][];
 
 export const VisibilityPicker = () => {
   const dispatch = useAppDispatch();

@@ -84,7 +84,11 @@ export const MomentVideoPlayer = ({
     const side = x < rect.width / 2 ? "left" : "right";
     const now = Date.now();
 
-    if (lastTapRef.current && now - lastTapRef.current.time < 300 && lastTapRef.current.side === side) {
+    if (
+      lastTapRef.current &&
+      now - lastTapRef.current.time < 300 &&
+      lastTapRef.current.side === side
+    ) {
       if (toggleTimeoutRef.current) clearTimeout(toggleTimeoutRef.current);
       toggleTimeoutRef.current = null;
       const video = videoRef.current;
@@ -111,7 +115,7 @@ export const MomentVideoPlayer = ({
   const controlsVisible = onToggleInfo ? showInfo : showControls;
 
   return (
-    <div className="relative w-full bg-muted">
+    <div className="bg-muted relative w-full">
       <div className="w-full" onClick={handleVideoClick}>
         <video
           ref={videoRef}
@@ -123,7 +127,7 @@ export const MomentVideoPlayer = ({
         />
       </div>
       {seekIndicator && (
-        <div className="pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2">
+        <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="rounded-lg bg-black/70 px-4 py-2 text-lg font-bold text-white">
             {seekIndicator === "backward" ? "-5s" : "+5s"}
           </div>
@@ -131,20 +135,24 @@ export const MomentVideoPlayer = ({
       )}
       {controlsVisible && (
         <>
-          <div className="animate-in fade-in-0 duration-200 pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="animate-in fade-in-0 pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 duration-200">
             <button
               onClick={togglePlay}
               className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
               aria-label={isPlaying ? "Dừng" : "Phát"}
             >
-              {isPlaying ? <Pause className="h-6 w-6 fill-white" /> : <Play className="h-6 w-6 fill-white pl-0.5" />}
+              {isPlaying ? (
+                <Pause className="h-6 w-6 fill-white" />
+              ) : (
+                <Play className="h-6 w-6 fill-white pl-0.5" />
+              )}
             </button>
           </div>
           <div
-            className={`animate-in fade-in-0 duration-200 absolute inset-x-0 px-4 ${fullscreen ? "bottom-12" : "bottom-4"}`}
+            className={`animate-in fade-in-0 absolute inset-x-0 px-4 duration-200 ${fullscreen ? "bottom-12" : "bottom-4"}`}
           >
             <div className="relative flex h-1 w-full items-center">
-              <div className="absolute inset-y-0 left-0 right-0 rounded-full bg-white/30" />
+              <div className="absolute inset-y-0 right-0 left-0 rounded-full bg-white/30" />
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-white"
                 style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}

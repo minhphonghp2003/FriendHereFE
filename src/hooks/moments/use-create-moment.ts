@@ -30,9 +30,7 @@ export const useCreateMoment = () => {
       });
 
       await Promise.all(
-        presigned.map((item, i) =>
-          uploadToPresignedUrl(item.uploadUrl, files[i], contentTypes[i])
-        )
+        presigned.map((item, i) => uploadToPresignedUrl(item.uploadUrl, files[i], contentTypes[i])),
       );
 
       const isVideo = input.video != null;
@@ -43,7 +41,7 @@ export const useCreateMoment = () => {
         isShowLocation: input.isShowLocation,
         excludedUserIds: input.excludedUserIds ?? null,
         imageFileIds: isVideo ? null : presigned.map((item) => item.fileId),
-        videoFileId: isVideo ? presigned[0]?.fileId ?? null : null,
+        videoFileId: isVideo ? (presigned[0]?.fileId ?? null) : null,
       });
       return data;
     } catch (err) {

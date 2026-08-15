@@ -8,7 +8,8 @@ export const FRIENDSHIP_TYPE_VALUES = {
   Lover: 2,
 } as const;
 
-export type FriendshipTypeValue = (typeof FRIENDSHIP_TYPE_VALUES)[keyof typeof FRIENDSHIP_TYPE_VALUES];
+export type FriendshipTypeValue =
+  (typeof FRIENDSHIP_TYPE_VALUES)[keyof typeof FRIENDSHIP_TYPE_VALUES];
 
 export const FRIENDSHIP_TYPE_LABELS: Record<FriendshipTypeValue, string> = {
   [FRIENDSHIP_TYPE_VALUES.Friend]: "Bạn thường",
@@ -39,7 +40,7 @@ export function normalizeFriendshipType(type: FriendshipType | number): Friendsh
 
 export function getMyFriendshipType(
   f: Pick<FriendshipDto, "user1Id" | "user2Id" | "type1" | "type2">,
-  myUserId: number | undefined
+  myUserId: number | undefined,
 ): FriendshipTypeValue {
   if (!myUserId) return FRIENDSHIP_TYPE_VALUES.Friend;
   return f.user1Id === myUserId

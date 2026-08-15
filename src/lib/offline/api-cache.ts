@@ -26,9 +26,7 @@ export function buildCacheKey(config: InternalAxiosRequestConfig): string {
   return axios.getUri(config);
 }
 
-export async function getCached(
-  key: string,
-): Promise<CachedEntry | undefined> {
+export async function getCached(key: string): Promise<CachedEntry | undefined> {
   return dbGet<CachedEntry>(STORE_CACHE, key);
 }
 
@@ -62,9 +60,7 @@ export function responseFromCache(
   };
 }
 
-function normalizeHeaders(
-  headers: AxiosResponse["headers"] | unknown,
-): Record<string, string> {
+function normalizeHeaders(headers: AxiosResponse["headers"] | unknown): Record<string, string> {
   if (!headers || typeof headers !== "object") return {};
 
   // AxiosHeaders instances expose a toJSON() method.

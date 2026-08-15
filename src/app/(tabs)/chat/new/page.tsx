@@ -47,7 +47,14 @@ export default function NewChatPage() {
         return;
       }
       const conversationId = res.data;
-      await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId });
+      await appHub.sendMessage({
+        conversationId,
+        content: text,
+        messageType: 0,
+        replyToId: null,
+        idempotencyKey: crypto.randomUUID(),
+        momentId,
+      });
       router.replace(`/chat/${conversationId}`);
     } catch (err) {
       setError("Không thể gửi tin nhắn");
@@ -60,18 +67,20 @@ export default function NewChatPage() {
   if (!receiverId) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)]">
-      <div className="flex items-center gap-3 p-3 border-b border-border">
-        <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded"><ArrowLeft className="w-5 h-5" /></button>
+    <div className="flex h-[calc(100dvh-8rem)] flex-col">
+      <div className="border-border flex items-center gap-3 border-b p-3">
+        <button onClick={() => router.back()} className="hover:bg-muted rounded p-1">
+          <ArrowLeft className="h-5 w-5" />
+        </button>
         <p className="font-semibold">{name}</p>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <p className="text-sm text-muted-foreground mb-4">Bắt đầu cuộc trò chuyện với {name}</p>
-        {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
+        <p className="text-muted-foreground mb-4 text-sm">Bắt đầu cuộc trò chuyện với {name}</p>
+        {error && <p className="mb-2 text-sm text-red-500">{error}</p>}
       </div>
-      <div className="border-t border-border">
+      <div className="border-border border-t">
         {pendingMomentLoading ? (
-          <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
+          <div className="bg-muted mx-3 mt-3 h-20 w-20 animate-pulse rounded-lg" />
         ) : pendingMoment ? (
           <div className="relative mx-3 mt-3 inline-block">
             <img
@@ -81,15 +90,31 @@ export default function NewChatPage() {
             />
             <button
               onClick={() => setPendingMoment(null)}
-              className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow"
+              className="bg-background absolute -top-2 -right-2 rounded-full p-0.5 shadow"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         ) : null}
         <div className="flex items-center gap-2 p-3">
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" disabled={sending} />
-          <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Nhập tin nhắn..."
+            className="bg-muted flex-1 rounded-full px-4 py-2 text-sm outline-none"
+            disabled={sending}
+          />
+          <button
+            onClick={handleSend}
+            disabled={(!input.trim() && !pendingMoment) || sending}
+            className="rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
             Gửi
           </button>
         </div>

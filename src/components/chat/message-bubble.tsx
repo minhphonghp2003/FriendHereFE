@@ -96,7 +96,7 @@ const repliedLabel = (r: RepliedMessageDto): string => {
   if (type === Number(MessageType.Sticker) || type === Number(MessageType.Gif)) {
     return REPLIED_TYPE_LABEL[type] ?? "";
   }
-  return r.content ? r.content : REPLIED_TYPE_LABEL[type] ?? "";
+  return r.content ? r.content : (REPLIED_TYPE_LABEL[type] ?? "");
 };
 
 const ReplyQuote = ({
@@ -138,7 +138,13 @@ const ReplyQuote = ({
     >
       <div className="min-w-0">
         <p className="truncate font-semibold">{r.senderName ?? "Người dùng"}</p>
-        <p className="truncate opacity-80">{showThumb ? (Number(r.type) === Number(MessageType.File) ? "[File]" : "[Khoảnh khắc]") : repliedLabel(r)}</p>
+        <p className="truncate opacity-80">
+          {showThumb
+            ? Number(r.type) === Number(MessageType.File)
+              ? "[File]"
+              : "[Khoảnh khắc]"
+            : repliedLabel(r)}
+        </p>
       </div>
       {showThumb && thumbUrl && (
         <img src={thumbUrl} alt="" className="ml-auto h-9 w-9 shrink-0 rounded object-cover" />
@@ -154,14 +160,23 @@ const MessageTicks = ({ status, isMe }: { status?: number; isMe: boolean }) => {
     <span className="ml-1 inline-flex items-center align-middle">
       {read && <Check className="h-3 w-3 text-blue-300" strokeWidth={2.5} />}
       <Check
-        className={`h-3 w-3 ${read ? "text-blue-300 -ml-1" : "text-white/70"}`}
+        className={`h-3 w-3 ${read ? "-ml-1 text-blue-300" : "text-white/70"}`}
         strokeWidth={2.5}
       />
     </span>
   );
 };
 
-export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited, onLongPress, onOpenReactions, onReplyClick }: MessageBubbleProps) => {
+export const MessageBubble = ({
+  msg,
+  isMe,
+  currentUserId,
+  onViewMoment,
+  isEdited,
+  onLongPress,
+  onOpenReactions,
+  onReplyClick,
+}: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [videoIndex, setVideoIndex] = useState<number | null>(null);
@@ -179,24 +194,29 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
     return [...map.entries()].map(([emoji, { count, mine }]) => ({ emoji, count, mine }));
   }, [msg.reactions, currentUserId]);
 
-  const reactionRow = groupedReactions.length > 0 ? (
-    <div className={`relative z-10 mt-1 flex flex-wrap gap-1 ${isMe ? "justify-end" : "justify-start"}`}>
-      {groupedReactions.map((g) => (
-        <button
-          key={g.emoji}
-          onClick={() => onOpenReactions?.(msg)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            onOpenReactions?.(msg);
-          }}
-          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm ${g.mine ? "border-blue-400 bg-blue-100/70" : "border-border bg-background/90"}`}
-        >
-          <span>{g.emoji}</span>
-          <span className={g.mine ? "font-semibold text-blue-600" : "text-muted-foreground"}>{g.count}</span>
-        </button>
-      ))}
-    </div>
-  ) : null;
+  const reactionRow =
+    groupedReactions.length > 0 ? (
+      <div
+        className={`relative z-10 mt-1 flex flex-wrap gap-1 ${isMe ? "justify-end" : "justify-start"}`}
+      >
+        {groupedReactions.map((g) => (
+          <button
+            key={g.emoji}
+            onClick={() => onOpenReactions?.(msg)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onOpenReactions?.(msg);
+            }}
+            className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm ${g.mine ? "border-blue-400 bg-blue-100/70" : "border-border bg-background/90"}`}
+          >
+            <span>{g.emoji}</span>
+            <span className={g.mine ? "font-semibold text-blue-600" : "text-muted-foreground"}>
+              {g.count}
+            </span>
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   useEffect(() => {
     if (videoIndex === null) return;
@@ -212,13 +232,13 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
   }, [videoIndex]);
 
   if (renderType === "System") {
-    return <p className="text-center text-xs text-muted-foreground">{msg.content}</p>;
+    return <p className="text-muted-foreground text-center text-xs">{msg.content}</p>;
   }
 
   if (msg.isDeleted) {
     return (
       <div
-        className={`rounded-2xl px-4 py-2 italic text-xs text-muted-foreground ${isMe ? "bg-muted/60 rounded-br-md" : "bg-muted rounded-bl-md"}`}
+        className={`text-muted-foreground rounded-2xl px-4 py-2 text-xs italic ${isMe ? "bg-muted/60 rounded-br-md" : "bg-muted rounded-bl-md"}`}
       >
         Message has been deleted
       </div>
@@ -241,7 +261,11 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
   if (renderType === "Sticker") {
     return (
       <div className="inline-block max-w-full">
-        <BubbleWrapper msg={msg} onLongPress={onLongPress} className="h-28 w-28 rounded-xl object-contain">
+        <BubbleWrapper
+          msg={msg}
+          onLongPress={onLongPress}
+          className="h-28 w-28 rounded-xl object-contain"
+        >
           <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
         </BubbleWrapper>
         {reactionRow}
@@ -252,7 +276,11 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
   if (renderType === "Gif") {
     return (
       <div className="inline-block max-w-full">
-        <BubbleWrapper msg={msg} onLongPress={onLongPress} className="max-h-[220px] max-w-[220px] rounded-xl object-contain">
+        <BubbleWrapper
+          msg={msg}
+          onLongPress={onLongPress}
+          className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
+        >
           <img
             src={msg.content ?? ""}
             alt=""
@@ -271,7 +299,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
       <BubbleWrapper
         msg={msg}
         onLongPress={onLongPress}
-        className={`rounded-2xl px-2 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
+        className={`rounded-2xl px-2 py-2 ${isMe ? "rounded-br-md bg-blue-600 text-white" : "bg-muted rounded-bl-md"}`}
       >
         {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
         <div className="space-y-1.5">
@@ -341,7 +369,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
             onClick={handleVideoClose}
           >
-            <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
               <DownloadButton url={videos[videoIndex].originalUrl} />
               <button
                 onClick={handleVideoClose}
@@ -370,7 +398,7 @@ export const MessageBubble = ({ msg, isMe, currentUserId, onViewMoment, isEdited
     <BubbleWrapper
       msg={msg}
       onLongPress={onLongPress}
-      className={`rounded-2xl px-4 py-2 ${isMe ? "bg-blue-600 text-white rounded-br-md" : "bg-muted rounded-bl-md"}`}
+      className={`rounded-2xl px-4 py-2 ${isMe ? "rounded-br-md bg-blue-600 text-white" : "bg-muted rounded-bl-md"}`}
     >
       {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
       {msg.momentThumbnail ? (

@@ -17,7 +17,9 @@ export async function getMyFriendships(params?: {
 }
 
 export async function sendFriendRequest(targetUserId: number): Promise<FriendshipDto> {
-  const { data } = await httpClient.post<ApiResponse<FriendshipDto>>("/Friendship", { targetUserId });
+  const { data } = await httpClient.post<ApiResponse<FriendshipDto>>("/Friendship", {
+    targetUserId,
+  });
   return data.data;
 }
 
@@ -50,7 +52,12 @@ export async function removeFriendship(id: number): Promise<void> {
   await httpClient.delete(`/Friendship/${id}`);
 }
 
-export async function changeFriendshipType(id: number, type: FriendshipTypeValue): Promise<FriendshipDto> {
-  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/type`, { type });
+export async function changeFriendshipType(
+  id: number,
+  type: FriendshipTypeValue,
+): Promise<FriendshipDto> {
+  const { data } = await httpClient.put<ApiResponse<FriendshipDto>>(`/Friendship/${id}/type`, {
+    type,
+  });
   return data.data;
 }

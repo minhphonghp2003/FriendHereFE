@@ -80,19 +80,19 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
   return (
     <div className="fixed inset-0 z-[60] flex items-end">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full rounded-t-2xl bg-background px-4 pb-8 pt-4 shadow-lg">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-muted-foreground/30" />
+      <div className="bg-background relative w-full rounded-t-2xl px-4 pt-4 pb-8 shadow-lg">
+        <div className="bg-muted-foreground/30 mx-auto mb-4 h-1 w-10 rounded-full" />
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">Cảm xúc</h2>
-          <button onClick={onClose} className="rounded-full p-1 hover:bg-muted">
+          <button onClick={onClose} className="hover:bg-muted rounded-full p-1">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {loading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground py-8 text-center text-sm">Loading...</p>
         ) : reactions.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No reactions</p>
+          <p className="text-muted-foreground py-8 text-center text-sm">No reactions</p>
         ) : (
           <div
             ref={scrollRef}
@@ -101,7 +101,7 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
           >
             {reactions.map((r) => (
               <div key={r.userId} className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+                <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold">
                   {r.userImage ? (
                     <img
                       src={r.userImage.thumbUrl}
@@ -116,17 +116,19 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
                   <span className="text-sm font-medium">{r.userName}</span>
                   <div className="flex gap-1">
                     {r.emojis.map((emoji, i) => (
-                      <span key={i} className="text-base">{emoji}</span>
+                      <span key={i} className="text-base">
+                        {emoji}
+                      </span>
                     ))}
                   </div>
                 </div>
               </div>
             ))}
             {loadingMore && (
-              <p className="py-2 text-center text-xs text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground py-2 text-center text-xs">Loading...</p>
             )}
             {!loadingMore && !hasMore && (
-              <p className="py-2 text-center text-xs text-muted-foreground">Đã hiển thị tất cả</p>
+              <p className="text-muted-foreground py-2 text-center text-xs">Đã hiển thị tất cả</p>
             )}
           </div>
         )}
