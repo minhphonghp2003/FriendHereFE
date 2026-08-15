@@ -12,7 +12,7 @@ const initialState: AppState = {
   sidebarOpen: false,
   locale: "en",
   notifications: [],
-  currentVersion: "0.1.0",
+  currentVersion: "0.2.0",
   latestVersion: null,
 };
 

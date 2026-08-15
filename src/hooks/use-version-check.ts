@@ -8,7 +8,7 @@ interface VersionInfo {
   hasUpdate: boolean;
 }
 
-const CURRENT_VERSION = "0.1.0"; // Should match package.json version
+const CURRENT_VERSION = "0.2.0"; // Should match package.json version
 const CHECK_INTERVAL = 1000 * 60 * 60; // Check every hour
 const STORAGE_KEY = "version_check_cache";
 
