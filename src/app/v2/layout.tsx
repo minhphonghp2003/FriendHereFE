@@ -7,16 +7,29 @@ import { useAuth } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
+import { useAppSelector } from "@/store/hooks";
 import { V2Header } from "@/components/v2/header/v2-header";
 import { V2ToggleNav } from "@/components/v2/nav/v2-toggle-nav";
+import { JoinRequestNotifications } from "@/components/chat/join-request-notifications";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface V2LayoutProps {
   children: ReactNode;
 }
 
 export default function V2Layout({ children }: V2LayoutProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  // v1 (tabs) layout parity: kicked dialog + join-request notifications
+  const kicked = useAppSelector((s) => s.location.kicked);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,6 +51,24 @@ export default function V2Layout({ children }: V2LayoutProps) {
           </main>
           <V2ToggleNav />
         </div>
+
+        {/* Layout-level notifications (same as v1) */}
+        <JoinRequestNotifications />
+        <Dialog open={kicked} onOpenChange={() => {}}>
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>Disconnected</DialogTitle>
+              <DialogDescription>
+                You were disconnected because you opened the app on another device.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button onClick={logout} className="w-full">
+                Logout
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <style jsx global>{`
           html,

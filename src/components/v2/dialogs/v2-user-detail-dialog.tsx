@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { getUserById, getCurrentUser, updateCurrentUser, setAvatar } from "@/services/user";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { getOpponentConversation } from "@/services/chat";
+import { appHub } from "@/lib/signalr/app-hub";
 import {
   getMyFriendships,
   getFriendshipById,
@@ -118,6 +119,30 @@ export function V2UserDetailDialog({
     setUserDetail(null);
     if (effectiveUserId !== null) fetchUserDetail();
   }, [effectiveUserId, fetchUserDetail]);
+
+  // v1 parity: refetch the open user's detail when their friendship changes
+  // in real time (other user accepts/blocks/etc. while we're viewing them)
+  useEffect(() => {
+    if (effectiveUserId === null || isMe) return;
+
+    const getOpponentId = (dto: { user1Id: number; user2Id: number }) =>
+      dto.user1Id === reduxUser?.id ? dto.user2Id : dto.user1Id;
+
+    const refetchIfRelevant = (dto: { user1Id: number; user2Id: number }) => {
+      if (getOpponentId(dto) === otherId) fetchUserDetail();
+    };
+
+    const unsubCreated = appHub.onReceiveFriendshipCreated(refetchIfRelevant);
+    const unsubAccepted = appHub.onReceiveFriendshipAccepted(refetchIfRelevant);
+    const unsubBlocked = appHub.onReceiveFriendshipBlocked(refetchIfRelevant);
+    const unsubUnblocked = appHub.onReceiveFriendshipUnblocked(refetchIfRelevant);
+    return () => {
+      unsubCreated();
+      unsubAccepted();
+      unsubBlocked();
+      unsubUnblocked();
+    };
+  }, [effectiveUserId, isMe, otherId, reduxUser?.id, fetchUserDetail]);
 
   // ---- My profile editing ----
   const [isEditing, setIsEditing] = useState(false);

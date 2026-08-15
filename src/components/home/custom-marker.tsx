@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
@@ -70,6 +70,72 @@ const getBatteryIcon = (level: number) => {
   return { Icon: BatteryFull, color: "#22c55e" };
 };
 
+/**
+ * Status box action button with NATIVE event isolation.
+ *
+ * Google Maps synthesizes the marker's click from pointerdown/pointerup, and
+ * those listeners sit on an ANCESTOR of this button (bubble phase). A listener
+ * attached directly to the button fires FIRST (target phase), so stopping
+ * propagation here prevents the marker from ever registering the gesture —
+ * while the button's own native click still runs the action.
+ */
+const StatusActionButton = ({
+  action,
+  actionsRef,
+}: {
+  action: MarkerStatusAction;
+  actionsRef: React.RefObject<MarkerStatusAction[]>;
+}) => {
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const el = btnRef.current;
+    if (!el) return;
+
+    const stop = (e: Event) => {
+      e.stopPropagation();
+    };
+    const run = (e: Event) => {
+      e.stopPropagation();
+      actionsRef.current.find((a) => a.key === action.key)?.onClick();
+    };
+
+    // Kill the marker's gesture synthesis at the target (button) level
+    el.addEventListener("pointerdown", stop);
+    el.addEventListener("pointerup", stop);
+    el.addEventListener("mousedown", stop);
+    el.addEventListener("mouseup", stop);
+    el.addEventListener("touchstart", stop, { passive: true });
+    el.addEventListener("touchend", stop, { passive: true });
+    // Run the action on click (fire once, isolated from the marker)
+    el.addEventListener("click", run);
+
+    return () => {
+      el.removeEventListener("pointerdown", stop);
+      el.removeEventListener("pointerup", stop);
+      el.removeEventListener("mousedown", stop);
+      el.removeEventListener("mouseup", stop);
+      el.removeEventListener("touchstart", stop);
+      el.removeEventListener("touchend", stop);
+      el.removeEventListener("click", run);
+    };
+  }, [action.key, actionsRef]);
+
+  return (
+    <button
+      ref={btnRef}
+      type="button"
+      title={action.label}
+      aria-label={action.label}
+      className={`flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-zinc-500/10 p-0 text-zinc-700 transition-colors hover:bg-teal-600 hover:text-white ${
+        action.destructive ? "hover:!bg-red-500" : ""
+      }`}
+    >
+      {action.icon}
+    </button>
+  );
+};
+
 export const CustomMarker = ({
   position,
   name,
@@ -85,8 +151,7 @@ export const CustomMarker = ({
   onClick,
 }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
-  // Keep the latest action handlers in a ref so the native listeners (bound
-  // once) always call the current closures.
+  // Latest action handlers for the native button listeners below
   const actionsRef = useRef<MarkerStatusAction[]>([]);
   actionsRef.current = statusActions ?? [];
 
@@ -136,34 +201,7 @@ export const CustomMarker = ({
               <span className="block truncate text-zinc-400">Add status</span>
             )}
             {statusActions?.map((action) => (
-              <button
-                key={action.key}
-                type="button"
-                title={action.label}
-                aria-label={action.label}
-                className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-zinc-500/10 p-0 text-zinc-700 transition-colors hover:bg-teal-600 hover:text-white ${
-                  action.destructive ? "hover:!bg-red-500" : ""
-                }`}
-                ref={(el) => {
-                  if (!el) return;
-                  // NATIVE listeners bound on the button itself (innermost
-                  // element): they run BEFORE the marker's ancestor listener,
-                  // and stopPropagation keeps the marker click from firing.
-                  // The action fires only on "click" (browsers synthesize it
-                  // from tap); touchend only isolates the event.
-                  const isolate = (e: Event) => {
-                    e.stopPropagation();
-                  };
-                  const run = (e: MouseEvent) => {
-                    e.stopPropagation();
-                    actionsRef.current.find((a) => a.key === action.key)?.onClick();
-                  };
-                  el.addEventListener("touchend", isolate, { passive: true });
-                  el.addEventListener("click", run as EventListener);
-                }}
-              >
-                {action.icon}
-              </button>
+              <StatusActionButton key={action.key} action={action} actionsRef={actionsRef} />
             ))}
           </div>
         )}

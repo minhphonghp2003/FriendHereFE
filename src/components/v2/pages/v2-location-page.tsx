@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useTheme } from "next-themes";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { CustomMarker } from "@/components/home/custom-marker";
+import { UserLocationList } from "@/components/home/user-location-list";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 import { V2FriendsSheet } from "./v2-friends-sheet";
 import { Check, Pencil, X as XIcon } from "lucide-react";
@@ -42,10 +43,18 @@ export function V2LocationPage() {
   const longitude = useAppSelector((s) => s.location.longitude);
   const myStatus = useAppSelector((s) => s.location.status);
   const myBattery = useAppSelector((s) => s.location.battery);
+  const movingUserIds = useAppSelector((s) => s.location.movingUserIds);
+  const locationDenied = useAppSelector((s) => s.location.locationDenied);
   const user = useAppSelector((s) => s.auth.user);
 
-  // Active users from v1 service (used for user-detail context: battery/status/distance)
-  const { data: activeUsers } = useActiveUsers(20, LOCATION_SORT.Distance);
+  // Active users from v1 service (used for user-detail context + denied fallback list)
+  const {
+    data: activeUsers,
+    isLoading: loadingActiveUsers,
+    hasMore: activeHasMore,
+    isLoadingMore: activeLoadingMore,
+    loadMore: activeLoadMore,
+  } = useActiveUsers(20, LOCATION_SORT.Distance);
 
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
@@ -148,6 +157,26 @@ export function V2LocationPage() {
     );
   }
 
+  // v1 parity: when location permission is denied, fall back to the user list
+  if (locationDenied) {
+    return (
+      <div className="v2-location-denied">
+        <p className="denied-notice">
+          Location permission is blocked. Showing the people list instead — enable
+          location in your browser settings to see the map.
+        </p>
+        <UserLocationList
+          users={activeUsers}
+          currentUser={user}
+          onUserClick={openUserDetail}
+          hasMore={activeHasMore}
+          isLoadingMore={activeLoadingMore}
+          onLoadMore={activeLoadMore}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="v2-location-container">
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
@@ -178,7 +207,7 @@ export function V2LocationPage() {
                   battery={location.battery}
                   status={location.status}
                   moments={location.moments}
-                  moving={false}
+                  moving={movingUserIds.includes(location.userId)}
                   size={56}
                   onClick={() => openUserDetail(location.userId)}
                   onMomentClick={() => openUserDetail(location.userId)}
@@ -311,6 +340,26 @@ export function V2LocationPage() {
       />
 
       <style jsx global>{`
+        /* Location-denied fallback (v1 list view) */
+        .v2-location-denied {
+          width: 100%;
+          height: 100%;
+          overflow-y: auto;
+          background: #0a0a0a;
+          padding-top: calc(64px + env(safe-area-inset-top, 0px));
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .denied-notice {
+          margin: 0;
+          padding: 12px 20px;
+          font-size: 13px;
+          line-height: 1.5;
+          color: rgba(255, 255, 255, 0.6);
+          background: rgba(245, 158, 11, 0.08);
+          border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
         .v2-location-container {
           position: relative;
           width: 100%;
