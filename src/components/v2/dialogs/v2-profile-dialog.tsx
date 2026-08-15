@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X, Mail, Camera } from "lucide-react";
+import { Mail, Camera } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useAppDispatch } from "@/store/hooks";
@@ -85,17 +85,7 @@ export function V2ProfileDialog({ open, onOpenChange }: V2ProfileDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="v2-dialog">
-        <div className="dialog-header">
-          <h2 className="dialog-title">Profile</h2>
-          <button 
-            onClick={() => onOpenChange(false)}
-            className="dialog-close-btn"
-            aria-label="Close"
-          >
-            <X className="dialog-close-icon" />
-          </button>
-        </div>
+      <DialogContent className="v2-dialog" showCloseButton={false}>
         <div className="dialog-content">
           <div className="profile-header">
             <div className="profile-avatar-section">

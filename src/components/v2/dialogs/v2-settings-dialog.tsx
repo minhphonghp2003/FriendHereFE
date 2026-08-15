@@ -2,14 +2,21 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { X, Bell, Lock, Moon, Sun, Globe, Shield } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Bell, LogOut, Eye, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useAppDispatch } from "@/store/hooks";
 import { logout as reduxLogout } from "@/store/slices/auth-slice";
-import { toast } from "sonner";
+import { setMyVisibility } from "@/store/slices/location-slice";
+import { locationHub } from "@/lib/signalr";
+import {
+  LOCATION_VISIBILITY_VALUES,
+  LOCATION_VISIBILITY_LABELS,
+  type LocationVisibilityValue,
+} from "@/lib/signalr/types";
+
+const VISIBILITY_OPTIONS = Object.entries(LOCATION_VISIBILITY_LABELS) as [string, string][];
 
 interface V2SettingsDialogProps {
   open: boolean;
@@ -17,150 +24,189 @@ interface V2SettingsDialogProps {
 }
 
 export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) {
-  const { theme, setTheme } = useTheme();
   const user = useSelector((state: RootState) => state.auth.user);
+  const visibility = useSelector((state: RootState) => state.location.visibility);
   const dispatch = useAppDispatch();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
 
-  const handleToggleNotifications = async () => {
-    setIsSaving(true);
-    try {
-      // Simulate API call - in real app, call notification settings service
-      setNotificationsEnabled(!notificationsEnabled);
-      toast.success(
-        notificationsEnabled 
-          ? "Notifications disabled" 
-          : "Notifications enabled"
-      );
-    } catch (error) {
-      toast.error("Failed to update notification settings");
-    } finally {
-      setIsSaving(false);
-    }
+  const visibilityLabel =
+    LOCATION_VISIBILITY_LABELS[visibility as LocationVisibilityValue] ??
+    LOCATION_VISIBILITY_LABELS[LOCATION_VISIBILITY_VALUES.Public];
+
+  // v1 logic (VisibilityPicker): update store + push via locationHub
+  const handleVisibilityChange = (value: LocationVisibilityValue) => {
+    dispatch(setMyVisibility(value));
+    locationHub.updateVisibility(value);
+    setShowVisibilityPicker(false);
   };
 
-  const handleToggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+  const handleToggleNotifications = () => {
+    setNotificationsEnabled(!notificationsEnabled);
   };
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to log out?")) {
       dispatch(reduxLogout());
       onOpenChange(false);
-      toast.success("Logged out successfully");
     }
   };
 
-  const settings = [
-    {
-      icon: Bell,
-      title: "Notifications",
-      description: "Receive push notifications",
-      action: "toggle",
-      value: notificationsEnabled,
-      onChange: handleToggleNotifications,
-    },
-    {
-      icon: Moon,
-      title: "Dark Mode",
-      description: "Use dark theme",
-      action: "toggle",
-      value: theme === "dark",
-      onChange: handleToggleTheme,
-    },
-    {
-      icon: Globe,
-      title: "Language",
-      description: "English (US)",
-      action: "link",
-    },
-    {
-      icon: Shield,
-      title: "Privacy",
-      description: "Manage your privacy settings",
-      action: "link",
-    },
-    {
-      icon: Lock,
-      title: "Security",
-      description: "Password and authentication",
-      action: "link",
-    },
-  ];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="v2-dialog">
-        <div className="dialog-header">
-          <h2 className="dialog-title">Settings</h2>
-          <button 
-            onClick={() => onOpenChange(false)}
-            className="dialog-close-btn"
-            aria-label="Close"
-          >
-            <X className="dialog-close-icon" />
-          </button>
-        </div>
+      <DialogContent className="v2-dialog" showCloseButton={false}>
         <div className="dialog-content">
-          <div className="settings-sections">
-            {settings.map((setting, index) => {
-              const Icon = setting.icon;
-              return (
-                <div key={index} className="setting-item">
+          {showVisibilityPicker ? (
+            <div className="settings-sections">
+              {VISIBILITY_OPTIONS.map(([value, label]) => {
+                const numericValue = Number(value) as LocationVisibilityValue;
+                const active = numericValue === visibility;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => handleVisibilityChange(numericValue)}
+                    className={`visibility-option ${active ? 'active' : ''}`}
+                  >
+                    <span>{label}</span>
+                    {active && <Check className="visibility-check" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              <div className="settings-sections">
+                {/* Location Visibility */}
+                <button
+                  onClick={() => setShowVisibilityPicker(true)}
+                  className="setting-item setting-item-btn"
+                >
                   <div className="setting-info">
                     <div className="setting-icon-wrapper">
-                      <Icon className="setting-icon" />
+                      <Eye className="setting-icon" />
                     </div>
                     <div className="setting-details">
-                      <h3 className="setting-title">{setting.title}</h3>
-                      <p className="setting-description">{setting.description}</p>
+                      <h3 className="setting-title">Visibility</h3>
+                      <p className="setting-description">Who can see my location</p>
                     </div>
                   </div>
-                  {setting.action === "toggle" && (
-                    <button
-                      onClick={setting.onChange}
-                      disabled={isSaving}
-                      className={`setting-toggle ${
-                        setting.value ? "setting-toggle-on" : ""
-                      }`}
-                      aria-label={`Toggle ${setting.title}`}
-                    >
-                      <div className="toggle-slider" />
-                    </button>
-                  )}
-                  {setting.action === "link" && (
-                    <button className="setting-link-btn">
-                      <X className="setting-chevron" />
-                    </button>
-                  )}
+                  <div className="setting-item-right">
+                    <span className="setting-value">{visibilityLabel}</span>
+                    <ChevronRight className="setting-chevron" />
+                  </div>
+                </button>
+
+                {/* Notifications */}
+                <div className="setting-item">
+                  <div className="setting-info">
+                    <div className="setting-icon-wrapper">
+                      <Bell className="setting-icon" />
+                    </div>
+                    <div className="setting-details">
+                      <h3 className="setting-title">Notifications</h3>
+                      <p className="setting-description">Receive push notifications</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleToggleNotifications}
+                    className={`setting-toggle ${
+                      notificationsEnabled ? "setting-toggle-on" : ""
+                    }`}
+                    aria-label="Toggle notifications"
+                  >
+                    <div className="toggle-slider" />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
 
-          <div className="settings-divider" />
+              <div className="settings-divider" />
 
-          <div className="settings-account">
-            <div className="account-info">
-              <p className="account-label">Account</p>
-              <p className="account-email">{user?.email || ""}</p>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="logout-btn"
-            >
-              Log Out
-            </Button>
-          </div>
+              <div className="settings-account">
+                <div className="account-info">
+                  <p className="account-label">Account</p>
+                  <p className="account-email">{user?.email || ""}</p>
+                </div>
+                <Button onClick={handleLogout} variant="outline" className="logout-btn">
+                  <LogOut className="logout-icon" />
+                  Log Out
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         <style jsx global>{`
+          .setting-item-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            text-align: left;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 12px;
+            transition: all 0.2s;
+          }
+
+          .setting-item-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+          }
+
+          .setting-item-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+
+          .setting-value {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          .setting-chevron {
+            width: 16px;
+            height: 16px;
+            color: rgba(255, 255, 255, 0.4);
+          }
+
+          .visibility-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+
+          .visibility-option:hover {
+            background: rgba(255, 255, 255, 0.08);
+          }
+
+          .visibility-option.active {
+            color: #2BB0AF;
+            border-color: rgba(43, 176, 175, 0.4);
+            background: rgba(43, 176, 175, 0.1);
+          }
+
+          .visibility-check {
+            width: 16px;
+            height: 16px;
+            color: #2BB0AF;
+          }
+
           .settings-sections {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
           }
 
           .setting-item {
@@ -172,10 +218,6 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             transition: all 0.2s;
-          }
-
-          .setting-item:hover {
-            background: rgba(255, 255, 255, 0.08);
           }
 
           .setting-info {
@@ -258,32 +300,6 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
             left: calc(100% - 24px);
           }
 
-          .setting-link-btn {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 0;
-          }
-
-          .setting-link-btn:hover {
-            background: rgba(255, 255, 255, 0.12);
-            color: white;
-          }
-
-          .setting-chevron {
-            width: 16px;
-            height: 16px;
-            transform: rotate(-45deg);
-          }
-
           .settings-divider {
             height: 1px;
             background: rgba(255, 255, 255, 0.1);
@@ -325,13 +341,19 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
             color: #ef4444;
             padding: 8px 16px;
             height: 36px;
-            font-size: 13px;
+          font-size: 13px;
             font-weight: 600;
+            gap: 6px;
           }
 
           .logout-btn:hover {
             background: rgba(239, 68, 68, 0.25);
             border-color: rgba(239, 68, 68, 0.5);
+          }
+
+          .logout-icon {
+            width: 14px;
+            height: 14px;
           }
         `}</style>
       </DialogContent>

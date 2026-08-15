@@ -2,20 +2,27 @@
 
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { MessageCircle, Settings, User } from "lucide-react";
+import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
+import { useCurrentUser } from "@/hooks/users/use-users";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2ProfileDialog } from "@/components/v2/dialogs/v2-profile-dialog";
 
 export function V2Header() {
-  const user = useSelector((state: RootState) => state.auth.user);
-  const conversations = useSelector((state: RootState) => state.chat.conversations);
+  const authUser = useSelector((state: RootState) => state.auth.user);
+  const { data: currentUser } = useCurrentUser();
   const [chatOpen, setChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const displayName = user?.name || "User";
+  const displayName = currentUser?.name || authUser?.name || "User";
+  const avatarThumb =
+    currentUser?.images && currentUser.images[0]
+      ? currentUser.images[0].thumbUrl || currentUser.images[0].originalUrl
+      : undefined;
+
   const initials = displayName
     .split(" ")
     .map((part) => part.charAt(0))
@@ -24,22 +31,48 @@ export function V2Header() {
     .toUpperCase();
 
   // Calculate total unread count across all conversations
-  const unreadCount = conversations.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0);
+  const unreadCount = useSelector((state: RootState) =>
+    state.chat.conversations.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0),
+  );
+
+  // Full page reload avoids stacking extra SignalR connections
+  const handleRefresh = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    window.location.reload();
+  };
 
   return (
     <>
       <header className="v2-header">
         <div className="header-left">
-          <div className="user-avatar-section">
+          <button
+            className="user-avatar-section"
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-label="Open profile"
+            aria-expanded={profileOpen}
+          >
             <div className="user-avatar">
-              <span className="user-avatar-text">{initials}</span>
+              {avatarThumb ? (
+                <img src={avatarThumb} alt={displayName} className="user-avatar-img" />
+              ) : (
+                <span className="user-avatar-text">{initials}</span>
+              )}
               <div className="avatar-status" />
             </div>
             <span className="user-name">{displayName}</span>
-          </div>
+          </button>
         </div>
         <div className="header-right">
-          <button 
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="header-icon-btn header-refresh-btn"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`header-icon ${refreshing ? 'spinning' : ''}`} />
+          </button>
+          <button
             onClick={() => setChatOpen(!chatOpen)}
             className={`header-chat-btn ${chatOpen ? 'header-btn-active' : ''}`}
             aria-label="Chat"
@@ -50,21 +83,13 @@ export function V2Header() {
               <span className="chat-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </button>
-          <button 
+          <button
             onClick={() => setSettingsOpen(!settingsOpen)}
             className={`header-icon-btn ${settingsOpen ? 'header-btn-active' : ''}`}
             aria-label="Settings"
             aria-expanded={settingsOpen}
           >
             <Settings className="header-icon" />
-          </button>
-          <button 
-            onClick={() => setProfileOpen(!profileOpen)}
-            className={`header-icon-btn ${profileOpen ? 'header-btn-active' : ''}`}
-            aria-label="Profile"
-            aria-expanded={profileOpen}
-          >
-            <User className="header-icon" />
           </button>
         </div>
       </header>
@@ -108,12 +133,22 @@ export function V2Header() {
         .header-left {
           display: flex;
           align-items: center;
+          min-width: 0;
         }
 
         .user-avatar-section {
           display: flex;
           align-items: center;
           gap: 8px;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          min-width: 0;
+        }
+
+        .user-avatar-section:active {
+          opacity: 0.7;
         }
 
         .user-avatar {
@@ -128,6 +163,12 @@ export function V2Header() {
           justify-content: center;
           border: 2px solid rgba(43, 176, 175, 0.3);
           flex-shrink: 0;
+        }
+
+        .user-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
         .user-avatar-text {
@@ -148,10 +189,10 @@ export function V2Header() {
         }
 
         .user-name {
-          font-size: 13px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.8);
-          max-width: 120px;
+          font-size: 14px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.9);
+          max-width: 140px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -161,6 +202,19 @@ export function V2Header() {
           display: flex;
           align-items: center;
           gap: 8px;
+        }
+
+        .header-refresh-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .header-icon.spinning {
+          animation: v2-refresh-spin 1s linear infinite;
+        }
+
+        @keyframes v2-refresh-spin {
+          to { transform: rotate(360deg); }
         }
 
         .header-chat-btn {
@@ -192,6 +246,7 @@ export function V2Header() {
         .chat-icon {
           width: 18px;
           height: 18px;
+          color: inherit;
         }
 
         .chat-badge {
@@ -241,6 +296,7 @@ export function V2Header() {
         .header-icon {
           width: 16px;
           height: 16px;
+          color: inherit;
         }
 
         /* Active state when modal is open */
@@ -256,6 +312,11 @@ export function V2Header() {
           border-color: rgba(255, 255, 255, 0.4) !important;
           color: white !important;
           box-shadow: 0 0 12px rgba(255, 255, 255, 0.15) !important;
+        }
+
+        .user-avatar-section.header-btn-active .user-avatar {
+          border-color: rgba(43, 176, 175, 0.8);
+          box-shadow: 0 0 12px rgba(43, 176, 175, 0.4);
         }
       `}</style>
     </>

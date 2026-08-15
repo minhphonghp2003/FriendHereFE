@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Camera, Plus, X, Heart, MessageCircle, Share2 } from "lucide-react";
+import { Camera, Plus, Heart, MessageCircle, Share2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -191,19 +191,8 @@ export function V2MomentsFeed() {
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="create-moment-dialog">
+        <DialogContent className="create-moment-dialog v2-native-sheet" showCloseButton={false}>
           <div className="create-dialog-content">
-            <div className="create-dialog-header">
-              <h2 className="create-dialog-title">New Moment</h2>
-              <button
-                className="close-btn"
-                onClick={() => setShowCreateDialog(false)}
-                aria-label="Close"
-              >
-                <X className="close-icon" />
-              </button>
-            </div>
-
             <div className="create-dialog-body">
               <div className="media-preview">
                 {newMomentMedia ? (
@@ -277,7 +266,7 @@ export function V2MomentsFeed() {
       {/* Moment Detail Modal */}
       {selectedMoment && (
         <Dialog open={!!selectedMoment} onOpenChange={() => setSelectedMoment(null)}>
-          <DialogContent className="moment-detail-dialog">
+          <DialogContent className="moment-detail-dialog" showCloseButton={false}>
             <div className="moment-detail-content">
               <div className="detail-media">
                 {(() => {
@@ -348,6 +337,453 @@ export function V2MomentsFeed() {
           </DialogContent>
         </Dialog>
       )}
+
+      <style jsx global>{`
+        .v2-moments-container {
+          width: 100%;
+          height: 100%;
+          background: #000;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding-top: calc(56px + env(safe-area-inset-top, 0px));
+        }
+
+        .v2-moments-container::-webkit-scrollbar {
+          display: none;
+        }
+
+        .moments-header {
+          padding: 16px 20px 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .moments-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: white;
+          margin: 0;
+        }
+
+        .moments-count {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 500;
+        }
+
+        .moments-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 4px;
+          padding: 4px;
+        }
+
+        .moment-card {
+          aspect-ratio: 9/16;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          overflow: hidden;
+          position: relative;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+
+        .moment-card:active {
+          transform: scale(0.98);
+        }
+
+        .moment-media {
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+
+        .moment-image,
+        .moment-video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .moment-user-overlay {
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          z-index: 10;
+        }
+
+        .moment-user-initial {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(10px);
+          color: white;
+          font-weight: 600;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .moment-stats {
+          position: absolute;
+          bottom: 8px;
+          right: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          z-index: 10;
+        }
+
+        .moment-stat-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(10px);
+          padding: 3px 7px;
+          border-radius: 10px;
+          font-size: 11px;
+          color: white;
+          font-weight: 500;
+        }
+
+        .moment-stat-item.liked {
+          background: rgba(239, 68, 68, 0.75);
+        }
+
+        .moment-stat-icon {
+          width: 11px;
+          height: 11px;
+        }
+
+        .moments-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 300px;
+          color: white;
+        }
+
+        .loading-spinner {
+          width: 32px;
+          height: 32px;
+          border: 3px solid rgba(255, 255, 255, 0.2);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: v2-spin 1s linear infinite;
+        }
+
+        @keyframes v2-spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+          margin-top: 12px;
+          font-size: 13px;
+          opacity: 0.7;
+        }
+
+        .moments-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          flex: 1;
+          text-align: center;
+          padding: 40px 20px;
+        }
+
+        .moments-empty .empty-icon {
+          width: 56px;
+          height: 56px;
+          color: rgba(255, 255, 255, 0.25);
+          margin-bottom: 16px;
+        }
+
+        .moments-empty .empty-title {
+          font-size: 17px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.85);
+          margin: 0 0 6px 0;
+        }
+
+        .moments-empty .empty-description {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.45);
+          margin: 0;
+        }
+
+        /* Create FAB */
+        .create-moment-btn {
+          position: fixed;
+          bottom: 100px;
+          right: 20px;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+          border: none;
+          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
+          cursor: pointer;
+          z-index: 500;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .create-moment-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 25px rgba(255, 107, 107, 0.5);
+        }
+
+        .create-moment-btn:active {
+          transform: scale(0.95);
+        }
+
+        .create-btn-content {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .create-icon {
+          width: 24px;
+          height: 24px;
+          color: white;
+        }
+
+        /* Native bottom-sheet style dialogs */
+        .create-moment-dialog,
+        .moment-detail-dialog {
+          background: rgba(15, 15, 15, 0.97) !important;
+          backdrop-filter: blur(30px);
+          -webkit-backdrop-filter: blur(30px);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 24px 24px 0 0 !important;
+          border-bottom: none !important;
+          padding: 0 !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          max-height: 92dvh;
+          margin: 0 !important;
+          position: fixed !important;
+          bottom: 0 !important;
+          top: auto !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          overflow: hidden;
+          animation: v2-sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        .create-moment-dialog::before,
+        .moment-detail-dialog::before {
+          content: '';
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 40px;
+          height: 4px;
+          border-radius: 2px;
+          background: rgba(255, 255, 255, 0.25);
+          z-index: 10;
+        }
+
+        .create-dialog-content {
+          padding: 28px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .create-dialog-body {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .media-preview {
+          width: 100%;
+          aspect-ratio: 1;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 16px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .preview-image,
+        .preview-video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .preview-placeholder {
+          text-align: center;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .placeholder-icon {
+          width: 44px;
+          height: 44px;
+          margin: 0 auto 10px;
+        }
+
+        .placeholder-text {
+          font-size: 14px;
+          margin: 0;
+        }
+
+        .caption-section {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .caption-input {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: white;
+          resize: none;
+          border-radius: 12px;
+        }
+
+        .caption-counter {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.4);
+          text-align: right;
+          margin-top: 6px;
+        }
+
+        .create-actions {
+          display: flex;
+          gap: 12px;
+        }
+
+        .create-actions button {
+          flex: 1;
+        }
+
+        .hidden-file-input {
+          display: none;
+        }
+
+        /* Moment detail */
+        .moment-detail-content {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 28px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .detail-media {
+          width: 100%;
+          aspect-ratio: 9/16;
+          background: black;
+          border-radius: 16px;
+          overflow: hidden;
+        }
+
+        .detail-image,
+        .detail-video {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .detail-info {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .detail-user {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .detail-user-avatar {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+
+        .detail-user-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: white;
+          margin: 0;
+        }
+
+        .detail-time {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.45);
+          margin: 2px 0 0 0;
+        }
+
+        .detail-caption {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.8);
+          line-height: 1.5;
+          margin: 0;
+        }
+
+        .detail-actions {
+          display: flex;
+          gap: 20px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .detail-action-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 10px;
+          transition: background 0.2s ease;
+          font-size: 14px;
+        }
+
+        .detail-action-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .action-icon {
+          width: 20px;
+          height: 20px;
+        }
+
+        .action-icon.liked {
+          color: #ff6b6b;
+        }
+
+        @keyframes v2-sheet-up {
+          from {
+            transform: translateX(-50%) translateY(100%);
+          }
+          to {
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useRef, TouchEvent } from "react";
-import { useAppSelector } from "@/store/hooks";
 import { ChevronUp, Users, BatteryCharging } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ActiveUserDto } from "@/lib/signalr/types";
 
-export function V2FriendsSheet() {
-  const locations = useAppSelector((s) => s.location.locations);
-  const myLatitude = useAppSelector((s) => s.location.latitude);
-  const myLongitude = useAppSelector((s) => s.location.longitude);
+interface V2FriendsSheetProps {
+  nearbyFriends: ActiveUserDto[];
+  myLocation: { lat: number; lng: number } | undefined;
+}
+
+export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(80);
   const [touchStart, setTouchStart] = useState(0);
@@ -82,15 +84,6 @@ export function V2FriendsSheet() {
 
   return (
     <>
-      {/* Drag Handle Button */}
-      {/* <button 
-        className="sheet-trigger-btn"
-        onClick={toggleSheet}
-        aria-label="Toggle friends list"
-      >
-        <Users className="trigger-icon" />
-        <span className="trigger-count">{locations.length}</span>
-      </button> */}
 
       {/* Bottom Sheet */}
       <div 
@@ -113,7 +106,7 @@ export function V2FriendsSheet() {
           <div className="sheet-preview">
             <div className="sheet-preview-info">
               <Users className="sheet-icon" />
-              <span className="sheet-count">{locations.length} friends nearby</span>
+              <span className="sheet-count">{nearbyFriends.length} friends nearby</span>
             </div>
             <ChevronUp 
               className={cn("sheet-chevron", isSheetOpen && "sheet-chevron-rotated")} 
@@ -125,38 +118,38 @@ export function V2FriendsSheet() {
         {/* Sheet Content */}
         <div className="sheet-content">
           <div className="friends-scroll">
-            {locations.map((location) => (
-              <div key={location.userId} className="friend-card">
+            {nearbyFriends.map((friend) => (
+              <div key={friend.userId} className="friend-card">
                 <div className="friend-card-avatar">
                   <div className="friend-card-placeholder">
-                    {location.name?.charAt(0) || "?"}
+                    {friend.name?.charAt(0) || "?"}
                   </div>
                   <div className="friend-status online" />
                 </div>
                 
                 <div className="friend-card-info">
-                  <h4 className="friend-card-name">{location.name || "User"}</h4>
+                  <h4 className="friend-card-name">{friend.name}</h4>
                   <p className="friend-card-distance">
-                    {myLatitude != null && myLongitude != null
-                      ? `${calculateDistance(
-                          myLatitude,
-                          myLongitude,
-                          location.latitude,
-                          location.longitude
-                        )} away`
-                      : "Unknown distance"}
+                    {myLocation ? (
+                      `${calculateDistance(
+                        myLocation.lat,
+                        myLocation.lng,
+                        friend.latitude,
+                        friend.longitude
+                      )} away`
+                    ) : "Unknown distance"}
                   </p>
-                  {location.battery != null && (
+                  {friend.battery != null && (
                     <div className="friend-card-battery">
                       <BatteryCharging className="battery-icon" size={12} />
-                      <span>{location.battery}%</span>
+                      <span>{friend.battery}%</span>
                     </div>
                   )}
                 </div>
               </div>
             ))}
             
-            {locations.length === 0 && (
+            {nearbyFriends.length === 0 && (
               <div className="empty-state">
                 <Users className="empty-icon" />
                 <p className="empty-text">No friends nearby</p>
@@ -305,6 +298,10 @@ export function V2FriendsSheet() {
           overflow-y: auto;
           padding: 0 16px 24px;
           -webkit-overflow-scrolling: touch;
+        }
+
+        .friends-scroll::-webkit-scrollbar {
+          display: none;
         }
 
         .friend-card {
