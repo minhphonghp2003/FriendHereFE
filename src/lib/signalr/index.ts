@@ -149,7 +149,12 @@ class LocationHub {
     this.receiveStatusUpdatedCallback = callback;
   }
 
-  async updateLocation(latitude: number, longitude: number, accuracy?: number, speed?: number): Promise<void> {
+  async updateLocation(
+    latitude: number,
+    longitude: number,
+    accuracy?: number,
+    speed?: number,
+  ): Promise<void> {
     if (!this.connection) return;
     try {
       await this.connection.invoke("UpdateLocation", latitude, longitude, accuracy, speed);

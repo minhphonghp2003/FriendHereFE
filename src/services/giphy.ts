@@ -8,10 +8,7 @@ export interface GiphyItem {
 
 // GET {API}/chat/giphy?q=<query>&type=gif|sticker
 // Response shape (FE-declared): { success: boolean; data: GiphyItem[] }
-export async function searchGiphy(
-  query: string,
-  type: "gif" | "sticker",
-): Promise<GiphyItem[]> {
+export async function searchGiphy(query: string, type: "gif" | "sticker"): Promise<GiphyItem[]> {
   const res = await httpClient.get<{ success: boolean; data: GiphyItem[] }>("/chat/giphy", {
     params: { q: query.trim() || undefined, type },
   });

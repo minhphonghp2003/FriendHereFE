@@ -7,7 +7,9 @@ export const throttle = <T extends (...args: unknown[]) => unknown>(
     if (!inThrottle) {
       fn(...args);
       inThrottle = true;
-      setTimeout(() => { inThrottle = false; }, limit);
+      setTimeout(() => {
+        inThrottle = false;
+      }, limit);
     }
   };
 };

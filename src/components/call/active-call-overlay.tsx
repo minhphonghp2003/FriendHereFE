@@ -53,14 +53,19 @@ export const ActiveCallOverlay = ({
 
   return (
     <div className="fixed inset-0 z-[75] flex flex-col bg-black">
-      <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full flex-1 object-cover" />
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        className="h-full w-full flex-1 object-cover"
+      />
       <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4">
         <div className="flex items-center gap-2">
           <p className="text-lg font-semibold text-white">{peer.name}</p>
           <span className="text-xs text-white/70">{formatDuration(seconds)}</span>
         </div>
       </div>
-      <div className="absolute right-4 top-16 z-10 h-40 w-28 overflow-hidden rounded-xl border border-white/30 shadow-lg">
+      <div className="absolute top-16 right-4 z-10 h-40 w-28 overflow-hidden rounded-xl border border-white/30 shadow-lg">
         <video
           ref={localVideoRef}
           autoPlay

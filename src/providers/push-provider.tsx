@@ -22,12 +22,7 @@ import { useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/auth-provider";
 import { updateFcmToken } from "@/services/auth";
-import {
-  deleteFcmToken,
-  getFcmToken,
-  isFirebaseConfigured,
-  onFcmTokenRefresh,
-} from "@/lib/fcm";
+import { deleteFcmToken, getFcmToken, isFirebaseConfigured, onFcmTokenRefresh } from "@/lib/fcm";
 import { PUSH_TYPE, type PushPayloadData } from "@/types/notification";
 
 const SYNC_DEBOUNCE_MS = 2000;
@@ -119,9 +114,10 @@ function handleForegroundPush(data: PushPayloadData | undefined): void {
   switch (data.type) {
     case PUSH_TYPE.CHAT_MESSAGE: {
       const isGroup = String(data.isGroup ?? "false") === "true";
-      const title = isGroup && data.conversationName
-        ? `${data.senderName} · ${data.conversationName}`
-        : data.senderName;
+      const title =
+        isGroup && data.conversationName
+          ? `${data.senderName} · ${data.conversationName}`
+          : data.senderName;
       toast(title, {
         description: data.preview,
         duration: 5000,

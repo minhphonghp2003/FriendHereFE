@@ -18,15 +18,21 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
     setIndex(initialIndex);
   }, [initialIndex]);
 
-  const handlePrev = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  }, [images.length]);
+  const handlePrev = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+    },
+    [images.length],
+  );
 
-  const handleNext = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
-  }, [images.length]);
+  const handleNext = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+    },
+    [images.length],
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -34,7 +40,7 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
       if (e.key === "ArrowLeft") setIndex((i) => (i === 0 ? images.length - 1 : i - 1));
       if (e.key === "ArrowRight") setIndex((i) => (i === images.length - 1 ? 0 : i + 1));
     },
-    [onClose, images.length]
+    [onClose, images.length],
   );
 
   useEffect(() => {
@@ -55,7 +61,7 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
       onClick={onClose}
     >
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <DownloadButton url={images[index].originalUrl} />
         <button
           onClick={onClose}
@@ -69,13 +75,13 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            className="absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            className="absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
@@ -83,9 +89,7 @@ export const ImageLightbox = ({ images, initialIndex, open, onClose }: ImageLigh
             {images.map((_, i) => (
               <div
                 key={i}
-                className={`h-2 w-2 rounded-full ${
-                  i === index ? "bg-white" : "bg-white/40"
-                }`}
+                className={`h-2 w-2 rounded-full ${i === index ? "bg-white" : "bg-white/40"}`}
               />
             ))}
           </div>

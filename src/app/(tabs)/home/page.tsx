@@ -152,10 +152,7 @@ export default function HomePage() {
     try {
       await locationHub.stop();
       await locationHub.start();
-      const pos =
-        latitude !== null && longitude !== null
-          ? { latitude, longitude }
-          : undefined;
+      const pos = latitude !== null && longitude !== null ? { latitude, longitude } : undefined;
       await locationHub.join(pos ? { latitude: pos.latitude, longitude: pos.longitude } : {});
     } catch (err) {
       console.error("[Home] Reload error:", err);
@@ -201,7 +198,13 @@ export default function HomePage() {
 
     return (
       <>
-        <div className="relative" style={{ width: "100%", height: "calc(100dvh - 4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))" }}>
+        <div
+          className="relative"
+          style={{
+            width: "100%",
+            height: "calc(100dvh - 4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+          }}
+        >
           <APIProvider apiKey={apiKey}>
             <Map
               key={mapColorScheme}

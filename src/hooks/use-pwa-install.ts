@@ -8,9 +8,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export function usePwaInstall() {
-  const [promptEvent, setPromptEvent] = useState<
-    BeforeInstallPromptEvent | null
-  >(null);
+  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
@@ -24,8 +22,7 @@ export function usePwaInstall() {
     // Check if already installed (standalone mode)
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone ===
-        true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsInstalled(standalone);
 
     const handleBeforeInstall = (e: Event) => {

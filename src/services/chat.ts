@@ -1,10 +1,18 @@
 import { httpClient } from "@/lib/axios";
-import type { ConversationDto, ConversationMemberDto, DiscoverableGroupDto, JoinRequestDto, MessageDto, MessageReactionUserDto } from "@/types/chat";
+import type {
+  ConversationDto,
+  ConversationMemberDto,
+  DiscoverableGroupDto,
+  JoinRequestDto,
+  MessageDto,
+  MessageReactionUserDto,
+} from "@/types/chat";
 import type { CursorPageResponse } from "@/types/api";
 
-export async function getConversations(prevId?: number | null, take = 20): Promise<
-  CursorPageResponse<ConversationDto>
-> {
+export async function getConversations(
+  prevId?: number | null,
+  take = 20,
+): Promise<CursorPageResponse<ConversationDto>> {
   const res = await httpClient.get("/chat", {
     params: { prevId: prevId ?? undefined, take },
   });
@@ -20,9 +28,7 @@ export async function getOpponentConversation(opponentId: number): Promise<{
   return res.data;
 }
 
-export async function getConversation(
-  conversationId: number
-): Promise<{
+export async function getConversation(conversationId: number): Promise<{
   data: ConversationDto;
   success: boolean;
   message?: string;
@@ -31,9 +37,7 @@ export async function getConversation(
   return res.data;
 }
 
-export async function getConversationMembers(
-  conversationId: number
-): Promise<{
+export async function getConversationMembers(conversationId: number): Promise<{
   success: boolean;
   data: ConversationMemberDto[];
   message?: string;
@@ -44,7 +48,7 @@ export async function getConversationMembers(
 
 export async function addGroupMember(
   conversationId: number,
-  userId: number
+  userId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/members`, { userId });
   return res.data;
@@ -52,22 +56,20 @@ export async function addGroupMember(
 
 export async function removeGroupMember(
   conversationId: number,
-  userId: number
+  userId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.delete(`/Chat/${conversationId}/members/${userId}`);
   return res.data;
 }
 
 export async function leaveGroup(
-  conversationId: number
+  conversationId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/leave`);
   return res.data;
 }
 
-export async function createJoinRequest(
-  conversationId: number
-): Promise<{
+export async function createJoinRequest(conversationId: number): Promise<{
   data: { id?: number } | null;
   success: boolean;
   message?: string;
@@ -77,14 +79,14 @@ export async function createJoinRequest(
 }
 
 export async function joinGroupDirect(
-  conversationId: number
+  conversationId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/join`);
   return res.data;
 }
 
 export async function cancelJoinRequest(
-  requestId: number
+  requestId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.delete(`/Chat/join-request/${requestId}`);
   return res.data;
@@ -92,15 +94,13 @@ export async function cancelJoinRequest(
 
 export async function confirmJoinRequest(
   requestId: number,
-  isApproved: boolean
+  isApproved: boolean,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.put(`/Chat/join-request/${requestId}`, { isApproved });
   return res.data;
 }
 
-export async function getPendingJoinRequests(
-  conversationId: number
-): Promise<{
+export async function getPendingJoinRequests(conversationId: number): Promise<{
   success: boolean;
   data: JoinRequestDto[];
   message?: string;
@@ -121,7 +121,7 @@ export async function getDiscoverableGroups(): Promise<{
 export async function getMessages(
   conversationId: number,
   prevId?: number | null,
-  take = 20
+  take = 20,
 ): Promise<CursorPageResponse<MessageDto>> {
   const res = await httpClient.get(`/chat/${conversationId}/messages`, {
     params: { prevId: prevId ?? undefined, take },
@@ -133,7 +133,7 @@ export async function getMessageReactions(
   conversationId: number,
   messageId: number,
   prevId?: number | null,
-  take = 10
+  take = 10,
 ): Promise<CursorPageResponse<MessageReactionUserDto>> {
   const res = await httpClient.get(`/chat/${conversationId}/messages/${messageId}/reactions`, {
     params: { prevId: prevId ?? undefined, take },
@@ -143,7 +143,7 @@ export async function getMessageReactions(
 
 export async function searchMessages(
   conversationId: number,
-  params: { messageId?: number; content?: string }
+  params: { messageId?: number; content?: string },
 ): Promise<{
   success: boolean;
   data: MessageDto[];
@@ -163,20 +163,26 @@ export async function createConversation(
   content: string | null,
   messageType: number,
   momentId?: number | null,
-  fileIds?: string[]
+  fileIds?: string[],
 ): Promise<{
   data: number;
   success: boolean;
   message?: string;
 }> {
-  const res = await httpClient.post("/chat", { receiverId, content, messageType, momentId, fileIds });
+  const res = await httpClient.post("/chat", {
+    receiverId,
+    content,
+    messageType,
+    momentId,
+    fileIds,
+  });
   return res.data;
 }
 
 export async function createGroupChat(
   name: string | undefined,
   memberIds: number[],
-  isRestricted?: boolean
+  isRestricted?: boolean,
 ): Promise<{
   data: number;
   success: boolean;
@@ -187,14 +193,14 @@ export async function createGroupChat(
 }
 
 export async function blockChatUser(
-  targetUserId: number
+  targetUserId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post("/Chat/block-user", { targetUserId });
   return res.data;
 }
 
 export async function unblockChatUser(
-  targetUserId: number
+  targetUserId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post("/Chat/unblock-user", { targetUserId });
   return res.data;
@@ -202,7 +208,7 @@ export async function unblockChatUser(
 
 export async function renameGroupChat(
   conversationId: number,
-  name: string
+  name: string,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.put(`/Chat/${conversationId}/group/name`, { name });
   return res.data;
@@ -210,7 +216,7 @@ export async function renameGroupChat(
 
 export async function changeGroupImage(
   conversationId: number,
-  fileId: string
+  fileId: string,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.put(`/Chat/${conversationId}/group/image`, { fileId });
   return res.data;
@@ -218,7 +224,7 @@ export async function changeGroupImage(
 
 export async function setGroupRestricted(
   conversationId: number,
-  isRestricted: boolean
+  isRestricted: boolean,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.put(`/Chat/${conversationId}/group/restricted`, { isRestricted });
   return res.data;
@@ -226,7 +232,7 @@ export async function setGroupRestricted(
 
 export async function setConversationMuted(
   conversationId: number,
-  isMuted: boolean
+  isMuted: boolean,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/mute`, { isMuted });
   return res.data;
@@ -234,14 +240,14 @@ export async function setConversationMuted(
 
 export async function setConversationArchived(
   conversationId: number,
-  isArchived: boolean
+  isArchived: boolean,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.post(`/Chat/${conversationId}/archive`, { isArchived });
   return res.data;
 }
 
 export async function deleteChat(
-  conversationId: number
+  conversationId: number,
 ): Promise<{ data: null; success: boolean; message?: string }> {
   const res = await httpClient.delete(`/Chat/${conversationId}`);
   return res.data;

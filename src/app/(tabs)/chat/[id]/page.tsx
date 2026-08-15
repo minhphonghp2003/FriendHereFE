@@ -2,8 +2,29 @@
 import { useEffect, useState, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setMessages, prependMessages, appendMessage, updateMessage, deleteMessage, mergeMessageReaction, removeMessageReaction, markMessagesRead, setActiveConversation, resetUnreadCount, setConversationBlocked, setConversationUnblocked, updateConversationState } from "@/store/slices/chat-slice";
-import { getMessages, getConversation, blockChatUser, unblockChatUser, getMessageReactions, searchMessages } from "@/services/chat";
+import {
+  setMessages,
+  prependMessages,
+  appendMessage,
+  updateMessage,
+  deleteMessage,
+  mergeMessageReaction,
+  removeMessageReaction,
+  markMessagesRead,
+  setActiveConversation,
+  resetUnreadCount,
+  setConversationBlocked,
+  setConversationUnblocked,
+  updateConversationState,
+} from "@/store/slices/chat-slice";
+import {
+  getMessages,
+  getConversation,
+  blockChatUser,
+  unblockChatUser,
+  getMessageReactions,
+  searchMessages,
+} from "@/services/chat";
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
@@ -14,7 +35,28 @@ import { LoadingVideo } from "@/components/common/loading-video";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
 import { useCall } from "@/providers/call-provider";
-import { ArrowLeft, Send, Ban, ShieldOff, X, Smile, Loader2, Phone, Film, ImagePlus, Reply, Pencil, Trash2, Copy, Link2, Search, ChevronDown, BellOff, Users, Info } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  Ban,
+  ShieldOff,
+  X,
+  Smile,
+  Loader2,
+  Phone,
+  Film,
+  ImagePlus,
+  Reply,
+  Pencil,
+  Trash2,
+  Copy,
+  Link2,
+  Search,
+  ChevronDown,
+  BellOff,
+  Users,
+  Info,
+} from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { toast } from "sonner";
 import type { MessageDto, ImageDto, MessageReactionUserDto } from "@/types/chat";
@@ -107,7 +149,9 @@ export default function ChatScreenPage() {
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
-  const currentConv = useAppSelector((s) => s.chat.conversations.find((c) => c.id === conversationId));
+  const currentConv = useAppSelector((s) =>
+    s.chat.conversations.find((c) => c.id === conversationId),
+  );
   const [actionMessage, setActionMessage] = useState<MessageDto | null>(null);
   const [actionPos, setActionPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
@@ -124,7 +168,9 @@ export default function ChatScreenPage() {
   const [searchMode, setSearchMode] = useState(false);
   const prevIdRef = useRef<number | null>(null);
   const markedFileKeysRef = useRef<Set<string>>(new Set());
-  const fileWaitersRef = useRef<Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>>([]);
+  const fileWaitersRef = useRef<
+    Array<{ keys: string[]; resolve: () => void; timer: ReturnType<typeof setTimeout> }>
+  >([]);
 
   const resolveFileWaiters = useCallback(() => {
     fileWaitersRef.current = fileWaitersRef.current.filter((waiter) => {
@@ -145,35 +191,42 @@ export default function ChatScreenPage() {
       if (!fileKey) return;
       markedFileKeysRef.current.add(fileKey);
       setPendingFiles((prev) =>
-        prev.map((p) => (p.key === fileKey ? { ...p, uploading: false } : p))
+        prev.map((p) => (p.key === fileKey ? { ...p, uploading: false } : p)),
       );
       resolveFileWaiters();
     });
     return unsub;
   }, [resolveFileWaiters]);
 
-  const fetchMessages = useCallback(async (prevId: number | null = null) => {
-    const container = messagesContainerRef.current;
-    const prevScrollHeight = prevId !== null && container ? container.scrollHeight : 0;
-    try {
-      const res = await getMessages(conversationId, prevId, 20);
-      if (prevId === null) {
-        setSearchMode(false);
-        dispatch(setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
-      } else {
-        dispatch(prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }));
-        requestAnimationFrame(() => {
-          const el = messagesContainerRef.current;
-          if (el && prevScrollHeight > 0) {
-            el.scrollTop = el.scrollHeight - prevScrollHeight;
-          }
-        });
+  const fetchMessages = useCallback(
+    async (prevId: number | null = null) => {
+      const container = messagesContainerRef.current;
+      const prevScrollHeight = prevId !== null && container ? container.scrollHeight : 0;
+      try {
+        const res = await getMessages(conversationId, prevId, 20);
+        if (prevId === null) {
+          setSearchMode(false);
+          dispatch(
+            setMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }),
+          );
+        } else {
+          dispatch(
+            prependMessages({ conversationId, messages: res.data.reverse(), hasMore: res.hasMore }),
+          );
+          requestAnimationFrame(() => {
+            const el = messagesContainerRef.current;
+            if (el && prevScrollHeight > 0) {
+              el.scrollTop = el.scrollHeight - prevScrollHeight;
+            }
+          });
+        }
+        prevIdRef.current = res.prevId;
+      } catch (err) {
+        console.error("Failed to fetch messages", err);
       }
-      prevIdRef.current = res.prevId;
-    } catch (err) {
-      console.error("Failed to fetch messages", err);
-    }
-  }, [conversationId, dispatch]);
+    },
+    [conversationId, dispatch],
+  );
 
   useEffect(() => {
     if (momentIdParam) {
@@ -193,16 +246,18 @@ export default function ChatScreenPage() {
     dispatch(resetUnreadCount(conversationId));
     setLoading(true);
     Promise.all([
-      getConversation(conversationId).then((res) => {
-        if (res.data) {
-          setConvName(res.data.name);
-          setConvOnline(res.data.isOnline);
-          setIsGroup(!res.data.isDirect);
-          setIsBlocked(res.data.isBlocked);
-          setBlockedById(res.data.blockedById);
-          dispatch(updateConversationState({ conversationId, patch: res.data }));
-        }
-      }).catch(() => {}),
+      getConversation(conversationId)
+        .then((res) => {
+          if (res.data) {
+            setConvName(res.data.name);
+            setConvOnline(res.data.isOnline);
+            setIsGroup(!res.data.isDirect);
+            setIsBlocked(res.data.isBlocked);
+            setBlockedById(res.data.blockedById);
+            dispatch(updateConversationState({ conversationId, patch: res.data }));
+          }
+        })
+        .catch(() => {}),
       fetchMessages(),
     ])
       .then(() => appHub.joinConversation(conversationId))
@@ -257,30 +312,36 @@ export default function ChatScreenPage() {
     });
     const unsubReacted = appHub.onReceiveMessageReacted((data) => {
       if (data.conversationId !== conversationId) return;
-      dispatch(mergeMessageReaction({
-        conversationId: data.conversationId,
-        messageId: data.messageId,
-        userId: data.userId,
-        emoji: data.emoji,
-      }));
+      dispatch(
+        mergeMessageReaction({
+          conversationId: data.conversationId,
+          messageId: data.messageId,
+          userId: data.userId,
+          emoji: data.emoji,
+        }),
+      );
     });
     const unsubReactedRemoved = appHub.onReceiveMessageReactedRemoved((data) => {
       if (data.conversationId !== conversationId) return;
-      dispatch(removeMessageReaction({
-        conversationId: data.conversationId,
-        messageId: data.messageId,
-        userId: data.userId,
-        emoji: data.emoji,
-      }));
+      dispatch(
+        removeMessageReaction({
+          conversationId: data.conversationId,
+          messageId: data.messageId,
+          userId: data.userId,
+          emoji: data.emoji,
+        }),
+      );
     });
     const unsubMessagesRead = appHub.onReceiveMessagesRead((data) => {
       if (data.conversationId !== conversationId) return;
       if (!user || data.readerUserId === user.id) return;
-      dispatch(markMessagesRead({
-        conversationId: data.conversationId,
-        messageIds: data.messageIds,
-        myUserId: user.id,
-      }));
+      dispatch(
+        markMessagesRead({
+          conversationId: data.conversationId,
+          messageIds: data.messageIds,
+          myUserId: user.id,
+        }),
+      );
     });
     return () => {
       unsubEdited();
@@ -317,7 +378,10 @@ export default function ChatScreenPage() {
         dispatch(setConversationUnblocked(conversationId));
       }
     });
-    return () => { unsubBlocked(); unsubUnblocked(); };
+    return () => {
+      unsubBlocked();
+      unsubUnblocked();
+    };
   }, [conversationId, user, opponentId, dispatch]);
 
   useEffect(() => {
@@ -336,7 +400,11 @@ export default function ChatScreenPage() {
         router.replace("/chat");
       }
     });
-    return () => { unsubRemoved(); unsubLeft(); unsubGroupDeleted(); };
+    return () => {
+      unsubRemoved();
+      unsubLeft();
+      unsubGroupDeleted();
+    };
   }, [conversationId, router]);
 
   useEffect(() => {
@@ -369,11 +437,15 @@ export default function ChatScreenPage() {
         resolve();
         return;
       }
-      const waiter = { keys: remaining, resolve, timer: setTimeout(() => {
-        fileWaitersRef.current = fileWaitersRef.current.filter((w) => w !== waiter);
-        setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: false })));
-        resolve();
-      }, 30000) };
+      const waiter = {
+        keys: remaining,
+        resolve,
+        timer: setTimeout(() => {
+          fileWaitersRef.current = fileWaitersRef.current.filter((w) => w !== waiter);
+          setPendingFiles((prev) => prev.map((p) => ({ ...p, uploading: false })));
+          resolve();
+        }, 30000),
+      };
       fileWaitersRef.current.push(waiter);
     });
   }, []);
@@ -402,8 +474,8 @@ export default function ChatScreenPage() {
         });
         await Promise.all(
           presigned.map((item, i) =>
-            uploadToPresignedUrl(item.uploadUrl, files[i].file, contentTypes[i])
-          )
+            uploadToPresignedUrl(item.uploadUrl, files[i].file, contentTypes[i]),
+          ),
         );
         const fileIds = presigned.map((item) => item.fileId);
         const fileKeys = presigned.map((item) => normalizeKeyToken(item.key));
@@ -413,7 +485,7 @@ export default function ChatScreenPage() {
             fileId: fileIds[i],
             key: fileKeys[i],
             uploading: true,
-          }))
+          })),
         );
         await waitForFilesMarked(fileKeys);
         await appHub.sendMessage({
@@ -428,7 +500,14 @@ export default function ChatScreenPage() {
         setPendingFiles([]);
         files.forEach((f) => URL.revokeObjectURL(f.preview));
       } else {
-        await appHub.sendMessage({ conversationId, content: text, messageType: 0, replyToId: replyTo?.id ?? null, idempotencyKey: crypto.randomUUID(), momentId: pendingMoment ? momentIdParam : undefined });
+        await appHub.sendMessage({
+          conversationId,
+          content: text,
+          messageType: 0,
+          replyToId: replyTo?.id ?? null,
+          idempotencyKey: crypto.randomUUID(),
+          momentId: pendingMoment ? momentIdParam : undefined,
+        });
       }
       setReplyTo(null);
       setPendingMoment(null);
@@ -439,34 +518,51 @@ export default function ChatScreenPage() {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [input, sending, conversationId, isBlocked, pendingMoment, pendingFiles, momentIdParam, waitForFilesMarked, editingMessage, replyTo]);
+  }, [
+    input,
+    sending,
+    conversationId,
+    isBlocked,
+    pendingMoment,
+    pendingFiles,
+    momentIdParam,
+    waitForFilesMarked,
+    editingMessage,
+    replyTo,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey && !isBlocked) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey && !isBlocked) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value;
-    setInput(text);
-    const hasText = text.trim().length > 0;
-    if (hasText && !typingSentRef.current && !isBlocked) {
-      typingSentRef.current = true;
-      appHub.sendTyping(conversationId, true).catch(() => {});
-    }
-    if (!hasText && typingSentRef.current) {
-      typingSentRef.current = false;
-      appHub.sendTyping(conversationId, false).catch(() => {});
-    }
-    if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
-    if (hasText) {
-      typingStopTimerRef.current = setTimeout(() => {
-        if (typingSentRef.current) {
-          typingSentRef.current = false;
-          appHub.sendTyping(conversationId, false).catch(() => {});
-        }
-      }, 1500);
-    }
-  }, [conversationId, isBlocked]);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value;
+      setInput(text);
+      const hasText = text.trim().length > 0;
+      if (hasText && !typingSentRef.current && !isBlocked) {
+        typingSentRef.current = true;
+        appHub.sendTyping(conversationId, true).catch(() => {});
+      }
+      if (!hasText && typingSentRef.current) {
+        typingSentRef.current = false;
+        appHub.sendTyping(conversationId, false).catch(() => {});
+      }
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+      if (hasText) {
+        typingStopTimerRef.current = setTimeout(() => {
+          if (typingSentRef.current) {
+            typingSentRef.current = false;
+            appHub.sendTyping(conversationId, false).catch(() => {});
+          }
+        }, 1500);
+      }
+    },
+    [conversationId, isBlocked],
+  );
 
   const removePendingFile = useCallback((id: string) => {
     setPendingFiles((prev) => {
@@ -503,7 +599,13 @@ export default function ChatScreenPage() {
       const nonVideos = prev.filter((p) => !p.isVideo);
       return [
         ...nonVideos,
-        { id: crypto.randomUUID(), file, preview: URL.createObjectURL(file), isVideo: true, uploading: false },
+        {
+          id: crypto.randomUUID(),
+          file,
+          preview: URL.createObjectURL(file),
+          isVideo: true,
+          uploading: false,
+        },
       ];
     });
   }, []);
@@ -518,27 +620,43 @@ export default function ChatScreenPage() {
     };
   }, []);
 
-  const sendMessageByType = useCallback(async (content: string, messageType: number) => {
-    if (isBlocked || sending) return;
-    setSending(true);
-    try {
-      await appHub.sendMessage({ conversationId, content, messageType, replyToId: null, idempotencyKey: crypto.randomUUID(), momentId: undefined });
-    } catch (err) {
-      console.error("Failed to send message", err);
-    } finally {
-      setSending(false);
-    }
-  }, [conversationId, isBlocked, sending]);
+  const sendMessageByType = useCallback(
+    async (content: string, messageType: number) => {
+      if (isBlocked || sending) return;
+      setSending(true);
+      try {
+        await appHub.sendMessage({
+          conversationId,
+          content,
+          messageType,
+          replyToId: null,
+          idempotencyKey: crypto.randomUUID(),
+          momentId: undefined,
+        });
+      } catch (err) {
+        console.error("Failed to send message", err);
+      } finally {
+        setSending(false);
+      }
+    },
+    [conversationId, isBlocked, sending],
+  );
 
-  const handleSendEmoji = useCallback((emoji: string) => {
-    setShowEmojiPicker(false);
-    sendMessageByType(emoji, MessageType.Emoji);
-  }, [sendMessageByType]);
+  const handleSendEmoji = useCallback(
+    (emoji: string) => {
+      setShowEmojiPicker(false);
+      sendMessageByType(emoji, MessageType.Emoji);
+    },
+    [sendMessageByType],
+  );
 
-  const handleSendGiphy = useCallback((item: GiphyItem) => {
-    setShowGiphyPicker(false);
-    sendMessageByType(item.url, giphyTab === "sticker" ? MessageType.Sticker : MessageType.Gif);
-  }, [sendMessageByType, giphyTab]);
+  const handleSendGiphy = useCallback(
+    (item: GiphyItem) => {
+      setShowGiphyPicker(false);
+      sendMessageByType(item.url, giphyTab === "sticker" ? MessageType.Sticker : MessageType.Gif);
+    },
+    [sendMessageByType, giphyTab],
+  );
 
   const fetchGiphy = useCallback(async (q: string, tab: "gif" | "sticker") => {
     setGiphyLoading(true);
@@ -561,15 +679,21 @@ export default function ChatScreenPage() {
     if (!showGiphyPicker) fetchGiphy(giphyQuery, giphyTab);
   }, [showGiphyPicker, giphyQuery, giphyTab, fetchGiphy]);
 
-  const handleGiphyTabChange = useCallback((tab: "gif" | "sticker") => {
-    setGiphyTab(tab);
-    if (showGiphyPicker) fetchGiphy(giphyQuery, tab);
-  }, [showGiphyPicker, giphyQuery, fetchGiphy]);
+  const handleGiphyTabChange = useCallback(
+    (tab: "gif" | "sticker") => {
+      setGiphyTab(tab);
+      if (showGiphyPicker) fetchGiphy(giphyQuery, tab);
+    },
+    [showGiphyPicker, giphyQuery, fetchGiphy],
+  );
 
-  const handleGiphySearch = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    fetchGiphy(giphyQuery, giphyTab);
-  }, [giphyQuery, giphyTab, fetchGiphy]);
+  const handleGiphySearch = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      fetchGiphy(giphyQuery, giphyTab);
+    },
+    [giphyQuery, giphyTab, fetchGiphy],
+  );
 
   const handleBlock = useCallback(async () => {
     if (!opponentId || blocking) return;
@@ -620,17 +744,20 @@ export default function ChatScreenPage() {
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
-  const handleDelete = useCallback((msg: MessageDto) => {
-    setActionMessage(null);
-    if (replyTo?.id === msg.id) setReplyTo(null);
-    if (editingMessage?.id === msg.id) {
-      setEditingMessage(null);
-      setInput("");
-    }
-    appHub
-      .deleteMessage({ conversationId, messageId: msg.id })
-      .catch((err) => console.error("Failed to delete message", err));
-  }, [conversationId, replyTo, editingMessage]);
+  const handleDelete = useCallback(
+    (msg: MessageDto) => {
+      setActionMessage(null);
+      if (replyTo?.id === msg.id) setReplyTo(null);
+      if (editingMessage?.id === msg.id) {
+        setEditingMessage(null);
+        setInput("");
+      }
+      appHub
+        .deleteMessage({ conversationId, messageId: msg.id })
+        .catch((err) => console.error("Failed to delete message", err));
+    },
+    [conversationId, replyTo, editingMessage],
+  );
 
   const copyText = useCallback(async (text: string) => {
     setActionMessage(null);
@@ -811,7 +938,7 @@ export default function ChatScreenPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100dvh-4rem)]">
+      <div className="flex h-[calc(100dvh-4rem)] items-center justify-center">
         <LoadingVideo size="md" />
       </div>
     );
@@ -823,16 +950,17 @@ export default function ChatScreenPage() {
       : (actionMessage.content ?? getMessagePreview(actionMessage))
     : "";
   const actionLinks = actionMessage && !actionMessage.isDeleted ? extractLinks(actionContent) : [];
-  const actionPhones = actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
+  const actionPhones =
+    actionMessage && !actionMessage.isDeleted ? extractPhones(actionContent) : [];
   const actionIsMine = actionMessage?.senderId === user?.id;
-  const actionIsText = actionMessage ? toChatMessageRenderType(actionMessage.type) === "Text" : false;
+  const actionIsText = actionMessage
+    ? toChatMessageRenderType(actionMessage.type) === "Text"
+    : false;
   const actionLiveMessage = actionMessage
-    ? messages.find((m) => m.id === actionMessage.id) ?? actionMessage
+    ? (messages.find((m) => m.id === actionMessage.id) ?? actionMessage)
     : null;
   const myReactionSet = new Set(
-    (actionLiveMessage?.reactions ?? [])
-      .filter((r) => r.userId === user?.id)
-      .map((r) => r.emoji),
+    (actionLiveMessage?.reactions ?? []).filter((r) => r.userId === user?.id).map((r) => r.emoji),
   );
   let actionItemCount = 1 + (actionIsMine ? 1 : 0) + (actionIsMine && actionIsText ? 1 : 0);
   if (actionLinks.length > 0) actionItemCount += 1;
@@ -843,8 +971,14 @@ export default function ChatScreenPage() {
     ? 52 + actionItemCount * 40 + (actionMessage.isDeleted ? 0 : 48)
     : 0;
   const actionPad = 8;
-  const actionLeft = Math.max(actionPad, Math.min(actionPos.x, window.innerWidth - actionPopupWidth - actionPad));
-  const actionTop = Math.max(actionPad, Math.min(actionPos.y, window.innerHeight - actionPopupHeight - actionPad));
+  const actionLeft = Math.max(
+    actionPad,
+    Math.min(actionPos.x, window.innerWidth - actionPopupWidth - actionPad),
+  );
+  const actionTop = Math.max(
+    actionPad,
+    Math.min(actionPos.y, window.innerHeight - actionPopupHeight - actionPad),
+  );
 
   return (
     <div
@@ -854,27 +988,29 @@ export default function ChatScreenPage() {
         bottom: "calc(4rem + env(safe-area-inset-bottom))",
       }}
     >
-      <div className="flex items-center gap-3 p-3 border-b border-border">
-        <button onClick={() => router.back()} className="p-1 hover:bg-muted rounded">
-          <ArrowLeft className="w-5 h-5" />
+      <div className="border-border flex items-center gap-3 border-b p-3">
+        <button onClick={() => router.back()} className="hover:bg-muted rounded p-1">
+          <ArrowLeft className="h-5 w-5" />
         </button>
         {searchOpen ? (
           <form onSubmit={handleSearchSubmit} className="flex flex-1 items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <input
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm kiếm tin nhắn..."
-                className="w-full rounded-full bg-muted py-2 pl-9 pr-3 text-sm outline-none"
+                className="bg-muted w-full rounded-full py-2 pr-3 pl-9 text-sm outline-none"
               />
             </div>
-            {searching && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+            {searching && (
+              <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+            )}
             <button
               type="button"
               onClick={closeSearch}
-              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+              className="text-muted-foreground hover:bg-muted rounded-full p-1"
               aria-label="Đóng tìm kiếm"
             >
               <X className="h-5 w-5" />
@@ -882,10 +1018,12 @@ export default function ChatScreenPage() {
           </form>
         ) : (
           <>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 truncate font-semibold">
                 <span className="truncate">{convName}</span>
-                {currentConv?.isMuted && <BellOff className="w-4 h-4 text-muted-foreground shrink-0" />}
+                {currentConv?.isMuted && (
+                  <BellOff className="text-muted-foreground h-4 w-4 shrink-0" />
+                )}
               </p>
               <p className={`text-xs ${convOnline ? "text-emerald-500" : "text-zinc-400"}`}>
                 {convOnline ? "Online" : "Offline"}
@@ -894,58 +1032,73 @@ export default function ChatScreenPage() {
             {!isGroup && opponentId && (
               <button
                 onClick={() => router.push(`/user/${opponentId}`)}
-                className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+                className="hover:bg-muted text-muted-foreground rounded-full p-2"
                 title="Thông tin"
                 aria-label="Thông tin người dùng"
               >
-                <Info className="w-5 h-5" />
+                <Info className="h-5 w-5" />
               </button>
             )}
             <button
               onClick={() => setSearchOpen(true)}
-              className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+              className="hover:bg-muted text-muted-foreground rounded-full p-2"
               title="Tìm kiếm"
               aria-label="Tìm kiếm"
             >
-              <Search className="w-5 h-5" />
+              <Search className="h-5 w-5" />
             </button>
             {!isGroup && (
               <button
                 onClick={() => opponentId && startCall(opponentId, convName, opponentAvatar)}
                 disabled={!opponentId || isBlocked}
-                className="p-2 rounded-full hover:bg-muted text-blue-600 disabled:opacity-50"
+                className="hover:bg-muted rounded-full p-2 text-blue-600 disabled:opacity-50"
                 title="Gọi video"
               >
-                <Phone className="w-5 h-5" />
+                <Phone className="h-5 w-5" />
               </button>
             )}
-            {!isGroup && (
-              isBlocked ? (
-                <button onClick={handleUnblock} disabled={blocking || blockedById !== user?.id} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Bỏ chặn">
-                  <ShieldOff className="w-5 h-5" />
+            {!isGroup &&
+              (isBlocked ? (
+                <button
+                  onClick={handleUnblock}
+                  disabled={blocking || blockedById !== user?.id}
+                  className="hover:bg-muted rounded-full p-2 text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Bỏ chặn"
+                >
+                  <ShieldOff className="h-5 w-5" />
                 </button>
               ) : (
-                <button onClick={handleBlock} disabled={blocking} className="p-2 rounded-full hover:bg-muted text-red-500 disabled:opacity-50" title="Chặn người dùng">
-                  <Ban className="w-5 h-5" />
+                <button
+                  onClick={handleBlock}
+                  disabled={blocking}
+                  className="hover:bg-muted rounded-full p-2 text-red-500 disabled:opacity-50"
+                  title="Chặn người dùng"
+                >
+                  <Ban className="h-5 w-5" />
                 </button>
-              )
-            )}
+              ))}
             {isGroup && (
               <button
                 onClick={() => setShowGroupSettings(true)}
-                className="p-2 rounded-full hover:bg-muted text-muted-foreground"
+                className="hover:bg-muted text-muted-foreground rounded-full p-2"
                 title="Thiết lập nhóm"
                 aria-label="Thiết lập nhóm"
               >
-                <Users className="w-5 h-5" />
+                <Users className="h-5 w-5" />
               </button>
             )}
           </>
         )}
       </div>
-      <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 space-y-2 overflow-y-auto p-4"
+      >
         {messages.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!</p>
+          <p className="text-muted-foreground py-8 text-center text-sm">
+            Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!
+          </p>
         )}
         {messages.map((msg) => {
           const isMe = msg.senderId === user?.id;
@@ -962,9 +1115,13 @@ export default function ChatScreenPage() {
                     className="shrink-0 self-end"
                   >
                     {msg.senderAvatar?.thumbUrl ? (
-                      <img src={msg.senderAvatar.thumbUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                      <img
+                        src={msg.senderAvatar.thumbUrl}
+                        alt=""
+                        className="h-7 w-7 rounded-full object-cover"
+                      />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      <div className="bg-muted text-muted-foreground flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold">
                         {msg.senderName?.charAt(0)?.toUpperCase() ?? "?"}
                       </div>
                     )}
@@ -973,7 +1130,7 @@ export default function ChatScreenPage() {
                 <div className={`max-w-[75%] ${isMe ? "text-right" : ""}`}>
                   {!isMe && !isSystem && (
                     <p
-                      className="text-[11px] font-medium text-muted-foreground mb-0.5 ml-1 cursor-pointer hover:underline"
+                      className="text-muted-foreground mb-0.5 ml-1 cursor-pointer text-[11px] font-medium hover:underline"
                       onClick={() => router.push(`/user/${msg.senderId}`)}
                     >
                       {msg.senderName}
@@ -999,7 +1156,7 @@ export default function ChatScreenPage() {
       {searchMode && (
         <button
           onClick={reloadToLatest}
-          className="absolute bottom-24 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-blue-700"
+          className="absolute right-4 bottom-24 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-blue-700"
           title="Quay lại tin nhắn mới nhất"
           aria-label="Quay lại tin nhắn mới nhất"
         >
@@ -1007,17 +1164,19 @@ export default function ChatScreenPage() {
         </button>
       )}
       {isBlocked ? (
-        <div className="flex items-center justify-center p-3 border-t border-border bg-muted/50">
+        <div className="border-border bg-muted/50 flex items-center justify-center border-t p-3">
           {blockedById === user?.id ? (
-            <p className="text-sm text-muted-foreground">Bạn đã chặn người này. Nhấn nút bỏ chặn để gửi tin nhắn.</p>
+            <p className="text-muted-foreground text-sm">
+              Bạn đã chặn người này. Nhấn nút bỏ chặn để gửi tin nhắn.
+            </p>
           ) : (
-            <p className="text-sm text-muted-foreground">Bạn đã bị chặn. Không thể gửi tin nhắn.</p>
+            <p className="text-muted-foreground text-sm">Bạn đã bị chặn. Không thể gửi tin nhắn.</p>
           )}
         </div>
       ) : (
-        <div className="relative border-t border-border">
+        <div className="border-border relative border-t">
           {typingUsers.size > 0 && (
-            <div className="flex items-center gap-1.5 px-4 pt-2 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-1.5 px-4 pt-2 text-xs">
               <span className="flex gap-0.5">
                 <span className="h-1 w-1 animate-bounce rounded-full bg-current" />
                 <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:0.15s]" />
@@ -1031,9 +1190,17 @@ export default function ChatScreenPage() {
               {pendingFiles.map((pf) => (
                 <div key={pf.id} className="relative h-20 w-20">
                   {pf.isVideo ? (
-                    <video src={pf.preview} className="h-full w-full rounded-lg bg-black object-cover" muted />
+                    <video
+                      src={pf.preview}
+                      className="h-full w-full rounded-lg bg-black object-cover"
+                      muted
+                    />
                   ) : (
-                    <img src={pf.preview} alt="" className="h-full w-full rounded-lg object-cover" />
+                    <img
+                      src={pf.preview}
+                      alt=""
+                      className="h-full w-full rounded-lg object-cover"
+                    />
                   )}
                   {pf.uploading && (
                     <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
@@ -1043,7 +1210,7 @@ export default function ChatScreenPage() {
                   <button
                     onClick={() => removePendingFile(pf.id)}
                     disabled={sending}
-                    className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow disabled:opacity-50"
+                    className="bg-background absolute -top-2 -right-2 rounded-full p-0.5 shadow disabled:opacity-50"
                     aria-label="Xóa tệp"
                   >
                     <X className="h-4 w-4" />
@@ -1054,7 +1221,7 @@ export default function ChatScreenPage() {
           )}
 
           {pendingMomentLoading ? (
-            <div className="h-20 w-20 animate-pulse rounded-lg bg-muted mx-3 mt-3" />
+            <div className="bg-muted mx-3 mt-3 h-20 w-20 animate-pulse rounded-lg" />
           ) : pendingMoment ? (
             <div className="relative mx-3 mt-3 inline-block">
               <img
@@ -1064,7 +1231,7 @@ export default function ChatScreenPage() {
               />
               <button
                 onClick={() => setPendingMoment(null)}
-                className="absolute -right-2 -top-2 rounded-full bg-background p-0.5 shadow"
+                className="bg-background absolute -top-2 -right-2 rounded-full p-0.5 shadow"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1073,7 +1240,7 @@ export default function ChatScreenPage() {
 
           {showEmojiPicker && (
             <div className="absolute bottom-full left-3 z-50 mb-2">
-              <div className="rounded-xl border border-border bg-background shadow-lg">
+              <div className="border-border bg-background rounded-xl border shadow-lg">
                 <EmojiPicker
                   onEmojiClick={(emojiData) => handleSendEmoji(emojiData.emoji)}
                   width={300}
@@ -1084,9 +1251,12 @@ export default function ChatScreenPage() {
           )}
 
           {showGiphyPicker && (
-            <div className="absolute bottom-full left-3 z-50 mb-2 w-[min(90vw,340px)] overflow-hidden rounded-xl border border-border bg-background shadow-lg">
-              <form onSubmit={handleGiphySearch} className="flex items-center gap-1.5 border-b border-border p-2">
-                <div className="flex shrink-0 rounded-full bg-muted p-0.5">
+            <div className="border-border bg-background absolute bottom-full left-3 z-50 mb-2 w-[min(90vw,340px)] overflow-hidden rounded-xl border shadow-lg">
+              <form
+                onSubmit={handleGiphySearch}
+                className="border-border flex items-center gap-1.5 border-b p-2"
+              >
+                <div className="bg-muted flex shrink-0 rounded-full p-0.5">
                   <button
                     type="button"
                     onClick={() => handleGiphyTabChange("gif")}
@@ -1106,22 +1276,31 @@ export default function ChatScreenPage() {
                   value={giphyQuery}
                   onChange={(e) => setGiphyQuery(e.target.value)}
                   placeholder="Tìm kiếm..."
-                  className="flex-1 rounded-full bg-muted px-3 py-1.5 text-sm outline-none"
+                  className="bg-muted flex-1 rounded-full px-3 py-1.5 text-sm outline-none"
                 />
               </form>
               <div className="grid max-h-64 grid-cols-3 gap-1 overflow-y-auto p-2">
                 {giphyLoading ? (
                   <div className="col-span-3 flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
                   </div>
                 ) : giphyResults.length === 0 ? (
-                  <p className="col-span-3 py-8 text-center text-xs text-muted-foreground">
+                  <p className="text-muted-foreground col-span-3 py-8 text-center text-xs">
                     Không tìm thấy {giphyTab === "sticker" ? "sticker" : "GIF"}
                   </p>
                 ) : (
                   giphyResults.map((item) => (
-                    <button key={item.id} onClick={() => handleSendGiphy(item)} className="overflow-hidden rounded-lg">
-                      <img src={item.thumbUrl} alt="" className="h-16 w-full object-cover" loading="lazy" />
+                    <button
+                      key={item.id}
+                      onClick={() => handleSendGiphy(item)}
+                      className="overflow-hidden rounded-lg"
+                    >
+                      <img
+                        src={item.thumbUrl}
+                        alt=""
+                        className="h-16 w-full object-cover"
+                        loading="lazy"
+                      />
                     </button>
                   ))
                 )}
@@ -1130,21 +1309,31 @@ export default function ChatScreenPage() {
           )}
 
           {(replyTo || editingMessage) && (
-            <div className="flex items-center gap-2 border-t border-border bg-muted/50 px-3 py-2">
-              <div className="flex-1 min-w-0">
+            <div className="border-border bg-muted/50 flex items-center gap-2 border-t px-3 py-2">
+              <div className="min-w-0 flex-1">
                 {editingMessage ? (
                   <>
                     <p className="text-xs font-semibold text-blue-600">Đang chỉnh sửa tin nhắn</p>
-                    <p className="truncate text-xs text-muted-foreground">{editingMessage.content ?? getMessagePreview(editingMessage)}</p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {editingMessage.content ?? getMessagePreview(editingMessage)}
+                    </p>
                   </>
                 ) : replyTo ? (
                   <>
-                    <p className="text-xs font-semibold text-blue-600">Trả lời {replyTo.senderName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{getMessagePreview(replyTo)}</p>
+                    <p className="text-xs font-semibold text-blue-600">
+                      Trả lời {replyTo.senderName}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {getMessagePreview(replyTo)}
+                    </p>
                   </>
                 ) : null}
               </div>
-              <button onClick={cancelReplyAndEdit} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Hủy">
+              <button
+                onClick={cancelReplyAndEdit}
+                className="text-muted-foreground hover:bg-muted rounded-full p-1"
+                aria-label="Hủy"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -1166,53 +1355,91 @@ export default function ChatScreenPage() {
               onChange={handleVideoChange}
               className="hidden"
             />
-            <button onClick={() => imageInputRef.current?.click()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Gửi ảnh">
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="text-muted-foreground hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              aria-label="Gửi ảnh"
+            >
               <ImagePlus className="h-5 w-5" />
             </button>
-            <button onClick={() => videoInputRef.current?.click()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Gửi video">
+            <button
+              onClick={() => videoInputRef.current?.click()}
+              className="text-muted-foreground hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              aria-label="Gửi video"
+            >
               <Film className="h-5 w-5" />
             </button>
-            <button onClick={handleToggleEmojiPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted" aria-label="Biểu tượng cảm xúc">
+            <button
+              onClick={handleToggleEmojiPicker}
+              className="text-muted-foreground hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              aria-label="Biểu tượng cảm xúc"
+            >
               <Smile className="h-5 w-5" />
             </button>
-            <button onClick={handleToggleGiphyPicker} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-muted-foreground hover:bg-muted" aria-label="GIF & Sticker">
+            <button
+              onClick={handleToggleGiphyPicker}
+              className="text-muted-foreground hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              aria-label="GIF & Sticker"
+            >
               GIF
             </button>
-            <input ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Nhập tin nhắn..." className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none" />
-            <button onClick={handleSend} disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending} className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-              <Send className="w-4 h-4" />
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Nhập tin nhắn..."
+              className="bg-muted flex-1 rounded-full px-4 py-2 text-sm outline-none"
+            />
+            <button
+              onClick={handleSend}
+              disabled={(!input.trim() && !pendingMoment && pendingFiles.length === 0) || sending}
+              className="rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
       {reactionMessage && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4" onClick={() => setReactionMessage(null)}>
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center p-4"
+          onClick={() => setReactionMessage(null)}
+        >
           <div className="absolute inset-0 bg-black/50" onClick={() => setReactionMessage(null)} />
           <div
-            className="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-xl"
+            className="bg-background relative z-10 w-full max-w-sm overflow-hidden rounded-2xl shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="font-semibold text-sm">Reactions</p>
-              <button onClick={() => setReactionMessage(null)} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Đóng">
+            <div className="border-border flex items-center justify-between border-b px-4 py-3">
+              <p className="text-sm font-semibold">Reactions</p>
+              <button
+                onClick={() => setReactionMessage(null)}
+                className="text-muted-foreground hover:bg-muted rounded-full p-1"
+                aria-label="Đóng"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {reactionsLoading && reactionUsers.length === 0 ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
                 </div>
               ) : reactionUsers.length === 0 ? (
-                <p className="py-8 text-center text-xs text-muted-foreground">Chưa có phản ứng</p>
+                <p className="text-muted-foreground py-8 text-center text-xs">Chưa có phản ứng</p>
               ) : (
                 reactionUsers.map((u) => (
                   <div key={u.userId} className="flex items-center gap-3 px-4 py-2.5">
-                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+                    <div className="bg-muted h-9 w-9 shrink-0 overflow-hidden rounded-full">
                       {u.userImage?.thumbUrl ? (
-                        <img src={u.userImage.thumbUrl} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={u.userImage.thumbUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground">
+                        <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm font-bold">
                           {u.userName?.charAt(0)?.toUpperCase() ?? "?"}
                         </div>
                       )}
@@ -1229,9 +1456,11 @@ export default function ChatScreenPage() {
               {reactionHasMore && (
                 <div className="flex justify-center py-3">
                   <button
-                    onClick={() => reactionMessage && loadReactions(reactionMessage, reactionPrevId)}
+                    onClick={() =>
+                      reactionMessage && loadReactions(reactionMessage, reactionPrevId)
+                    }
                     disabled={reactionsLoading}
-                    className="rounded-full bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/70 disabled:opacity-50"
+                    className="bg-muted text-muted-foreground hover:bg-muted/70 rounded-full px-4 py-1.5 text-xs font-medium disabled:opacity-50"
                   >
                     {reactionsLoading ? "Đang tải..." : "Xem thêm"}
                   </button>
@@ -1245,18 +1474,18 @@ export default function ChatScreenPage() {
         <div className="fixed inset-0 z-[90]" onClick={() => setActionMessage(null)}>
           <div className="absolute inset-0" onClick={() => setActionMessage(null)} />
           <div
-            className="absolute z-10 w-52 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            className="border-border bg-background absolute z-10 w-52 overflow-hidden rounded-xl border shadow-2xl"
             style={{ left: actionLeft, top: actionTop }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b border-border px-3 py-2">
+            <div className="border-border border-b px-3 py-2">
               <p className="truncate text-xs font-medium">{actionMessage.senderName}</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="text-muted-foreground truncate text-xs">
                 {actionMessage.isDeleted ? "Message has been deleted" : actionContent}
               </p>
             </div>
             {!actionMessage.isDeleted && (
-              <div className="flex items-center justify-between gap-1 border-b border-border px-3 py-2">
+              <div className="border-border flex items-center justify-between gap-1 border-b px-3 py-2">
                 {QUICK_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
@@ -1270,35 +1499,53 @@ export default function ChatScreenPage() {
               </div>
             )}
             <div className="py-1">
-              <button onClick={() => handleReply(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+              <button
+                onClick={() => handleReply(actionMessage)}
+                className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm"
+              >
                 <Reply className="h-4 w-4" />
                 Reply
               </button>
               {actionIsMine && actionIsText && (
-                <button onClick={() => handleEdit(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <button
+                  onClick={() => handleEdit(actionMessage)}
+                  className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm"
+                >
                   <Pencil className="h-4 w-4" />
                   Edit
                 </button>
               )}
               {actionIsMine && (
-                <button onClick={() => handleDelete(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500 hover:bg-muted">
+                <button
+                  onClick={() => handleDelete(actionMessage)}
+                  className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm text-red-500"
+                >
                   <Trash2 className="h-4 w-4" />
                   Delete
                 </button>
               )}
               {actionLinks.length > 0 && (
-                <button onClick={() => copyText(actionLinks.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <button
+                  onClick={() => copyText(actionLinks.join("\n"))}
+                  className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm"
+                >
                   <Link2 className="h-4 w-4" />
                   Copy link
                 </button>
               )}
               {actionPhones.length > 0 && (
-                <button onClick={() => copyText(actionPhones.join("\n"))} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+                <button
+                  onClick={() => copyText(actionPhones.join("\n"))}
+                  className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm"
+                >
                   <Phone className="h-4 w-4" />
                   Copy phone
                 </button>
               )}
-              <button onClick={() => handleCopy(actionMessage)} className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted">
+              <button
+                onClick={() => handleCopy(actionMessage)}
+                className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-sm"
+              >
                 <Copy className="h-4 w-4" />
                 Copy
               </button>
@@ -1321,4 +1568,3 @@ export default function ChatScreenPage() {
     </div>
   );
 }
-

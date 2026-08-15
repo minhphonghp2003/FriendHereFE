@@ -23,11 +23,17 @@ const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
-    setConversations: (state, action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>) => {
+    setConversations: (
+      state,
+      action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>,
+    ) => {
       state.conversations = action.payload.data;
       state.conversationsHasMore = action.payload.hasMore;
     },
-    addConversations: (state, action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>) => {
+    addConversations: (
+      state,
+      action: PayloadAction<{ data: ConversationDto[]; hasMore: boolean }>,
+    ) => {
       const existingIds = new Set(state.conversations.map((c) => c.id));
       const newOnes = action.payload.data.filter((c) => !existingIds.has(c.id));
       state.conversations.push(...newOnes);
@@ -41,7 +47,10 @@ const chatSlice = createSlice({
         state.conversations.unshift(action.payload);
       }
     },
-    updateConversationWithLastMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
+    updateConversationWithLastMessage: (
+      state,
+      action: PayloadAction<{ conversationId: number; message: MessageDto }>,
+    ) => {
       const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
       if (conv) {
         conv.lastMessage = action.payload.message;
@@ -55,7 +64,10 @@ const chatSlice = createSlice({
         }
       }
     },
-    updateConversationFromNotification: (state, action: PayloadAction<ConversationUpdatedNotificationDto>) => {
+    updateConversationFromNotification: (
+      state,
+      action: PayloadAction<ConversationUpdatedNotificationDto>,
+    ) => {
       const { conversationId, lastMessage, unreadCount } = action.payload;
       const conv = state.conversations.find((c) => c.id === conversationId);
       if (!conv) return;
@@ -76,7 +88,10 @@ const chatSlice = createSlice({
         conv.unreadCount = 0;
       }
     },
-    setConversationBlocked: (state, action: PayloadAction<{ conversationId: number; blockedById: number }>) => {
+    setConversationBlocked: (
+      state,
+      action: PayloadAction<{ conversationId: number; blockedById: number }>,
+    ) => {
       const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
       if (conv) {
         conv.isBlocked = true;
@@ -90,18 +105,27 @@ const chatSlice = createSlice({
         conv.blockedById = null;
       }
     },
-    setMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>) => {
+    setMessages: (
+      state,
+      action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>,
+    ) => {
       state.messages[action.payload.conversationId] = action.payload.messages;
       state.messageHasMore[action.payload.conversationId] = action.payload.hasMore;
     },
-    prependMessages: (state, action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>) => {
+    prependMessages: (
+      state,
+      action: PayloadAction<{ conversationId: number; messages: MessageDto[]; hasMore: boolean }>,
+    ) => {
       const existing = state.messages[action.payload.conversationId] ?? [];
       const existingIds = new Set(existing.map((m) => m.id));
       const newOnes = action.payload.messages.filter((m) => !existingIds.has(m.id));
       state.messages[action.payload.conversationId] = [...newOnes, ...existing];
       state.messageHasMore[action.payload.conversationId] = action.payload.hasMore;
     },
-    appendMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
+    appendMessage: (
+      state,
+      action: PayloadAction<{ conversationId: number; message: MessageDto }>,
+    ) => {
       const { conversationId, message } = action.payload;
       if (!state.messages[conversationId]) {
         state.messages[conversationId] = [];
@@ -110,13 +134,19 @@ const chatSlice = createSlice({
         state.messages[conversationId].push(message);
       }
     },
-    updateMessage: (state, action: PayloadAction<{ conversationId: number; message: MessageDto }>) => {
+    updateMessage: (
+      state,
+      action: PayloadAction<{ conversationId: number; message: MessageDto }>,
+    ) => {
       const { conversationId, message } = action.payload;
       const list = state.messages[conversationId];
       if (list) {
         const idx = list.findIndex((m) => m.id === message.id);
         if (idx !== -1) {
-          list[idx] = { ...message, repliedMessage: message.repliedMessage ?? list[idx].repliedMessage };
+          list[idx] = {
+            ...message,
+            repliedMessage: message.repliedMessage ?? list[idx].repliedMessage,
+          };
           if (!state.editedMessageIds.includes(message.id)) {
             state.editedMessageIds.push(message.id);
           }
@@ -127,21 +157,44 @@ const chatSlice = createSlice({
         conv.lastMessage = message;
       }
     },
-    deleteMessage: (state, action: PayloadAction<{ conversationId: number; messageId: number }>) => {
+    deleteMessage: (
+      state,
+      action: PayloadAction<{ conversationId: number; messageId: number }>,
+    ) => {
       const { conversationId, messageId } = action.payload;
       const list = state.messages[conversationId];
       if (list) {
         const idx = list.findIndex((m) => m.id === messageId);
         if (idx !== -1) {
-          list[idx] = { ...list[idx], isDeleted: true, content: null, attachments: [], reactions: [] };
+          list[idx] = {
+            ...list[idx],
+            isDeleted: true,
+            content: null,
+            attachments: [],
+            reactions: [],
+          };
         }
       }
       const conv = state.conversations.find((c) => c.id === conversationId);
       if (conv && conv.lastMessage && conv.lastMessage.id === messageId) {
-        conv.lastMessage = { ...conv.lastMessage, isDeleted: true, content: null, attachments: [], reactions: [] };
+        conv.lastMessage = {
+          ...conv.lastMessage,
+          isDeleted: true,
+          content: null,
+          attachments: [],
+          reactions: [],
+        };
       }
     },
-    mergeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+    mergeMessageReaction: (
+      state,
+      action: PayloadAction<{
+        conversationId: number;
+        messageId: number;
+        userId: number;
+        emoji: string;
+      }>,
+    ) => {
       const { conversationId, messageId, userId, emoji } = action.payload;
       const list = state.messages[conversationId];
       if (!list) return;
@@ -152,7 +205,15 @@ const chatSlice = createSlice({
       if (exists) return;
       msg.reactions = [...reactions, { userId, emoji }];
     },
-    removeMessageReaction: (state, action: PayloadAction<{ conversationId: number; messageId: number; userId: number; emoji: string }>) => {
+    removeMessageReaction: (
+      state,
+      action: PayloadAction<{
+        conversationId: number;
+        messageId: number;
+        userId: number;
+        emoji: string;
+      }>,
+    ) => {
       const { conversationId, messageId, userId, emoji } = action.payload;
       const list = state.messages[conversationId];
       if (!list) return;
@@ -161,7 +222,10 @@ const chatSlice = createSlice({
       const reactions = msg.reactions ?? [];
       msg.reactions = reactions.filter((r) => !(r.userId === userId && r.emoji === emoji));
     },
-    markMessagesRead: (state, action: PayloadAction<{ conversationId: number; messageIds: number[]; myUserId: number }>) => {
+    markMessagesRead: (
+      state,
+      action: PayloadAction<{ conversationId: number; messageIds: number[]; myUserId: number }>,
+    ) => {
       const { conversationId, messageIds, myUserId } = action.payload;
       const list = state.messages[conversationId];
       if (!list) return;
@@ -172,7 +236,10 @@ const chatSlice = createSlice({
         }
       }
     },
-    updateConversationState: (state, action: PayloadAction<{ conversationId: number; patch: Partial<ConversationDto> }>) => {
+    updateConversationState: (
+      state,
+      action: PayloadAction<{ conversationId: number; patch: Partial<ConversationDto> }>,
+    ) => {
       const conv = state.conversations.find((c) => c.id === action.payload.conversationId);
       if (conv) {
         Object.assign(conv, action.payload.patch);

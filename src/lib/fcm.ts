@@ -25,11 +25,7 @@ import {
 } from "firebase/messaging";
 import { env } from "@/config/env";
 import { updateFcmToken } from "@/services/auth";
-import {
-  PUSH_TYPE,
-  SW_COMMAND,
-  type PushPayloadData,
-} from "@/types/notification";
+import { PUSH_TYPE, SW_COMMAND, type PushPayloadData } from "@/types/notification";
 
 const firebaseConfig = {
   apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -43,9 +39,9 @@ const firebaseConfig = {
 export const isFirebaseConfigured = (): boolean =>
   Boolean(
     firebaseConfig.apiKey &&
-      firebaseConfig.projectId &&
-      firebaseConfig.messagingSenderId &&
-      firebaseConfig.appId,
+    firebaseConfig.projectId &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId,
   );
 
 let messagingInstance: Messaging | null = null;

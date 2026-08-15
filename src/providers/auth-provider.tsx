@@ -40,22 +40,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       } catch {}
 
-      dispatch(setCredentials({
-        user: { id: Number(userId), name, email },
-        token: storedToken || undefined,
-      }));
+      dispatch(
+        setCredentials({
+          user: { id: Number(userId), name, email },
+          token: storedToken || undefined,
+        }),
+      );
 
       const fetchDetail = async () => {
         try {
           const detail = await getUserById(Number(userId));
-          dispatch(setCredentials({
-            user: { id: detail.id, name: detail.name, email: detail.email ?? "" },
-            token: storedToken || undefined,
-          }));
-          localStorage.setItem(USER_INFO_KEY, JSON.stringify({
-            name: detail.name,
-            email: detail.email ?? "",
-          }));
+          dispatch(
+            setCredentials({
+              user: { id: detail.id, name: detail.name, email: detail.email ?? "" },
+              token: storedToken || undefined,
+            }),
+          );
+          localStorage.setItem(
+            USER_INFO_KEY,
+            JSON.stringify({
+              name: detail.name,
+              email: detail.email ?? "",
+            }),
+          );
         } catch {
           // keep cached data if fetch fails
         }
@@ -65,12 +72,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setHydrated(true);
   }, [dispatch]);
 
-  const handleLogin = (userData: { id: number; name: string; email: string }, authToken?: string) => {
+  const handleLogin = (
+    userData: { id: number; name: string; email: string },
+    authToken?: string,
+  ) => {
     localStorage.setItem(USER_ID_KEY, String(userData.id));
-    localStorage.setItem(USER_INFO_KEY, JSON.stringify({
-      name: userData.name,
-      email: userData.email,
-    }));
+    localStorage.setItem(
+      USER_INFO_KEY,
+      JSON.stringify({
+        name: userData.name,
+        email: userData.email,
+      }),
+    );
     if (authToken) {
       localStorage.setItem(TOKEN_KEY, authToken);
     }
@@ -89,7 +102,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, token, login: handleLogin, logout: handleLogout }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, token, login: handleLogin, logout: handleLogout }}
+    >
       {children}
     </AuthContext.Provider>
   );

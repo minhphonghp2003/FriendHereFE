@@ -8,6 +8,7 @@ import { PushProvider } from "@/providers/push-provider";
 import { OfflineProvider } from "@/providers/offline-provider";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { VersionUpdateAlert } from "@/components/version-update-alert";
 import "./globals.css";
 
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -28,9 +29,7 @@ export const metadata: Metadata = {
       { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
@@ -64,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider>
               <PushProvider>
                 <OfflineProvider>
+                  <VersionUpdateAlert />
                   <OfflineBanner />
                   {children}
                 </OfflineProvider>

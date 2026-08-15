@@ -20,7 +20,7 @@ export default function MomentsPage() {
         bottom: "calc(4rem + env(safe-area-inset-bottom))",
       }}
     >
-      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h1 className="text-2xl font-bold">Khoảnh khắc</h1>
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="mr-1 h-4 w-4" />

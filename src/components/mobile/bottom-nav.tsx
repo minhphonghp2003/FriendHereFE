@@ -21,7 +21,7 @@ export const BottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background"
+      className="border-border bg-background fixed right-0 bottom-0 left-0 z-50 border-t"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
         paddingLeft: "env(safe-area-inset-left)",
@@ -42,7 +42,7 @@ export const BottomNav = () => {
               <span className="relative">
                 <tab.icon className="h-6 w-6" />
                 {tab.href === "/chat" && totalUnread > 0 && (
-                  <span className="absolute -right-2.5 -top-1.5 min-w-[1.05rem] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-[1.05rem] text-white">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[1.05rem] rounded-full bg-red-500 px-1 text-center text-[10px] leading-[1.05rem] font-bold text-white">
                     {totalUnread > 99 ? "99+" : totalUnread}
                   </span>
                 )}

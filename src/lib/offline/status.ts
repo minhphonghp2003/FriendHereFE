@@ -10,8 +10,7 @@ type StatusListener = (online: boolean) => void;
 
 const listeners = new Set<StatusListener>();
 
-let online =
-  typeof navigator !== "undefined" ? navigator.onLine : true;
+let online = typeof navigator !== "undefined" ? navigator.onLine : true;
 
 export function isOnline(): boolean {
   return online;

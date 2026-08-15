@@ -51,39 +51,33 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <main className="flex min-h-dvh flex-col bg-background safe-top safe-bottom">
+      <main className="bg-background safe-top safe-bottom flex min-h-dvh flex-col">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-8 text-center">
           <CheckCircle className="mb-4 size-16 text-emerald-500" />
 
           <h2 className="text-xl font-semibold">Đặt lại mật khẩu thành công</h2>
 
-          <p className="mt-2 text-muted-foreground">
-            Đang chuyển hướng đến trang đăng nhập...
-          </p>
+          <p className="text-muted-foreground mt-2">Đang chuyển hướng đến trang đăng nhập...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-background safe-top safe-bottom">
+    <main className="bg-background safe-top safe-bottom flex min-h-dvh flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
         <Link
           href="/login"
-          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground mb-10 inline-flex items-center gap-2 text-sm transition"
         >
           <ArrowLeft className="size-4" />
           Quay lại đăng nhập
         </Link>
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Đặt lại mật khẩu
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight">Đặt lại mật khẩu</h1>
 
-          <p className="mt-3 text-muted-foreground">
-            Nhập mật khẩu mới cho tài khoản của bạn.
-          </p>
+          <p className="text-muted-foreground mt-3">Nhập mật khẩu mới cho tài khoản của bạn.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
@@ -117,28 +111,21 @@ export default function ResetPasswordPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-3 text-sm">
                 {error}
               </div>
             )}
           </div>
 
           <div className="mt-auto pt-10">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="h-12 w-full rounded-xl text-base"
-            >
+            <Button type="submit" disabled={isLoading} className="h-12 w-full rounded-xl text-base">
               {isLoading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
             </Button>
           </div>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link
-            href="/forgot-password"
-            className="font-semibold text-primary hover:underline"
-          >
+        <p className="text-muted-foreground mt-6 text-center text-sm">
+          <Link href="/forgot-password" className="text-primary font-semibold hover:underline">
             Yêu cầu link mới
           </Link>
         </p>

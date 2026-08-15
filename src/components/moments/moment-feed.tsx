@@ -17,8 +17,15 @@ interface MomentFeedProps {
 }
 
 export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: MomentFeedProps) => {
-  const { data: moments, isLoading, isLoadingMore, error, hasMore, refetch, loadMore } =
-    useFeedMoments(PAGE_TAKE);
+  const {
+    data: moments,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    refetch,
+    loadMore,
+  } = useFeedMoments(PAGE_TAKE);
   const containerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef(loadMore);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,8 +51,8 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
 
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-background text-center">
-        <p className="text-sm text-muted-foreground">Không thể tải khoảnh khắc</p>
+      <div className="bg-background flex h-full flex-col items-center justify-center text-center">
+        <p className="text-muted-foreground text-sm">Không thể tải khoảnh khắc</p>
         <Button variant="outline" size="sm" onClick={refetch} className="mt-2">
           Thử lại
         </Button>
@@ -55,15 +62,15 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
 
   if (moments.length === 0 && !isLoading) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-background text-center">
-        <p className="text-sm text-muted-foreground">Chưa có khoảnh khắc nào</p>
+      <div className="bg-background flex h-full flex-col items-center justify-center text-center">
+        <p className="text-muted-foreground text-sm">Chưa có khoảnh khắc nào</p>
       </div>
     );
   }
 
   if (moments.length === 0 && isLoading) {
     return (
-      <div className="flex h-full items-center justify-center bg-background">
+      <div className="bg-background flex h-full items-center justify-center">
         <LoadingVideo size="md" />
       </div>
     );
@@ -89,10 +96,10 @@ export const MomentFeed = ({ currentUserId, onMomentDeleted, onMomentHidden }: M
           />
         </div>
       ))}
-      <div className="flex h-16 w-full shrink-0 items-center justify-center bg-background">
-        {isLoadingMore && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+      <div className="bg-background flex h-16 w-full shrink-0 items-center justify-center">
+        {isLoadingMore && <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />}
         {!hasMore && moments.length > 0 && (
-          <p className="text-xs text-muted-foreground">Đã hiển thị tất cả</p>
+          <p className="text-muted-foreground text-xs">Đã hiển thị tất cả</p>
         )}
       </div>
     </div>

@@ -18,7 +18,7 @@ export default function RootPage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center safe-top safe-bottom">
+    <div className="safe-top safe-bottom flex min-h-dvh items-center justify-center">
       <LoadingVideo size="lg" />
     </div>
   );

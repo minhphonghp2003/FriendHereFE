@@ -60,8 +60,7 @@ const providers = [
     label: "Tiếp tục với Google",
     icon: GoogleIcon,
     variant: "outline" as const,
-    className:
-      "border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900",
+    className: "border-zinc-300 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900",
   },
   {
     provider: "facebook" as const,
@@ -69,11 +68,11 @@ const providers = [
     icon: FacebookIcon,
     className: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
   },
-
 ];
 
 const ERROR_MESSAGES: Record<string, string> = {
-  facebook_email_not_shared: "Facebook không chia sẻ địa chỉ email. Vui lòng sử dụng Google hoặc đăng nhập bằng email.",
+  facebook_email_not_shared:
+    "Facebook không chia sẻ địa chỉ email. Vui lòng sử dụng Google hoặc đăng nhập bằng email.",
 };
 
 export default function InitPage() {
@@ -103,7 +102,7 @@ export default function InitPage() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-background safe-top safe-bottom px-6 py-10">
+    <div className="bg-background safe-top safe-bottom flex min-h-dvh flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <Image
@@ -115,11 +114,9 @@ export default function InitPage() {
             className="mx-auto mb-6"
           />
 
-          <h1 className="text-3xl font-bold tracking-tight">
-            {env.NEXT_PUBLIC_APP_NAME}
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">{env.NEXT_PUBLIC_APP_NAME}</h1>
 
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-2 text-sm">
             Gần nhau hơn. Gặp gỡ xung quanh. Trò chuyện ngay.
           </p>
         </div>
@@ -129,7 +126,7 @@ export default function InitPage() {
             <Button
               key={provider}
               variant={variant}
-              className={`h-12 w-full rounded-xl gap-3 ${className}`}
+              className={`h-12 w-full gap-3 rounded-xl ${className}`}
               onClick={() => handleOAuth(provider)}
             >
               <Icon />
@@ -143,28 +140,22 @@ export default function InitPage() {
             </div>
 
             <div className="relative flex justify-center">
-              <span className="bg-background px-3 text-xs uppercase text-muted-foreground">
+              <span className="bg-background text-muted-foreground px-3 text-xs uppercase">
                 hoặc
               </span>
             </div>
           </div>
 
           <Link href="/login" className="block">
-            <Button
-              variant="outline"
-              className="h-12 w-full rounded-xl gap-3"
-            >
+            <Button variant="outline" className="h-12 w-full gap-3 rounded-xl">
               <LogIn className="size-5" />
               Đăng nhập bằng email
             </Button>
           </Link>
 
-          <p className="pt-2 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground pt-2 text-center text-sm">
             Chưa có tài khoản?{" "}
-            <Link
-              href="/register"
-              className="font-semibold text-primary hover:underline"
-            >
+            <Link href="/register" className="text-primary font-semibold hover:underline">
               Đăng ký
             </Link>
           </p>

@@ -41,10 +41,7 @@ export const offlineFirstAdapter: AxiosAdapter = async (config) => {
       return responseFromCache(config, cached);
     }
     // No cached copy available — surface a clear offline error.
-    throw createOfflineError(
-      "You are offline and no cached data is available.",
-      config,
-    );
+    throw createOfflineError("You are offline and no cached data is available.", config);
   }
 
   // ── Offline mutation → queue for later sync ─────────────────────────────
@@ -88,23 +85,12 @@ function isNetworkError(error: unknown): boolean {
   return (
     axios.isAxiosError(error) &&
     !error.response &&
-    (error.code === "ERR_NETWORK" ||
-      error.code === "ECONNABORTED" ||
-      error.code === "ETIMEDOUT")
+    (error.code === "ERR_NETWORK" || error.code === "ECONNABORTED" || error.code === "ETIMEDOUT")
   );
 }
 
-function createOfflineError(
-  message: string,
-  config: InternalAxiosRequestConfig,
-): AxiosError {
-  return new axios.AxiosError(
-    message,
-    "ERR_NETWORK",
-    config,
-    null,
-    undefined,
-  );
+function createOfflineError(message: string, config: InternalAxiosRequestConfig): AxiosError {
+  return new axios.AxiosError(message, "ERR_NETWORK", config, null, undefined);
 }
 
 function createQueuedError(config: InternalAxiosRequestConfig): AxiosError {

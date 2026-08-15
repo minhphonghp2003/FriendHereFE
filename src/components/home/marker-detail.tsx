@@ -3,10 +3,26 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getOpponentConversation } from "@/services/chat";
-import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriendship, blockUser, unblockUser, changeFriendshipType, getFriendshipById } from "@/services/friendship";
+import {
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  removeFriendship,
+  blockUser,
+  unblockUser,
+  changeFriendshipType,
+  getFriendshipById,
+} from "@/services/friendship";
 import type { User } from "@/types/user";
 import type { AuthUser } from "@/types/auth";
-import { isPendingStatus, isAcceptedStatus, isBlockedStatus, getMyFriendshipType, FRIENDSHIP_TYPE_VALUES, FRIENDSHIP_TYPE_LABELS } from "@/types/friendship";
+import {
+  isPendingStatus,
+  isAcceptedStatus,
+  isBlockedStatus,
+  getMyFriendshipType,
+  FRIENDSHIP_TYPE_VALUES,
+  FRIENDSHIP_TYPE_LABELS,
+} from "@/types/friendship";
 import type { FriendshipDto, FriendshipTypeValue } from "@/types/friendship";
 import { MessageSquare } from "lucide-react";
 
@@ -57,7 +73,8 @@ export const MarkerDetail = ({
   onFriendshipChange,
 }: MarkerDetailProps) => {
   const name = userDetail?.name ?? (isCurrentUser ? currentUser?.name : null) ?? "Unknown";
-  const image = userDetail?.images?.[0]?.originalUrl ?? userDetail?.images?.[0]?.thumbUrl ?? undefined;
+  const image =
+    userDetail?.images?.[0]?.originalUrl ?? userDetail?.images?.[0]?.thumbUrl ?? undefined;
   const email = userDetail?.email ?? (isCurrentUser ? currentUser?.email : null);
   const age = userDetail?.age;
 
@@ -73,14 +90,23 @@ export const MarkerDetail = ({
   useEffect(() => {
     let cancelled = false;
     if (isCurrentUser || !friendship || !isAcceptedStatus(friendship)) {
-      Promise.resolve(null).then((v) => { if (!cancelled) setFriendshipDetail(v); });
+      Promise.resolve(null).then((v) => {
+        if (!cancelled) setFriendshipDetail(v);
+      });
       return;
     }
     getFriendshipById(friendship.friendshipId)
-      .then((dto) => { if (!cancelled) setFriendshipDetail(dto); })
-      .catch(() => { if (!cancelled) setFriendshipDetail(null); });
-    return () => { cancelled = true; };
-  }, [friendship, isCurrentUser]);  const handleChat = useCallback(async () => {
+      .then((dto) => {
+        if (!cancelled) setFriendshipDetail(dto);
+      })
+      .catch(() => {
+        if (!cancelled) setFriendshipDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [friendship, isCurrentUser]);
+  const handleChat = useCallback(async () => {
     if (isCurrentUser || !userDetail) return;
     try {
       const res = await getOpponentConversation(userDetail.id);
@@ -172,27 +198,30 @@ export const MarkerDetail = ({
     }
   }, [friendship, actionLoading, onFriendshipChange]);
 
-  const handleChangeType = useCallback(async (type: FriendshipTypeValue) => {
-    if (!friendship || actionLoading) return;
-    setActionLoading(true);
-    try {
-      await changeFriendshipType(friendship.friendshipId, type);
-      onFriendshipChange?.();
-    } catch (err) {
-      console.error("Failed to change friendship type", err);
-    } finally {
-      setActionLoading(false);
-    }
-  }, [friendship, actionLoading, onFriendshipChange]);
+  const handleChangeType = useCallback(
+    async (type: FriendshipTypeValue) => {
+      if (!friendship || actionLoading) return;
+      setActionLoading(true);
+      try {
+        await changeFriendshipType(friendship.friendshipId, type);
+        onFriendshipChange?.();
+      } catch (err) {
+        console.error("Failed to change friendship type", err);
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [friendship, actionLoading, onFriendshipChange],
+  );
 
-const handleViewProfile = useCallback(() => {
+  const handleViewProfile = useCallback(() => {
     if (isCurrentUser || !userDetail) return;
     router.push(`/user/${userDetail.id}`);
   }, [isCurrentUser, userDetail, router]);
 
   if (loading) {
     return (
-      <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="absolute right-0 bottom-0 left-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-zinc-300 dark:bg-zinc-600" />
         <div className="flex animate-pulse items-start gap-3">
           <div className="h-12 w-12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
@@ -209,7 +238,8 @@ const handleViewProfile = useCallback(() => {
     if (isCurrentUser) return null;
 
     if (friendship && isBlockedStatus(friendship)) {
-      const isBlocker = friendship.blockedById != null && friendship.blockedById === currentUser?.id;
+      const isBlocker =
+        friendship.blockedById != null && friendship.blockedById === currentUser?.id;
       if (isBlocker) {
         return (
           <button
@@ -276,7 +306,9 @@ const handleViewProfile = useCallback(() => {
     }
 
     if (isAcceptedStatus(friendship)) {
-      const myType = friendshipDetail ? getMyFriendshipType(friendshipDetail, currentUser?.id) : FRIENDSHIP_TYPE_VALUES.Friend;
+      const myType = friendshipDetail
+        ? getMyFriendshipType(friendshipDetail, currentUser?.id)
+        : FRIENDSHIP_TYPE_VALUES.Friend;
       return (
         <div className="flex flex-1 flex-col gap-1.5">
           <button
@@ -306,7 +338,7 @@ const handleViewProfile = useCallback(() => {
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="absolute right-0 bottom-0 left-0 z-50 rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
       <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-zinc-300 dark:bg-zinc-600" />
       <div className="flex items-start gap-3">
         <button
@@ -327,16 +359,10 @@ const handleViewProfile = useCallback(() => {
         >
           <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
             {name}
-            {isCurrentUser && (
-              <span className="ml-2 text-xs font-normal text-zinc-500">(You)</span>
-            )}
+            {isCurrentUser && <span className="ml-2 text-xs font-normal text-zinc-500">(You)</span>}
           </p>
-          {email && (
-            <p className="mt-0.5 text-xs text-zinc-500">{email}</p>
-          )}
-          {age && (
-            <p className="text-xs text-zinc-500">{age} years old</p>
-          )}
+          {email && <p className="mt-0.5 text-xs text-zinc-500">{email}</p>}
+          {age && <p className="text-xs text-zinc-500">{age} years old</p>}
           {status && (
             <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-medium text-blue-600">
               <MessageSquare className="h-3 w-3 shrink-0" />
@@ -355,13 +381,18 @@ const handleViewProfile = useCallback(() => {
               <>
                 <span className="text-zinc-300">•</span>
                 <span className="text-zinc-500">
-                  {distance < 1000 ? `${Math.round(distance)}m` : `${(distance / 1000).toFixed(1)}km`}
+                  {distance < 1000
+                    ? `${Math.round(distance)}m`
+                    : `${(distance / 1000).toFixed(1)}km`}
                 </span>
               </>
             )}
           </div>
         </div>
-        <button onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400">
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400"
+        >
           ✕
         </button>
       </div>
@@ -369,7 +400,10 @@ const handleViewProfile = useCallback(() => {
         <div className="mt-3">
           <div className="flex gap-2">
             {renderFriendshipButton()}
-            <button onClick={handleChat} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            <button
+              onClick={handleChat}
+              className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
               Nhắn tin
             </button>
           </div>

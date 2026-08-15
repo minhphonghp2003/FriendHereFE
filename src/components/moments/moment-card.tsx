@@ -3,7 +3,21 @@
 import Image from "next/image";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, EyeOff, Eye, Users, Heart, Star, Globe, MapPin, MoreHorizontal, MessageCircle, Loader2, Check, ChevronLeft } from "lucide-react";
+import {
+  Trash2,
+  EyeOff,
+  Eye,
+  Users,
+  Heart,
+  Star,
+  Globe,
+  MapPin,
+  MoreHorizontal,
+  MessageCircle,
+  Loader2,
+  Check,
+  ChevronLeft,
+} from "lucide-react";
 import { MomentImageCarousel } from "./moment-image-carousel";
 import { ReactionBottomSheet } from "./reaction-bottom-sheet";
 import { MomentVideoPlayer } from "./moment-video-player";
@@ -67,16 +81,26 @@ const VisibilityOption = ({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
+      className="text-foreground hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm disabled:opacity-50"
     >
-      <Icon className="h-4 w-4 text-muted-foreground" />
+      <Icon className="text-muted-foreground h-4 w-4" />
       <span className="flex-1 text-left">{cfg.label}</span>
       {active && <Check className="h-4 w-4 text-emerald-500" />}
     </button>
   );
 };
 
-export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen = false, active = true, showInfo = true, onToggleInfo, hideTimelineChip = false }: MomentCardProps) => {
+export const MomentCard = ({
+  moment,
+  currentUserId,
+  onDelete,
+  onHide,
+  fullscreen = false,
+  active = true,
+  showInfo = true,
+  onToggleInfo,
+  hideTimelineChip = false,
+}: MomentCardProps) => {
   const router = useRouter();
   const { mutate: deleteMoment, isLoading: deleting } = useDeleteMoment();
   const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
@@ -147,7 +171,11 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
       list.push(r.userId);
       map.set(r.emoji, list);
     }
-    return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds, count: userIds.length }));
+    return Array.from(map.entries()).map(([emoji, userIds]) => ({
+      emoji,
+      userIds,
+      count: userIds.length,
+    }));
   }, [localReactions]);
 
   const handleReact = (emoji: string, x?: number, y?: number) => {
@@ -173,10 +201,14 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
       if (res.data) {
         router.push(`/chat/${res.data}?momentId=${moment.id}`);
       } else {
-        router.push(`/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`);
+        router.push(
+          `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+        );
       }
     } catch {
-      router.push(`/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`);
+      router.push(
+        `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+      );
     } finally {
       setSendingMessage(false);
     }
@@ -265,7 +297,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
           </div>
 
           {infoVisible && (
-            <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-5">
+            <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-col items-center gap-5">
               {!isOwner &&
                 COMMON_EMOJIS.map((emoji) => (
                   <button
@@ -283,7 +315,9 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                   className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white disabled:opacity-50"
                 >
                   <MessageCircle className="h-8 w-8 drop-shadow-lg" />
-                  <span className="text-[11px] font-medium">{sendingMessage ? "..." : "Nhắn tin"}</span>
+                  <span className="text-[11px] font-medium">
+                    {sendingMessage ? "..." : "Nhắn tin"}
+                  </span>
                 </button>
               )}
               {isOwner && groupedReactions.length > 0 && (
@@ -292,7 +326,9 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                   className="flex flex-col-reverse items-center text-white/90 hover:text-white"
                 >
                   {groupedReactions.slice(0, 3).map((g) => (
-                    <span key={g.emoji} className="text-3xl drop-shadow-lg">{g.emoji}</span>
+                    <span key={g.emoji} className="text-3xl drop-shadow-lg">
+                      {g.emoji}
+                    </span>
                   ))}
                 </button>
               )}
@@ -301,95 +337,98 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         </div>
 
         {infoVisible && (
-          <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200 absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pb-16 pt-4">
-          <div className="flex min-w-0 cursor-pointer items-center gap-3" onClick={handleViewProfile}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
-              {moment.userImage ? (
-                <img
-                  src={moment.userImage.thumbUrl}
-                  alt={displayName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                displayName.charAt(0)
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-              <div className="flex items-center gap-1.5 text-xs text-white/80">
-                <VisIcon className="h-3 w-3" />
-                <span>{visConfig.label}</span>
-                <span>·</span>
-                <span>{new Date(moment.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
-          <div className="relative flex shrink-0 items-center gap-1">
-            {downloadUrl && <DownloadButton url={downloadUrl} />}
-            <button
-              onClick={toggleMenu}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
-              aria-label="Tùy chọn"
+          <div className="animate-in fade-in-0 slide-in-from-top-2 absolute inset-x-0 top-0 z-20 flex items-start justify-between bg-gradient-to-b from-black/70 via-black/20 to-transparent px-4 pt-4 pb-16 duration-200">
+            <div
+              className="flex min-w-0 cursor-pointer items-center gap-3"
+              onClick={handleViewProfile}
             >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-            {showMenu && (
-              <div className="animate-in fade-in-0 zoom-in-95 duration-100 absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
-                {showVisibilityMenu ? (
-                  <>
-                    <button
-                      onClick={() => setShowVisibilityMenu(false)}
-                      className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Quyền riêng tư
-                    </button>
-                    {VISIBILITY_OPTIONS.map((vis) => (
-                      <VisibilityOption
-                        key={vis}
-                        value={vis}
-                        active={vis === localVisibility}
-                        disabled={changingVisibility}
-                        onClick={() => handleChangeVisibility(vis)}
-                      />
-                    ))}
-                  </>
-                ) : isOwner ? (
-                  <>
-                    <button
-                      onClick={() => setShowVisibilityMenu(true)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Đổi quyền riêng tư
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deleting ? "Đang xóa..." : "Xóa"}
-                    </button>
-                  </>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold text-white ring-2 ring-white/70">
+                {moment.userImage ? (
+                  <img
+                    src={moment.userImage.thumbUrl}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <button
-                    onClick={handleHide}
-                    disabled={hiding}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
-                  >
-                    <EyeOff className="h-4 w-4" />
-                    {hiding ? "Đang ẩn..." : "Ẩn"}
-                  </button>
+                  displayName.charAt(0)
                 )}
               </div>
-            )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                <div className="flex items-center gap-1.5 text-xs text-white/80">
+                  <VisIcon className="h-3 w-3" />
+                  <span>{visConfig.label}</span>
+                  <span>·</span>
+                  <span>{new Date(moment.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="relative flex shrink-0 items-center gap-1">
+              {downloadUrl && <DownloadButton url={downloadUrl} />}
+              <button
+                onClick={toggleMenu}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
+                aria-label="Tùy chọn"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+              {showMenu && (
+                <div className="animate-in fade-in-0 zoom-in-95 border-border bg-background absolute top-full right-0 z-20 mt-1 w-44 rounded-md border shadow-md duration-100">
+                  {showVisibilityMenu ? (
+                    <>
+                      <button
+                        onClick={() => setShowVisibilityMenu(false)}
+                        className="border-border text-muted-foreground hover:bg-muted flex w-full items-center gap-2 border-b px-3 py-2 text-sm"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Quyền riêng tư
+                      </button>
+                      {VISIBILITY_OPTIONS.map((vis) => (
+                        <VisibilityOption
+                          key={vis}
+                          value={vis}
+                          active={vis === localVisibility}
+                          disabled={changingVisibility}
+                          onClick={() => handleChangeVisibility(vis)}
+                        />
+                      ))}
+                    </>
+                  ) : isOwner ? (
+                    <>
+                      <button
+                        onClick={() => setShowVisibilityMenu(true)}
+                        className="text-foreground hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Đổi quyền riêng tư
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="text-destructive hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deleting ? "Đang xóa..." : "Xóa"}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleHide}
+                      disabled={hiding}
+                      className="text-muted-foreground hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
+                    >
+                      <EyeOff className="h-4 w-4" />
+                      {hiding ? "Đang ẩn..." : "Ẩn"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {infoVisible && (
-          <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200 z-10 border-t border-white/10 bg-black px-4 pb-4 pt-3">
+          <div className="animate-in fade-in-0 slide-in-from-bottom-2 z-10 border-t border-white/10 bg-black px-4 pt-3 pb-4 duration-200">
             {moment.timeline && !hideTimelineChip && (
               <div className="mb-2 flex justify-start">
                 <TimelineChip timeline={moment.timeline} variant="dark" />
@@ -401,7 +440,10 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             {moment.location?.isShowed && (
               <div className="mb-2 flex items-center gap-1.5 text-xs text-white/80">
                 <MapPin className="h-3 w-3" />
-                <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
+                <span>
+                  {moment.location.placeName ||
+                    `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}
+                </span>
               </div>
             )}
           </div>
@@ -427,9 +469,9 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="border-border bg-card rounded-lg border">
       <div className="flex cursor-pointer items-center gap-3 p-3" onClick={handleViewProfile}>
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-bold text-muted-foreground">
+        <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-bold">
           {moment.userImage ? (
             <img
               src={moment.userImage.thumbUrl}
@@ -440,9 +482,9 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             displayName.charAt(0)
           )}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{displayName}</p>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <VisIcon className="h-3 w-3" />
             <span>{visConfig.label}</span>
             <span>·</span>
@@ -450,21 +492,16 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
           </div>
         </div>
         <div className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={toggleMenu}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleMenu}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
           {showMenu && (
-            <div className="animate-in fade-in-0 zoom-in-95 duration-100 absolute right-0 top-full z-10 mt-1 w-44 rounded-md border border-border bg-background shadow-md">
+            <div className="animate-in fade-in-0 zoom-in-95 border-border bg-background absolute top-full right-0 z-10 mt-1 w-44 rounded-md border shadow-md duration-100">
               {showVisibilityMenu ? (
                 <>
                   <button
                     onClick={() => setShowVisibilityMenu(false)}
-                    className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                    className="border-border text-muted-foreground hover:bg-muted flex w-full items-center gap-2 border-b px-3 py-2 text-sm"
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Quyền riêng tư
@@ -483,7 +520,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                 <>
                   <button
                     onClick={() => setShowVisibilityMenu(true)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    className="text-foreground hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
                   >
                     <Eye className="h-4 w-4" />
                     Đổi quyền riêng tư
@@ -491,7 +528,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                   <button
                     onClick={handleDelete}
                     disabled={deleting}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
+                    className="text-destructive hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
                   >
                     <Trash2 className="h-4 w-4" />
                     {deleting ? "Đang xóa..." : "Xóa"}
@@ -501,7 +538,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
                 <button
                   onClick={handleHide}
                   disabled={hiding}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                  className="text-muted-foreground hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-sm"
                 >
                   <EyeOff className="h-4 w-4" />
                   {hiding ? "Đang ẩn..." : "Ẩn"}
@@ -512,9 +549,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
         </div>
       </div>
 
-      {moment.caption && (
-        <p className="px-3 pb-2 text-sm">{moment.caption}</p>
-      )}
+      {moment.caption && <p className="px-3 pb-2 text-sm">{moment.caption}</p>}
 
       {moment.timeline && !hideTimelineChip && (
         <div className="flex justify-start px-3 pb-2">
@@ -523,11 +558,9 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
       )}
 
       <div className="relative">
-        {moment.video && (
-          <MomentVideoPlayer src={moment.video.originalUrl} />
-        )}
+        {moment.video && <MomentVideoPlayer src={moment.video.originalUrl} />}
         {!moment.video && moment.images.length === 1 && (
-          <div className="relative aspect-square w-full overflow-hidden bg-muted">
+          <div className="bg-muted relative aspect-square w-full overflow-hidden">
             <Image
               src={moment.images[0].originalUrl}
               alt=""
@@ -550,20 +583,23 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
       </div>
 
       {moment.location?.isShowed && (
-        <div className="flex items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-1.5 px-3 py-2 text-xs">
           <MapPin className="h-3 w-3" />
-          <span>{moment.location.placeName || `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}</span>
+          <span>
+            {moment.location.placeName ||
+              `${moment.location.latitude.toFixed(4)}, ${moment.location.longitude.toFixed(4)}`}
+          </span>
         </div>
       )}
 
       {!isOwner && (
-        <div className="flex items-center border-t border-border px-3 py-2">
+        <div className="border-border flex items-center border-t px-3 py-2">
           <div className="flex flex-1 items-center gap-1">
             {COMMON_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-base hover:bg-muted"
+                className="hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md text-base"
               >
                 {emoji}
               </button>
@@ -573,7 +609,7 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
             <button
               onClick={handleSendMessage}
               disabled={sendingMessage}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs disabled:opacity-50"
             >
               <MessageCircle className="h-4 w-4" />
               <span>{sendingMessage ? "Đang gửi..." : "Nhắn tin"}</span>
@@ -585,20 +621,20 @@ export const MomentCard = ({ moment, currentUserId, onDelete, onHide, fullscreen
       {isOwner && (
         <button
           onClick={() => setShowReactions(true)}
-          className="flex w-full flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-left hover:bg-muted/50"
+          className="border-border hover:bg-muted/50 flex w-full flex-wrap items-center gap-2 border-t px-3 py-2 text-left"
         >
           {groupedReactions.length > 0 ? (
             groupedReactions.map((g) => (
               <span
                 key={g.emoji}
-                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
               >
                 <span>{g.emoji}</span>
-                <span className="font-medium tabular-nums text-muted-foreground">{g.count}</span>
+                <span className="text-muted-foreground font-medium tabular-nums">{g.count}</span>
               </span>
             ))
           ) : (
-            <span className="text-xs text-muted-foreground">Chưa có cảm xúc</span>
+            <span className="text-muted-foreground text-xs">Chưa có cảm xúc</span>
           )}
         </button>
       )}

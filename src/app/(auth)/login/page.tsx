@@ -61,30 +61,25 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-dvh flex-col bg-background safe-top safe-bottom">
+    <main className="bg-background safe-top safe-bottom flex min-h-dvh flex-col">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 py-8">
         <Link
           href="/init"
-          className="mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground mb-10 inline-flex items-center gap-2 text-sm transition"
         >
           <ArrowLeft className="size-4" />
           Quay lại
         </Link>
 
         <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Chào mừng trở lại
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight">Chào mừng trở lại</h1>
 
-          <p className="mt-3 text-muted-foreground">
+          <p className="text-muted-foreground mt-3">
             Đăng nhập để tiếp tục trò chuyện và xem bạn bè ở đâu.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col"
-        >
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
           <div className="space-y-6">
             <div className="space-y-2">
               <Label>Email</Label>
@@ -108,10 +103,7 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <Label>Mật khẩu</Label>
 
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
+                <Link href="/forgot-password" className="text-primary text-sm hover:underline">
                   Quên?
                 </Link>
               </div>
@@ -133,27 +125,20 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-xl border p-3 text-sm">
                 {error}
               </div>
             )}
           </div>
 
           <div className="mt-auto pt-10">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="h-12 w-full rounded-xl text-base"
-            >
+            <Button type="submit" disabled={isLoading} className="h-12 w-full rounded-xl text-base">
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-6 text-center text-sm">
               Chưa có tài khoản?{" "}
-              <Link
-                href="/register"
-                className="font-semibold text-primary hover:underline"
-              >
+              <Link href="/register" className="text-primary font-semibold hover:underline">
                 Tạo tài khoản
               </Link>
             </p>

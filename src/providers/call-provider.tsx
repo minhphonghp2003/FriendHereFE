@@ -94,29 +94,32 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     pending.forEach((c) => pc.addIceCandidate(c).catch(console.error));
   }, []);
 
-  const createPeer = useCallback((targetUserId: number) => {
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        appHub
-          .sendCallSignal({ targetUserId, type: "ice", payload: JSON.stringify(e.candidate) })
-          .catch(console.error);
-      }
-    };
-    pc.ontrack = (e) => {
-      const stream = e.streams[0] ?? new MediaStream([e.track]);
-      remoteStreamRef.current = stream;
-      setRemoteStream(stream);
-    };
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "failed" && statusRef.current === "active") {
-        cleanup();
-        showNotice("Mất kết nối cuộc gọi");
-      }
-    };
-    pcRef.current = pc;
-    return pc;
-  }, [cleanup, showNotice]);
+  const createPeer = useCallback(
+    (targetUserId: number) => {
+      const pc = new RTCPeerConnection(RTC_CONFIG);
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          appHub
+            .sendCallSignal({ targetUserId, type: "ice", payload: JSON.stringify(e.candidate) })
+            .catch(console.error);
+        }
+      };
+      pc.ontrack = (e) => {
+        const stream = e.streams[0] ?? new MediaStream([e.track]);
+        remoteStreamRef.current = stream;
+        setRemoteStream(stream);
+      };
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "failed" && statusRef.current === "active") {
+          cleanup();
+          showNotice("Mất kết nối cuộc gọi");
+        }
+      };
+      pcRef.current = pc;
+      return pc;
+    },
+    [cleanup, showNotice],
+  );
 
   const getLocalMedia = useCallback(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
@@ -130,12 +133,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const startCall = useCallback(
-    async (
-      targetUserId: number,
-      name = "",
-      image: ImageDto | null = null,
-      hasVideo = true,
-    ) => {
+    async (targetUserId: number, name = "", image: ImageDto | null = null, hasVideo = true) => {
       if (statusRef.current !== "idle") return;
       const newPeer: CallPeer = { userId: targetUserId, name, image, hasVideo };
       peerRef.current = newPeer;
@@ -336,7 +334,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       {renderOverlay()}
       {notice && (
         <div className="pointer-events-none fixed inset-x-0 top-6 z-[80] flex justify-center">
-          <div className="animate-in fade-in-0 zoom-in-95 duration-200 rounded-full bg-foreground/90 px-4 py-2 text-sm font-medium text-background shadow-lg">
+          <div className="animate-in fade-in-0 zoom-in-95 bg-foreground/90 text-background rounded-full px-4 py-2 text-sm font-medium shadow-lg duration-200">
             {notice}
           </div>
         </div>

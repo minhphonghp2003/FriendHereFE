@@ -3,11 +3,11 @@ import type { ApiResponse } from "@/types/api";
 import type { PresignedUploadItem, PresignedUploadRequest } from "@/types/upload";
 
 export async function getPresignedUploadUrls(
-  request: PresignedUploadRequest
+  request: PresignedUploadRequest,
 ): Promise<PresignedUploadItem[]> {
   const { data } = await httpClient.post<ApiResponse<PresignedUploadItem[]>>(
     "/Upload/presigned-upload",
-    request
+    request,
   );
   return data.data;
 }
@@ -15,7 +15,7 @@ export async function getPresignedUploadUrls(
 export async function uploadToPresignedUrl(
   url: string,
   file: Blob,
-  contentType: string
+  contentType: string,
 ): Promise<void> {
   const res = await fetch(url, {
     method: "PUT",
