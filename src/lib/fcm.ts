@@ -131,24 +131,42 @@ export async function getFcmToken(
     : typeof Notification !== "undefined"
       ? Notification.permission
       : "denied";
-  if (permission !== "granted") return { token: null, permission };
+
+  console.log("[fcm] getFcmToken - permission:", permission, "prompt:", options.prompt);
+
+  if (permission !== "granted") {
+    console.log("[fcm] Permission not granted, returning null token");
+    return { token: null, permission };
+  }
 
   const messaging = await getFcmMessaging();
-  if (!messaging) return { token: null, permission };
+  if (!messaging) {
+    console.warn("[fcm] Messaging instance not available");
+    return { token: null, permission };
+  }
 
   try {
     const sw = await getSwRegistration();
+    if (!sw) {
+      console.warn("[fcm] Service worker registration failed");
+      return { token: null, permission };
+    }
+
+    console.log("[fcm] Requesting token from Firebase...");
     const token = await getToken(messaging, {
       vapidKey: env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || undefined,
-      serviceWorkerRegistration: sw ?? undefined,
+      serviceWorkerRegistration: sw,
     });
+
+    console.log("[fcm] Token received:", token ? "success" : "null");
+
     if (token !== cachedToken) {
       cachedToken = token;
       if (options.notify !== false) notifyTokenListeners(token);
     }
     return { token, permission };
   } catch (err) {
-    console.warn("[fcm] Failed to get token:", err);
+    console.error("[fcm] Failed to get token:", err);
     return { token: null, permission };
   }
 }
@@ -163,17 +181,27 @@ export async function getFcmToken(
  * Best-effort: never throws; failures are logged.
  */
 export async function syncFcmTokenAfterAuth(): Promise<void> {
-  if (!isFirebaseConfigured()) return;
+  if (!isFirebaseConfigured()) {
+    console.warn("[fcm] Firebase not configured - check environment variables");
+    return;
+  }
   try {
-    const { token } = await getFcmToken({ prompt: true });
+    const { token, permission } = await getFcmToken({ prompt: true });
+    console.log(
+      "[fcm] Token fetch result - token:",
+      token ? "obtained" : "null",
+      "permission:",
+      permission,
+    );
     if (token) {
       console.log("[fcm] Syncing FCM token to BE:", token);
       await updateFcmToken(token);
+      console.log("[fcm] Successfully synced token to backend");
     } else {
-      console.warn("[fcm] No FCM token obtained after auth (permission denied/unavailable?)");
+      console.warn("[fcm] No FCM token obtained - permission:", permission);
     }
   } catch (err) {
-    console.warn("[fcm] Failed to sync token after auth:", err);
+    console.error("[fcm] Failed to sync token after auth:", err);
   }
 }
 
