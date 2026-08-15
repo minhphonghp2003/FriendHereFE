@@ -20,6 +20,7 @@ import { LogOut, User, Bell, Shield, HelpCircle, Pencil, Upload, Users, UserPlus
 import { PwaInstallRow } from "@/components/pwa-install-button";
 import type { User as UserType } from "@/types/user";
 import type { FriendshipDto } from "@/types/friendship";
+import { requestNotificationPermission } from "@/lib/fcm";
 
 export default function SettingsPage() {
   const { user, token, login } = useAuth();
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
 
   const fetchUserDetail = useCallback(async () => {
     if (!user) return;
@@ -59,6 +61,12 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => { fetchUserDetail(); }, [fetchUserDetail]);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     if (!showFriendRequests && !showFriendsList) return;
@@ -171,6 +179,15 @@ export default function SettingsPage() {
     setActionLoading(id);
     try { const res = await unblockUser(id); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
   };
+
+  const handleRequestNotificationPermission = async () => {
+    try {
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+    } catch (err) {
+      console.error("Failed to request notification permission:", err);
+    }
+  };
   const handleChangeType = async (id: number, type: FriendshipTypeValue) => {
     setActionLoading(id);
     try { const res = await changeFriendshipType(id, type); setFriendships((p) => p.map((f) => (f.id === id ? res : f))); } catch {} finally { setActionLoading(null); }
@@ -236,20 +253,29 @@ export default function SettingsPage() {
           <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Thông báo</span>
+            {notificationPermission === "granted" ? (
+              <span className="text-sm text-green-600">Đã bật</span>
+            ) : notificationPermission === "denied" ? (
+              <span className="text-sm text-red-600">Đã tắt</span>
+            ) : notificationPermission === "default" ? (
+              <Button size="sm" variant="outline" onClick={handleRequestNotificationPermission}>
+                Bật thông báo
+              </Button>
+            ) : null}
             <span className="text-muted-foreground">›</span>
           </button>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+          <div className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <Shield className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Quyền riêng tư</span>
             <span className="text-muted-foreground">›</span>
-          </button>
+          </div>
           <Separator />
-          <button className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
+          <div className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/50">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
             <span className="flex-1">Trợ giúp</span>
             <span className="text-muted-foreground">›</span>
-          </button>
+          </div>
         </CardContent>
       </Card>
 
