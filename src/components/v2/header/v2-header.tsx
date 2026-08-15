@@ -2,22 +2,30 @@
 
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { MessageCircle, Settings, RefreshCw } from "lucide-react";
+import { MessageCircle, Settings, RefreshCw, UserPlus } from "lucide-react";
 import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2ProfileDialog } from "@/components/v2/dialogs/v2-profile-dialog";
+import { V2FriendsDialog } from "@/components/v2/dialogs/v2-friends-dialog";
+
+type ActiveDialog = "chat" | "settings" | "profile" | "friends" | null;
 
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const { data: currentUser } = useCurrentUser();
-  const [chatOpen, setChatOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  // Single active modal: only one dialog open at a time
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Toggle: tapping the active button closes it; tapping another swaps dialogs
+  const toggleDialog = (dialog: Exclude<ActiveDialog, null>) => {
+    setActiveDialog((current) => (current === dialog ? null : dialog));
+  };
+
   const displayName = currentUser?.name || authUser?.name || "User";
+  const email = currentUser?.email || authUser?.email || "";
   const avatarThumb =
     currentUser?.images && currentUser.images[0]
       ? currentUser.images[0].thumbUrl || currentUser.images[0].originalUrl
@@ -48,9 +56,9 @@ export function V2Header() {
         <div className="header-left">
           <button
             className="user-avatar-section"
-            onClick={() => setProfileOpen(!profileOpen)}
+            onClick={() => toggleDialog("profile")}
             aria-label="Open profile"
-            aria-expanded={profileOpen}
+            aria-expanded={activeDialog === "profile"}
           >
             <div className="user-avatar">
               {avatarThumb ? (
@@ -60,43 +68,57 @@ export function V2Header() {
               )}
               <div className="avatar-status" />
             </div>
-            <span className="user-name">{displayName}</span>
+            <div className="user-text">
+              <span className="user-name">{displayName}</span>
+              {email && <span className="user-email">{email}</span>}
+            </div>
           </button>
         </div>
         <div className="header-right">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="header-icon-btn header-refresh-btn"
+            className="header-float-btn header-refresh-btn"
             aria-label="Refresh"
           >
-            <RefreshCw className={`header-icon ${refreshing ? 'spinning' : ''}`} />
+            <RefreshCw
+              className={`header-float-icon header-icon-outline ${refreshing ? 'spinning' : ''}`}
+            />
           </button>
           <button
-            onClick={() => setChatOpen(!chatOpen)}
-            className={`header-chat-btn ${chatOpen ? 'header-btn-active' : ''}`}
-            aria-label="Chat"
-            aria-expanded={chatOpen}
+            onClick={() => toggleDialog("friends")}
+            className={`header-float-btn ${activeDialog === "friends" ? 'header-btn-active' : ''}`}
+            aria-label="Friends"
+            aria-expanded={activeDialog === "friends"}
           >
-            <MessageCircle className="chat-icon" />
+            <UserPlus className="header-float-icon" />
+          </button>
+          <button
+            onClick={() => toggleDialog("chat")}
+            className={`header-float-btn ${activeDialog === "chat" ? 'header-btn-active' : ''}`}
+            aria-label="Chat"
+            aria-expanded={activeDialog === "chat"}
+          >
+            <MessageCircle className="header-float-icon" fill="currentColor" />
             {unreadCount > 0 && (
               <span className="chat-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </button>
           <button
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className={`header-icon-btn ${settingsOpen ? 'header-btn-active' : ''}`}
+            onClick={() => toggleDialog("settings")}
+            className={`header-float-btn ${activeDialog === "settings" ? 'header-btn-active' : ''}`}
             aria-label="Settings"
-            aria-expanded={settingsOpen}
+            aria-expanded={activeDialog === "settings"}
           >
-            <Settings className="header-icon" />
+            <Settings className="header-float-icon" fill="currentColor" />
           </button>
         </div>
       </header>
 
-      <V2ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
-      <V2SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <V2ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
+      <V2ChatDialog open={activeDialog === "chat"} onOpenChange={(open) => !open && setActiveDialog(null)} />
+      <V2SettingsDialog open={activeDialog === "settings"} onOpenChange={(open) => !open && setActiveDialog(null)} />
+      <V2ProfileDialog open={activeDialog === "profile"} onOpenChange={(open) => !open && setActiveDialog(null)} />
+      <V2FriendsDialog open={activeDialog === "friends"} onOpenChange={(open) => !open && setActiveDialog(null)} />
 
       <style jsx global>{`
         .v2-header {
@@ -139,7 +161,7 @@ export function V2Header() {
         .user-avatar-section {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           background: none;
           border: none;
           padding: 0;
@@ -153,10 +175,10 @@ export function V2Header() {
 
         .user-avatar {
           position: relative;
-          width: 36px;
-          height: 36px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
-          overflow: hidden;
+          overflow: visible;
           background: linear-gradient(135deg, #2BB0AF 0%, #1a8a89 100%);
           display: flex;
           align-items: center;
@@ -168,34 +190,55 @@ export function V2Header() {
         .user-avatar-img {
           width: 100%;
           height: 100%;
+          border-radius: 50%;
           object-fit: cover;
         }
 
         .user-avatar-text {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: 600;
           color: white;
         }
 
         .avatar-status {
           position: absolute;
-          bottom: 1px;
-          right: 1px;
-          width: 8px;
-          height: 8px;
+          bottom: 0;
+          right: 0;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
           background: #22c55e;
-          border: 2px solid rgba(0, 0, 0, 0.3);
+          border: 2px solid rgba(0, 0, 0, 0.4);
+        }
+
+        .user-text {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          min-width: 0;
+          gap: 1px;
         }
 
         .user-name {
           font-size: 14px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.9);
-          max-width: 140px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.95);
+          max-width: 150px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          line-height: 1.2;
+        }
+
+        .user-email {
+          font-size: 11px;
+          font-weight: 400;
+          color: rgba(255, 255, 255, 0.55);
+          max-width: 150px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          line-height: 1.2;
         }
 
         .header-right {
@@ -204,12 +247,50 @@ export function V2Header() {
           gap: 8px;
         }
 
+        /* Floating white buttons with primary-colored icons */
+        .header-float-btn {
+          position: relative;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          border: none;
+          border-radius: 50%;
+          color: #2BB0AF; /* primary */
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          padding: 0;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-float-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .header-float-btn:active {
+          transform: translateY(0) scale(0.95);
+        }
+
+        .header-float-icon {
+          width: 17px;
+          height: 17px;
+          color: inherit;
+        }
+
+        /* Refresh keeps an outline icon */
+        .header-icon-outline {
+          fill: none;
+        }
+
         .header-refresh-btn:disabled {
-          opacity: 0.6;
+          opacity: 0.7;
           cursor: not-allowed;
         }
 
-        .header-icon.spinning {
+        .header-float-icon.spinning {
           animation: v2-refresh-spin 1s linear infinite;
         }
 
@@ -217,101 +298,29 @@ export function V2Header() {
           to { transform: rotate(360deg); }
         }
 
-        .header-chat-btn {
-          position: relative;
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(43, 176, 175, 0.15);
-          border: 1px solid rgba(43, 176, 175, 0.3);
-          border-radius: 50%;
-          color: #2BB0AF;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          cursor: pointer;
-          padding: 0;
-        }
-
-        .header-chat-btn:hover {
-          background: rgba(43, 176, 175, 0.25);
-          border-color: rgba(43, 176, 175, 0.5);
-          transform: scale(1.05);
-        }
-
-        .header-chat-btn:active {
-          transform: scale(0.95);
-        }
-
-        .chat-icon {
-          width: 18px;
-          height: 18px;
-          color: inherit;
-        }
-
         .chat-badge {
           position: absolute;
-          top: -2px;
-          right: -2px;
+          top: -3px;
+          right: -3px;
           background: #ef4444;
           color: white;
           font-size: 9px;
           font-weight: 700;
-          min-width: 14px;
-          height: 14px;
+          min-width: 15px;
+          height: 15px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 7px;
-          border: 2px solid rgba(0, 0, 0, 0.3);
+          border-radius: 8px;
+          border: 2px solid white;
           padding: 0 3px;
         }
 
-        .header-icon-btn {
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 50%;
-          color: rgba(255, 255, 255, 0.7);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          cursor: pointer;
-          padding: 0;
-        }
-
-        .header-icon-btn:hover {
-          background: rgba(255, 255, 255, 0.12);
-          border-color: rgba(255, 255, 255, 0.2);
-          color: white;
-          transform: scale(1.05);
-        }
-
-        .header-icon-btn:active {
-          transform: scale(0.95);
-        }
-
-        .header-icon {
-          width: 16px;
-          height: 16px;
-          color: inherit;
-        }
-
         /* Active state when modal is open */
-        .header-btn-active {
-          background: rgba(43, 176, 175, 0.4) !important;
-          border-color: rgba(43, 176, 175, 0.7) !important;
-          color: #2BB0AF !important;
-          box-shadow: 0 0 16px rgba(43, 176, 175, 0.3) !important;
-        }
-
-        .header-icon-btn.header-btn-active {
-          background: rgba(255, 255, 255, 0.2) !important;
-          border-color: rgba(255, 255, 255, 0.4) !important;
+        .header-float-btn.header-btn-active {
+          background: #2BB0AF !important;
           color: white !important;
-          box-shadow: 0 0 12px rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 6px 20px rgba(43, 176, 175, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
 
         .user-avatar-section.header-btn-active .user-avatar {

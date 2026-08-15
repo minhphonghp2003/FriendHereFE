@@ -82,6 +82,12 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
     return `${Math.round(distance)}km`;
   };
 
+  // Drag progress 0..1 (collapsed -> fully open) drives content opacity
+  const openProgress = Math.min(
+    1,
+    Math.max(0, (sheetHeight - minSheetHeight) / (maxSheetHeight - minSheetHeight)),
+  );
+
   return (
     <>
 
@@ -115,18 +121,33 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
           </div>
         </div>
 
-        {/* Sheet Content */}
-        <div className="sheet-content">
+        {/* Sheet Content — fades in as the sheet is swiped up */}
+        <div
+          className="sheet-content"
+          style={{
+            opacity: openProgress,
+            transition: isDragging ? 'none' : 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            pointerEvents: openProgress < 0.5 ? 'none' : 'auto',
+          }}
+        >
           <div className="friends-scroll">
             {nearbyFriends.map((friend) => (
               <div key={friend.userId} className="friend-card">
                 <div className="friend-card-avatar">
-                  <div className="friend-card-placeholder">
-                    {friend.name?.charAt(0) || "?"}
-                  </div>
+                  {friend.image ? (
+                    <img
+                      src={friend.image}
+                      alt={friend.name}
+                      className="friend-card-image"
+                    />
+                  ) : (
+                    <div className="friend-card-placeholder">
+                      {friend.name?.charAt(0) || "?"}
+                    </div>
+                  )}
                   <div className="friend-status online" />
                 </div>
-                
+
                 <div className="friend-card-info">
                   <h4 className="friend-card-name">{friend.name}</h4>
                   <p className="friend-card-distance">
@@ -139,6 +160,9 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
                       )} away`
                     ) : "Unknown distance"}
                   </p>
+                  {friend.status && (
+                    <p className="friend-card-status">{friend.status}</p>
+                  )}
                   {friend.battery != null && (
                     <div className="friend-card-battery">
                       <BatteryCharging className="battery-icon" size={12} />
@@ -325,10 +349,15 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
           flex-shrink: 0;
         }
 
+        .friend-card-image,
         .friend-card-placeholder {
           width: 44px;
           height: 44px;
           border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .friend-card-placeholder {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -371,6 +400,16 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
           font-size: 12px;
           color: rgba(255, 255, 255, 0.5);
           margin: 2px 0 0;
+        }
+
+        .friend-card-status {
+          font-size: 11px;
+          font-style: italic;
+          color: rgba(43, 176, 175, 0.9);
+          margin: 2px 0 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .friend-card-battery {

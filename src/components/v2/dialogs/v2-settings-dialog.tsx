@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bell, LogOut, Eye, ChevronRight, Check } from "lucide-react";
+import { Bell, LogOut, Eye, ChevronRight, Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -18,10 +18,25 @@ import {
 
 const VISIBILITY_OPTIONS = Object.entries(LOCATION_VISIBILITY_LABELS) as [string, string][];
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 interface V2SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const isStandalonePwa = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const standaloneMedia = window.matchMedia?.("(display-mode: standalone)").matches;
+  const iosStandalone =
+    typeof window.navigator !== "undefined" &&
+    // @ts-expect-error iOS Safari proprietary flag
+    window.navigator.standalone === true;
+  return Boolean(standaloneMedia || iosStandalone);
+};
 
 export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -29,6 +44,44 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
   const dispatch = useAppDispatch();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isPwa, setIsPwa] = useState(true);
+
+  // Detect PWA mode + capture the install prompt when available
+  useEffect(() => {
+    setIsPwa(isStandalonePwa());
+
+    const onBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", () => setInstallPrompt(null));
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Only show the section when not installed as PWA
+  const showDownloadSection = !isPwa;
+
+  const handleInstall = async () => {
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setInstallPrompt(null);
+      }
+      return;
+    }
+    // No native prompt (e.g. iOS Safari): guide the user
+    alert(
+      "To install the app:\n\n" +
+        "iOS: Share → Add to Home Screen\n" +
+        "Android: Menu → Install app / Add to Home screen",
+    );
+  };
 
   const visibilityLabel =
     LOCATION_VISIBILITY_LABELS[visibility as LocationVisibilityValue] ??
@@ -118,6 +171,29 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                   </button>
                 </div>
               </div>
+
+              {/* Download app — only shown when NOT running as installed PWA */}
+              {showDownloadSection && (
+                <>
+                  <div className="settings-divider" />
+                  <button onClick={handleInstall} className="setting-item setting-item-btn">
+                    <div className="setting-info">
+                      <div className="setting-icon-wrapper">
+                        <Download className="setting-icon" />
+                      </div>
+                      <div className="setting-details">
+                        <h3 className="setting-title">Download app</h3>
+                        <p className="setting-description">
+                          Install for a full-screen app experience
+                        </p>
+                      </div>
+                    </div>
+                    <div className="setting-item-right">
+                      <ChevronRight className="setting-chevron" />
+                    </div>
+                  </button>
+                </>
+              )}
 
               <div className="settings-divider" />
 

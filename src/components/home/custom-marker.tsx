@@ -44,6 +44,10 @@ interface CustomMarkerProps {
   battery?: number | null;
   status?: string | null;
   moments?: MomentDto[] | null;
+  /** Optional marker size override (px). Defaults to 60 (v1 behavior). */
+  size?: number;
+  /** When provided, renders action buttons inside the status box (status box also shows when empty if actions exist). */
+  statusActions?: React.ReactNode;
   onMomentClick?: (moment: MomentDto) => void;
   onClick?: () => void;
 }
@@ -63,6 +67,8 @@ export const CustomMarker = ({
   battery,
   status,
   moments,
+  size,
+  statusActions,
   onMomentClick,
   onClick,
 }: CustomMarkerProps) => {
@@ -77,6 +83,11 @@ export const CustomMarker = ({
 
   const visibleMoments = moments ?? [];
 
+  const markerWidth = size ?? MARKER_WIDTH;
+  const markerHeight = size ?? MARKER_HEIGHT;
+  const momentWidth = size ? Math.round(size / 2) : MOMENT_WIDTH;
+  const momentHeight = size ? Math.round(size / 2) : MOMENT_HEIGHT;
+
   return (
     <AdvancedMarker
       position={position}
@@ -88,7 +99,7 @@ export const CustomMarker = ({
       <div
         className="relative transition-transform duration-200"
         style={{
-          marginTop: -(MARKER_HEIGHT / 2),
+          marginTop: -(markerHeight / 2),
           transform: hovered ? "scale(1.06)" : "scale(1)",
           transformOrigin: "bottom center",
           filter: moving
@@ -96,19 +107,26 @@ export const CustomMarker = ({
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
-        {status && (
+        {(status || statusActions) && (
           <div
-            className="pointer-events-none absolute left-1/2 z-10 max-w-[160px] -translate-x-1/2 rounded-4xl border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] leading-tight font-semibold text-zinc-700 shadow-md"
+            className={`absolute left-1/2 z-10 max-w-[200px] -translate-x-1/2 rounded-4xl border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] leading-tight font-semibold text-zinc-700 shadow-md ${
+              statusActions ? "pointer-events-auto flex items-center gap-1" : "pointer-events-none"
+            }`}
             style={{ bottom: "calc(100% + 4px)" }}
           >
-            <span className="block truncate">{status}</span>
+            {status ? (
+              <span className="block truncate">{status}</span>
+            ) : (
+              <span className="block truncate text-zinc-400">Add status</span>
+            )}
+            {statusActions}
           </div>
         )}
         <div
           className="relative overflow-hidden rounded-full border-[3px]"
           style={{
-            width: MARKER_WIDTH,
-            height: MARKER_HEIGHT,
+            width: markerWidth,
+            height: markerHeight,
             borderColor: pinColor,
             boxShadow: "0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,0.35)",
             animation: moving ? "markerPulse 1s ease-in-out infinite" : undefined,
@@ -149,7 +167,7 @@ export const CustomMarker = ({
         {visibleMoments.length > 0 && (
           <div
             className="absolute top-1/2 z-20 flex -translate-y-1/2 items-center"
-            style={{ left: `calc(100% - ${MOMENT_WIDTH / 2}px)` }}
+            style={{ left: `calc(100% - ${momentWidth / 2}px)` }}
           >
             {visibleMoments.slice(0, 3).map((m, i) => {
               const thumb = getMomentThumbnail(m);
@@ -163,7 +181,7 @@ export const CustomMarker = ({
                     onMomentClick?.(m);
                   }}
                   className={`relative overflow-hidden rounded-md border-2 border-white bg-zinc-200 shadow-md transition-transform duration-200 hover:-translate-y-1 ${i > 0 ? "-ml-2.5" : ""}`}
-                  style={{ width: MOMENT_WIDTH, height: MOMENT_HEIGHT, zIndex: i + 1 }}
+                  style={{ width: momentWidth, height: momentHeight, zIndex: i + 1 }}
                 >
                   {thumb ? (
                     <Image
