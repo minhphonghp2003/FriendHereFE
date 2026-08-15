@@ -4,9 +4,9 @@ const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHereFE";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${appName} V2`,
-    short_name: `${appName} V2`,
-    description: "V2 - Location sharing, moments, and real-time chat",
+    name: appName,
+    short_name: appName,
+    description: "Location sharing, moments, and real-time chat",
     start_url: "/v2",
     display: "standalone",
     background_color: "#000000",

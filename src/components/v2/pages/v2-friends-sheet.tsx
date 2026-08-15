@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, TouchEvent } from "react";
-import { ChevronUp, Users, BatteryCharging } from "lucide-react";
+import { ChevronUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveUserDto } from "@/lib/signalr/types";
 
@@ -150,25 +150,24 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
 
                 <div className="friend-card-info">
                   <h4 className="friend-card-name">{friend.name}</h4>
-                  <p className="friend-card-distance">
-                    {myLocation ? (
-                      `${calculateDistance(
-                        myLocation.lat,
-                        myLocation.lng,
-                        friend.latitude,
-                        friend.longitude
-                      )} away`
-                    ) : "Unknown distance"}
-                  </p>
-                  {friend.status && (
-                    <p className="friend-card-status">{friend.status}</p>
-                  )}
-                  {friend.battery != null && (
-                    <div className="friend-card-battery">
-                      <BatteryCharging className="battery-icon" size={12} />
-                      <span>{friend.battery}%</span>
-                    </div>
-                  )}
+                  <div className="friend-card-meta">
+                    <span className="friend-card-distance">
+                      {myLocation
+                        ? `${calculateDistance(
+                            myLocation.lat,
+                            myLocation.lng,
+                            friend.latitude,
+                            friend.longitude,
+                          )} away`
+                        : "Unknown distance"}
+                    </span>
+                    {friend.status && (
+                      <>
+                        <span className="friend-card-meta-dot">·</span>
+                        <span className="friend-card-status">{friend.status}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -331,12 +330,12 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
         .friend-card {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px;
-          margin-bottom: 8px;
+          gap: 10px;
+          padding: 8px 10px;
+          margin-bottom: 6px;
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 16px;
+          border-radius: 14px;
           transition: background 0.2s;
         }
 
@@ -351,8 +350,8 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
 
         .friend-card-image,
         .friend-card-placeholder {
-          width: 44px;
-          height: 44px;
+          width: 38px;
+          height: 38px;
           border-radius: 50%;
           object-fit: cover;
         }
@@ -361,8 +360,8 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          font-size: 18px;
+          background: linear-gradient(135deg, #2BB0AF 0%, #1a8a89 100%);
+          font-size: 16px;
           font-weight: 600;
           color: white;
         }
@@ -387,7 +386,7 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
         }
 
         .friend-card-name {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: white;
           margin: 0;
@@ -396,33 +395,34 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
           white-space: nowrap;
         }
 
+        .friend-card-meta {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          margin-top: 2px;
+          min-width: 0;
+        }
+
         .friend-card-distance {
-          font-size: 12px;
+          font-size: 11px;
           color: rgba(255, 255, 255, 0.5);
-          margin: 2px 0 0;
+          flex-shrink: 0;
+        }
+
+        .friend-card-meta-dot {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.3);
+          flex-shrink: 0;
         }
 
         .friend-card-status {
           font-size: 11px;
           font-style: italic;
-          color: rgba(43, 176, 175, 0.9);
-          margin: 2px 0 0;
+          color: rgba(43, 176, 175, 0.95);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        }
-
-        .friend-card-battery {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          margin-top: 4px;
-          font-size: 11px;
-          color: #22c55e;
-        }
-
-        .battery-icon {
-          color: #22c55e;
+          min-width: 0;
         }
 
         .empty-state {

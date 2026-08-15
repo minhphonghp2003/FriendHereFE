@@ -5,6 +5,9 @@ import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useTheme } from "next-themes";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { CustomMarker } from "@/components/home/custom-marker";
+import { MarkerDetail } from "@/components/home/marker-detail";
+import { useUser } from "@/hooks/users/use-users";
+import { useAuth } from "@/providers/auth-provider";
 import { V2FriendsSheet } from "./v2-friends-sheet";
 import { Check, Pencil, X as XIcon } from "lucide-react";
 import { V2LocationSettingsDialog } from "./v2-location-settings-dialog";
@@ -33,6 +36,7 @@ function MapAutoCenter({ position }: { position: google.maps.LatLngLiteral | und
 export function V2LocationPage() {
   const { resolvedTheme } = useTheme();
   const dispatch = useAppDispatch();
+  const { user: authUser } = useAuth();
 
   // Use v1's Redux location store directly
   const locations = useAppSelector((s) => s.location.locations);
@@ -53,6 +57,16 @@ export function V2LocationPage() {
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
+
+  // Marker detail modal — v1 pattern: selectedUserId + useUser
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const {
+    data: selectedUserDetail,
+    isLoading: loadingSelectedUser,
+    refetch: refetchSelectedUser,
+  } = useUser(selectedUserId ?? 0);
+  const selectedLocation = locations.find((l) => l.userId === selectedUserId);
+  const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
 
   const position =
     latitude !== null && longitude !== null
@@ -170,7 +184,8 @@ export function V2LocationPage() {
                   status={location.status}
                   moments={location.moments}
                   moving={false}
-                  size={72}
+                  size={56}
+                  onClick={() => setSelectedUserId(location.userId)}
                 />
               ))}
 
@@ -183,7 +198,8 @@ export function V2LocationPage() {
                 isCurrentUser
                 battery={myBattery}
                 status={myDisplayStatus}
-                size={72}
+                size={56}
+                onClick={() => setSelectedUserId(user?.id ?? null)}
                 statusActions={
                   statusEditorOpen ? undefined : (
                     <>
@@ -264,6 +280,29 @@ export function V2LocationPage() {
 
       <V2FriendsSheet nearbyFriends={nearbyFriends} myLocation={position} />
       <V2LocationSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* User detail modal — v1 MarkerDetail (add friend, chat, block, ...) */}
+      {selectedUserId !== null && (
+        <MarkerDetail
+          isCurrentUser={selectedUserId === user?.id}
+          currentUser={authUser}
+          userDetail={selectedUserDetail ?? null}
+          loading={loadingSelectedUser}
+          battery={
+            selectedUserId === user?.id
+              ? (myBattery ?? undefined)
+              : (selectedActive?.battery ?? selectedLocation?.battery ?? undefined)
+          }
+          status={
+            selectedUserId === user?.id
+              ? (myDisplayStatus ?? undefined)
+              : (selectedActive?.status ?? selectedLocation?.status ?? undefined)
+          }
+          distance={selectedUserId === user?.id ? null : (selectedActive?.distance ?? null)}
+          onClose={() => setSelectedUserId(null)}
+          onFriendshipChange={refetchSelectedUser}
+        />
+      )}
 
       <style jsx global>{`
         .v2-location-container {

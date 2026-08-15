@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bell, LogOut, Eye, ChevronRight, Check, Download } from "lucide-react";
+import { Bell, BellOff, LogOut, Eye, ChevronRight, Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -15,72 +15,54 @@ import {
   LOCATION_VISIBILITY_LABELS,
   type LocationVisibilityValue,
 } from "@/lib/signalr/types";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { requestNotificationPermission } from "@/lib/fcm";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHere";
 
 const VISIBILITY_OPTIONS = Object.entries(LOCATION_VISIBILITY_LABELS) as [string, string][];
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 interface V2SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const isStandalonePwa = (): boolean => {
-  if (typeof window === "undefined") return false;
-  const standaloneMedia = window.matchMedia?.("(display-mode: standalone)").matches;
-  const iosStandalone =
-    typeof window.navigator !== "undefined" &&
-    // @ts-expect-error iOS Safari proprietary flag
-    window.navigator.standalone === true;
-  return Boolean(standaloneMedia || iosStandalone);
-};
-
 export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) {
   const user = useSelector((state: RootState) => state.auth.user);
   const visibility = useSelector((state: RootState) => state.location.visibility);
   const dispatch = useAppDispatch();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isPwa, setIsPwa] = useState(true);
 
-  // Detect PWA mode + capture the install prompt when available
+  // v1 PWA install logic
+  const { canInstall, isInstalled, isIOS, promptInstall } = usePwaInstall();
+  const [showIOSInstall, setShowIOSInstall] = useState(false);
+
+  // v1 notification permission logic
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission | null>(null);
+
   useEffect(() => {
-    setIsPwa(isStandalonePwa());
-
-    const onBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-    window.addEventListener("appinstalled", () => setInstallPrompt(null));
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-    };
-  }, []);
-
-  // Only show the section when not installed as PWA
-  const showDownloadSection = !isPwa;
-
-  const handleInstall = async () => {
-    if (installPrompt) {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      if (choice.outcome === "accepted") {
-        setInstallPrompt(null);
-      }
-      return;
+    if (typeof Notification !== "undefined") {
+      setNotificationPermission(Notification.permission);
     }
-    // No native prompt (e.g. iOS Safari): guide the user
-    alert(
-      "To install the app:\n\n" +
-        "iOS: Share → Add to Home Screen\n" +
-        "Android: Menu → Install app / Add to Home screen",
-    );
+  }, [open]);
+
+  const handleRequestNotificationPermission = async () => {
+    try {
+      // v1: requestNotificationPermission from lib/fcm
+      const permission = await requestNotificationPermission();
+      setNotificationPermission(permission);
+    } catch (err) {
+      console.error("Failed to request notification permission:", err);
+    }
+  };
+
+  const handleInstall = () => {
+    if (isIOS) {
+      setShowIOSInstall(true);
+    } else if (canInstall) {
+      promptInstall();
+    }
   };
 
   const visibilityLabel =
@@ -92,10 +74,6 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
     dispatch(setMyVisibility(value));
     locationHub.updateVisibility(value);
     setShowVisibilityPicker(false);
-  };
-
-  const handleToggleNotifications = () => {
-    setNotificationsEnabled(!notificationsEnabled);
   };
 
   const handleLogout = () => {
@@ -149,31 +127,44 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                   </div>
                 </button>
 
-                {/* Notifications */}
+                {/* Notifications — v1 permission flow */}
                 <div className="setting-item">
                   <div className="setting-info">
                     <div className="setting-icon-wrapper">
-                      <Bell className="setting-icon" />
+                      {notificationPermission === "granted" ? (
+                        <Bell className="setting-icon" />
+                      ) : (
+                        <BellOff className="setting-icon" />
+                      )}
                     </div>
                     <div className="setting-details">
                       <h3 className="setting-title">Notifications</h3>
-                      <p className="setting-description">Receive push notifications</p>
+                      <p className="setting-description">
+                        {notificationPermission === "granted"
+                          ? "Push notifications enabled"
+                          : notificationPermission === "denied"
+                            ? "Blocked in browser settings"
+                            : "Receive push notifications"}
+                      </p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleToggleNotifications}
-                    className={`setting-toggle ${
-                      notificationsEnabled ? "setting-toggle-on" : ""
-                    }`}
-                    aria-label="Toggle notifications"
-                  >
-                    <div className="toggle-slider" />
-                  </button>
+                  {notificationPermission === "granted" ? (
+                    <span className="setting-perm-badge granted">On</span>
+                  ) : notificationPermission === "denied" ? (
+                    <span className="setting-perm-badge denied">Off</span>
+                  ) : (
+                    <button
+                      onClick={handleRequestNotificationPermission}
+                      className="setting-enable-btn"
+                    >
+                      Enable
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Download app — only shown when NOT running as installed PWA */}
-              {showDownloadSection && (
+              {/* Download app — v1 usePwaInstall, hidden when already installed */}
+              {!isInstalled && (
                 <>
                   <div className="settings-divider" />
                   <button onClick={handleInstall} className="setting-item setting-item-btn">
@@ -184,7 +175,9 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                       <div className="setting-details">
                         <h3 className="setting-title">Download app</h3>
                         <p className="setting-description">
-                          Install for a full-screen app experience
+                          {canInstall || isIOS
+                            ? "Install for a full-screen app experience"
+                            : "Browser doesn't support quick install yet"}
                         </p>
                       </div>
                     </div>
@@ -211,7 +204,69 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
           )}
         </div>
 
+        {/* iOS install instructions — same steps as v1's PwaInstallButton */}
+        {isIOS && (
+          <Dialog open={showIOSInstall} onOpenChange={setShowIOSInstall}>
+            <DialogContent className="v2-ios-install-dialog">
+              <h3 className="ios-install-title">Cài đặt {APP_NAME}</h3>
+              <p className="ios-install-sub">Thêm ứng dụng vào màn hình chính để trải nghiệm tốt nhất.</p>
+              <ol className="ios-install-steps">
+                <li>
+                  <span className="ios-step-num">1</span>
+                  <span>Nhấn nút Share ở thanh công cụ Safari.</span>
+                </li>
+                <li>
+                  <span className="ios-step-num">2</span>
+                  <span>Chọn &ldquo;Thêm vào Màn hình chính&rdquo;.</span>
+                </li>
+                <li>
+                  <span className="ios-step-num">3</span>
+                  <span>Nhấn &ldquo;Thêm&rdquo; để hoàn tất.</span>
+                </li>
+              </ol>
+              <button onClick={() => setShowIOSInstall(false)} className="ios-install-done">
+                Đã hiểu
+              </button>
+            </DialogContent>
+          </Dialog>
+        )}
+
         <style jsx global>{`
+          .setting-perm-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            flex-shrink: 0;
+          }
+
+          .setting-perm-badge.granted {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+          }
+
+          .setting-perm-badge.denied {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+          }
+
+          .setting-enable-btn {
+            background: #2BB0AF;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+          }
+
+          .setting-enable-btn:hover {
+            background: #1a8a89;
+          }
+
           .setting-item-btn {
             width: 100%;
             background: rgba(255, 255, 255, 0.05);
@@ -430,6 +485,75 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
           .logout-icon {
             width: 14px;
             height: 14px;
+          }
+
+          /* iOS install dialog (v1 steps) */
+          .v2-ios-install-dialog {
+            background: rgba(20, 20, 20, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 20px !important;
+            padding: 24px !important;
+            max-width: 320px;
+          }
+
+          .ios-install-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 6px;
+          }
+
+          .ios-install-sub {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0 0 16px;
+          }
+
+          .ios-install-steps {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .ios-install-steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+          }
+
+          .ios-step-num {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            background: #2BB0AF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+          }
+
+          .ios-install-done {
+            width: 100%;
+            background: #2BB0AF;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .ios-install-done:hover {
+            background: #1a8a89;
           }
         `}</style>
       </DialogContent>

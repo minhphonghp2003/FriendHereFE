@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { MessageCircle, Settings, RefreshCw, UserPlus } from "lucide-react";
+import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2ProfileDialog } from "@/components/v2/dialogs/v2-profile-dialog";
-import { V2FriendsDialog } from "@/components/v2/dialogs/v2-friends-dialog";
 
-type ActiveDialog = "chat" | "settings" | "profile" | "friends" | null;
+type ActiveDialog = "chat" | "settings" | "profile" | null;
 
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
@@ -86,14 +85,6 @@ export function V2Header() {
             />
           </button>
           <button
-            onClick={() => toggleDialog("friends")}
-            className={`header-float-btn ${activeDialog === "friends" ? 'header-btn-active' : ''}`}
-            aria-label="Friends"
-            aria-expanded={activeDialog === "friends"}
-          >
-            <UserPlus className="header-float-icon" />
-          </button>
-          <button
             onClick={() => toggleDialog("chat")}
             className={`header-float-btn ${activeDialog === "chat" ? 'header-btn-active' : ''}`}
             aria-label="Chat"
@@ -118,7 +109,6 @@ export function V2Header() {
       <V2ChatDialog open={activeDialog === "chat"} onOpenChange={(open) => !open && setActiveDialog(null)} />
       <V2SettingsDialog open={activeDialog === "settings"} onOpenChange={(open) => !open && setActiveDialog(null)} />
       <V2ProfileDialog open={activeDialog === "profile"} onOpenChange={(open) => !open && setActiveDialog(null)} />
-      <V2FriendsDialog open={activeDialog === "friends"} onOpenChange={(open) => !open && setActiveDialog(null)} />
 
       <style jsx global>{`
         .v2-header {
