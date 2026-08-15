@@ -402,7 +402,7 @@ export const MarkerDetail = ({
             {renderFriendshipButton()}
             <button
               onClick={handleChat}
-              className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90 flex-1 rounded-lg py-2 text-sm font-medium text-white"
             >
               Nhắn tin
             </button>

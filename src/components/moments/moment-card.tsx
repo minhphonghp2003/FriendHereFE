@@ -558,7 +558,9 @@ export const MomentCard = ({
       )}
 
       <div className="relative">
-        {moment.video && <MomentVideoPlayer src={moment.video.originalUrl} />}
+        {moment.video && (
+          <MomentVideoPlayer src={moment.video.originalUrl} poster={moment.video.thumbUrl} />
+        )}
         {!moment.video && moment.images.length === 1 && (
           <div className="bg-muted relative aspect-square w-full overflow-hidden">
             <Image

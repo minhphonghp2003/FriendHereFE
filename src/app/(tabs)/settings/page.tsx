@@ -324,7 +324,7 @@ export default function SettingsPage() {
             <UserPlus className="text-muted-foreground h-5 w-5" />
             <span className="flex-1">Lời mời kết bạn</span>
             {pendingReceived.length > 0 && (
-              <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs text-white">
+              <span className="bg-primary flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs text-white">
                 {pendingReceived.length}
               </span>
             )}

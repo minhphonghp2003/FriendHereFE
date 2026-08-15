@@ -299,7 +299,7 @@ export const MessageBubble = ({
       <BubbleWrapper
         msg={msg}
         onLongPress={onLongPress}
-        className={`rounded-2xl px-2 py-2 ${isMe ? "rounded-br-md bg-blue-600 text-white" : "bg-muted rounded-bl-md"}`}
+        className={`rounded-2xl px-2 py-2 ${isMe ? "bg-primary rounded-br-md text-white" : "bg-muted rounded-bl-md"}`}
       >
         {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
         <div className="space-y-1.5">
@@ -398,7 +398,7 @@ export const MessageBubble = ({
     <BubbleWrapper
       msg={msg}
       onLongPress={onLongPress}
-      className={`rounded-2xl px-4 py-2 ${isMe ? "rounded-br-md bg-blue-600 text-white" : "bg-muted rounded-bl-md"}`}
+      className={`rounded-2xl px-4 py-2 ${isMe ? "bg-primary rounded-br-md text-white" : "bg-muted rounded-bl-md"}`}
     >
       {msg.replyToId && <ReplyQuote msg={msg} isMe={isMe} onReplyClick={onReplyClick} />}
       {msg.momentThumbnail ? (

@@ -140,7 +140,7 @@ export default function NewGroupChatPage() {
                         {getNameDisplay(f.otherUserName)}
                       </span>
                       {isSelected && (
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white">
+                        <span className="bg-primary absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-white">
                           <Check className="h-3 w-3" />
                         </span>
                       )}
@@ -159,7 +159,7 @@ export default function NewGroupChatPage() {
         <button
           onClick={handleCreate}
           disabled={!canCreate}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="bg-primary hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-full py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
