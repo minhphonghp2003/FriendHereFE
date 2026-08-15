@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { TOKEN_EXPIRES_AT_KEY } from "@/constants";
+import { TOKEN_EXPIRES_AT_KEY, REFRESH_TOKEN_KEY, REFRESH_TOKEN_EXPIRES_AT_KEY } from "@/constants";
 
 import { useAuth } from "@/providers/auth-provider";
 import { login as apiLogin } from "@/services/auth";
@@ -37,6 +37,8 @@ export default function LoginPage() {
       const result = await apiLogin(form);
 
       localStorage.setItem(TOKEN_EXPIRES_AT_KEY, result.expiresAt);
+      localStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
+      localStorage.setItem(REFRESH_TOKEN_EXPIRES_AT_KEY, result.refreshTokenExpiresAt);
 
       login(
         {
@@ -45,6 +47,9 @@ export default function LoginPage() {
           email: result.email,
         },
         result.token,
+        result.refreshToken,
+        result.expiresAt,
+        result.refreshTokenExpiresAt,
       );
 
       // Obtain the FCM token (prompts for permission if needed) and register
