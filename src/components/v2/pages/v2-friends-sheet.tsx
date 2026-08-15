@@ -1,21 +1,27 @@
 "use client";
 
 import { useState, useRef, TouchEvent } from "react";
-import { ChevronUp, Users } from "lucide-react";
+import { ChevronUp, Users, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { getOpponentConversation } from "@/services/chat";
 import type { ActiveUserDto } from "@/lib/signalr/types";
 
 interface V2FriendsSheetProps {
   nearbyFriends: ActiveUserDto[];
   myLocation: { lat: number; lng: number } | undefined;
+  /** Open the unified user detail dialog (same as marker tap) */
+  onUserTap?: (userId: number) => void;
 }
 
-export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProps) {
+export function V2FriendsSheet({ nearbyFriends, myLocation, onUserTap }: V2FriendsSheetProps) {
+  const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(80);
   const [touchStart, setTouchStart] = useState(0);
   const [touchCurrent, setTouchCurrent] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [chatLoadingId, setChatLoadingId] = useState<number | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   
   const maxSheetHeight = typeof window !== 'undefined' ? window.innerHeight - 100 : 400;
@@ -82,6 +88,25 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
     return `${Math.round(distance)}km`;
   };
 
+  // v1 MarkerDetail logic: find existing conversation or create a new one
+  const handleChat = async (e: React.MouseEvent, userId: number, name: string) => {
+    e.stopPropagation();
+    if (chatLoadingId !== null) return;
+    setChatLoadingId(userId);
+    try {
+      const res = await getOpponentConversation(userId);
+      if (res.data) {
+        router.push(`/chat/${res.data}`);
+      } else {
+        router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
+      }
+    } catch {
+      router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
+    } finally {
+      setChatLoadingId(null);
+    }
+  };
+
   // Drag progress 0..1 (collapsed -> fully open) drives content opacity
   const openProgress = Math.min(
     1,
@@ -132,7 +157,16 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
         >
           <div className="friends-scroll">
             {nearbyFriends.map((friend) => (
-              <div key={friend.userId} className="friend-card">
+              <div
+                key={friend.userId}
+                className="friend-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => onUserTap?.(friend.userId)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onUserTap?.(friend.userId);
+                }}
+              >
                 <div className="friend-card-avatar">
                   {friend.image ? (
                     <img
@@ -169,6 +203,16 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
                     )}
                   </div>
                 </div>
+
+                {/* Trailing message button (v1 chat logic) */}
+                <button
+                  onClick={(e) => handleChat(e, friend.userId, friend.name)}
+                  disabled={chatLoadingId === friend.userId}
+                  className="friend-card-chat-btn"
+                  aria-label={`Message ${friend.name}`}
+                >
+                  <MessageCircle className="friend-card-chat-icon" fill="currentColor" />
+                </button>
               </div>
             ))}
             
@@ -341,6 +385,45 @@ export function V2FriendsSheet({ nearbyFriends, myLocation }: V2FriendsSheetProp
 
         .friend-card:active {
           background: rgba(255, 255, 255, 0.08);
+        }
+
+        .friend-card {
+          cursor: pointer;
+        }
+
+        .friend-card-chat-btn {
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #2BB0AF;
+          border: none;
+          border-radius: 50%;
+          color: white;
+          cursor: pointer;
+          flex-shrink: 0;
+          padding: 0;
+          transition: all 0.2s;
+        }
+
+        .friend-card-chat-btn:hover:not(:disabled) {
+          background: #1a8a89;
+          transform: scale(1.08);
+        }
+
+        .friend-card-chat-btn:active {
+          transform: scale(0.92);
+        }
+
+        .friend-card-chat-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .friend-card-chat-icon {
+          width: 16px;
+          height: 16px;
         }
 
         .friend-card-avatar {

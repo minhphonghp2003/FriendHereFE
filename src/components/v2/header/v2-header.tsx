@@ -7,7 +7,7 @@ import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
 import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
-import { V2ProfileDialog } from "@/components/v2/dialogs/v2-profile-dialog";
+import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 
 type ActiveDialog = "chat" | "settings" | "profile" | null;
 
@@ -108,7 +108,10 @@ export function V2Header() {
 
       <V2ChatDialog open={activeDialog === "chat"} onOpenChange={(open) => !open && setActiveDialog(null)} />
       <V2SettingsDialog open={activeDialog === "settings"} onOpenChange={(open) => !open && setActiveDialog(null)} />
-      <V2ProfileDialog open={activeDialog === "profile"} onOpenChange={(open) => !open && setActiveDialog(null)} />
+      <V2UserDetailDialog
+        userId={activeDialog === "profile" ? "me" : null}
+        onClose={() => setActiveDialog(null)}
+      />
 
       <style jsx global>{`
         .v2-header {

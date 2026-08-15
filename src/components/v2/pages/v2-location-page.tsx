@@ -5,9 +5,7 @@ import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useTheme } from "next-themes";
 import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
 import { CustomMarker } from "@/components/home/custom-marker";
-import { MarkerDetail } from "@/components/home/marker-detail";
-import { useUser } from "@/hooks/users/use-users";
-import { useAuth } from "@/providers/auth-provider";
+import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 import { V2FriendsSheet } from "./v2-friends-sheet";
 import { Check, Pencil, X as XIcon } from "lucide-react";
 import { V2LocationSettingsDialog } from "./v2-location-settings-dialog";
@@ -36,7 +34,6 @@ function MapAutoCenter({ position }: { position: google.maps.LatLngLiteral | und
 export function V2LocationPage() {
   const { resolvedTheme } = useTheme();
   const dispatch = useAppDispatch();
-  const { user: authUser } = useAuth();
 
   // Use v1's Redux location store directly
   const locations = useAppSelector((s) => s.location.locations);
@@ -58,13 +55,8 @@ export function V2LocationPage() {
   const [statusValue, setStatusValue] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
 
-  // Marker detail modal — v1 pattern: selectedUserId + useUser
+  // User detail modal (unified V2 dialog fetches its own user data)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const {
-    data: selectedUserDetail,
-    isLoading: loadingSelectedUser,
-    refetch: refetchSelectedUser,
-  } = useUser(selectedUserId ?? 0);
   const selectedLocation = locations.find((l) => l.userId === selectedUserId);
   const selectedActive = activeUsers.find((u) => u.userId === selectedUserId);
 
@@ -278,31 +270,39 @@ export function V2LocationPage() {
         </div>
       )}
 
-      <V2FriendsSheet nearbyFriends={nearbyFriends} myLocation={position} />
+      <V2FriendsSheet
+        nearbyFriends={nearbyFriends}
+        myLocation={position}
+        onUserTap={(userId) => setSelectedUserId(userId)}
+      />
       <V2LocationSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
-      {/* User detail modal — v1 MarkerDetail (add friend, chat, block, ...) */}
-      {selectedUserId !== null && (
-        <MarkerDetail
-          isCurrentUser={selectedUserId === user?.id}
-          currentUser={authUser}
-          userDetail={selectedUserDetail ?? null}
-          loading={loadingSelectedUser}
-          battery={
-            selectedUserId === user?.id
-              ? (myBattery ?? undefined)
-              : (selectedActive?.battery ?? selectedLocation?.battery ?? undefined)
-          }
-          status={
-            selectedUserId === user?.id
-              ? (myDisplayStatus ?? undefined)
-              : (selectedActive?.status ?? selectedLocation?.status ?? undefined)
-          }
-          distance={selectedUserId === user?.id ? null : (selectedActive?.distance ?? null)}
-          onClose={() => setSelectedUserId(null)}
-          onFriendshipChange={refetchSelectedUser}
-        />
-      )}
+      {/* User detail modal — unified V2 component (my profile OR other user w/ v1 actions) */}
+      <V2UserDetailDialog
+        userId={
+          selectedUserId === null
+            ? null
+            : selectedUserId === user?.id
+              ? "me"
+              : selectedUserId
+        }
+        onClose={() => setSelectedUserId(null)}
+        battery={
+          selectedUserId !== null && selectedUserId !== user?.id
+            ? (selectedActive?.battery ?? selectedLocation?.battery ?? null)
+            : null
+        }
+        status={
+          selectedUserId !== null && selectedUserId !== user?.id
+            ? (selectedActive?.status ?? selectedLocation?.status ?? null)
+            : null
+        }
+        distance={
+          selectedUserId !== null && selectedUserId !== user?.id
+            ? (selectedActive?.distance ?? null)
+            : null
+        }
+      />
 
       <style jsx global>{`
         .v2-location-container {
