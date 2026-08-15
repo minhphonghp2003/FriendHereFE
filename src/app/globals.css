@@ -49,72 +49,74 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Custom Teal/Mint Color Palette */
+  --background: oklch(0.98 0.01 195); /* #F3FBF8 - Soft Mint White */
+  --foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --card: oklch(1 0 0); /* #FFFFFF - White */
+  --card-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --popover: oklch(1 0 0); /* #FFFFFF - White */
+  --popover-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --primary: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --primary-foreground: oklch(1 0 0); /* #FFFFFF - White */
+  --secondary: oklch(0.85 0.06 195); /* #B4EADA - Mint */
+  --secondary-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --muted: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --muted-foreground: oklch(0.55 0.06 195); /* #5E7F86 - Muted Teal */
+  --accent: oklch(0.85 0.06 195); /* #B4EADA - Mint */
+  --accent-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: oklch(0.88 0.04 195); /* #D8ECE8 - Light Teal Gray */
+  --input: oklch(0.88 0.04 195); /* #D8ECE8 - Light Teal Gray */
+  --ring: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --chart-1: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --chart-2: oklch(0.48 0.14 195); /* #057C90 - Deep Teal */
+  --chart-3: oklch(0.85 0.06 195); /* #B4EADA - Mint */
+  --chart-4: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
+  --chart-5: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.98 0.01 195); /* #F3FBF8 - Soft Mint White */
+  --sidebar-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --sidebar-primary: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --sidebar-primary-foreground: oklch(1 0 0); /* #FFFFFF - White */
+  --sidebar-accent: oklch(0.85 0.06 195); /* #B4EADA - Mint */
+  --sidebar-accent-foreground: oklch(0.35 0.08 195); /* #164A57 - Deep Teal Navy */
+  --sidebar-border: oklch(0.88 0.04 195); /* #D8ECE8 - Light Teal Gray */
+  --sidebar-ring: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Dark Mode Teal/Mint Color Palette */
+  --background: oklch(0.18 0.06 195); /* #164A57 - Deep Teal Navy (darker) */
+  --foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --card: oklch(0.22 0.08 195); /* #057C90 - Deep Teal */
+  --card-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --popover: oklch(0.22 0.08 195); /* #057C90 - Deep Teal */
+  --popover-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --primary: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
+  --primary-foreground: oklch(0.18 0.06 195); /* #164A57 - Deep Teal Navy */
+  --secondary: oklch(0.35 0.12 195); /* #2BB0AF - Teal */
+  --secondary-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --muted: oklch(0.30 0.10 195); /* Deep Teal (slightly lighter) */
+  --muted-foreground: oklch(0.75 0.06 195); /* #B4EADA - Mint (lighter) */
+  --accent: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --accent-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(0.35 0.12 195); /* #2BB0AF - Teal (transparent) */
+  --input: oklch(0.35 0.12 195); /* #2BB0AF - Teal (transparent) */
+  --ring: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
+  --chart-1: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
+  --chart-2: oklch(0.62 0.12 195); /* #2BB0AF - Teal */
+  --chart-3: oklch(0.85 0.06 195); /* #B4EADA - Mint */
+  --chart-4: oklch(0.48 0.14 195); /* #057C90 - Deep Teal */
+  --chart-5: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --sidebar: oklch(0.22 0.08 195); /* #057C90 - Deep Teal */
+  --sidebar-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --sidebar-primary: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
+  --sidebar-primary-foreground: oklch(0.18 0.06 195); /* #164A57 - Deep Teal Navy */
+  --sidebar-accent: oklch(0.35 0.12 195); /* #2BB0AF - Teal */
+  --sidebar-accent-foreground: oklch(0.96 0.03 195); /* #F3FBF8 - Soft Mint White */
+  --sidebar-border: oklch(0.35 0.12 195); /* #2BB0AF - Teal (transparent) */
+  --sidebar-ring: oklch(0.78 0.08 195); /* #7DDED0 - Aqua */
 }
 
 @layer base {
