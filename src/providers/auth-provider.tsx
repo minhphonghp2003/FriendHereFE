@@ -4,13 +4,26 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCredentials, logout } from "@/store/slices/auth-slice";
 import { getUserById } from "@/services/user";
-import { TOKEN_KEY, USER_ID_KEY, USER_INFO_KEY } from "@/constants";
+import {
+  TOKEN_KEY,
+  USER_ID_KEY,
+  USER_INFO_KEY,
+  REFRESH_TOKEN_KEY,
+  TOKEN_EXPIRES_AT_KEY,
+  REFRESH_TOKEN_EXPIRES_AT_KEY,
+} from "@/constants";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
   user: { id: number; name: string; email: string } | null;
   token: string | null;
-  login: (user: { id: number; name: string; email: string }, token?: string) => void;
+  login: (
+    user: { id: number; name: string; email: string },
+    token?: string,
+    refreshToken?: string,
+    expiresAt?: string,
+    refreshTokenExpiresAt?: string,
+  ) => void;
   logout: () => void;
 }
 
@@ -28,6 +41,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const userId = localStorage.getItem(USER_ID_KEY);
     const storedToken = localStorage.getItem(TOKEN_KEY);
+    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const storedExpiresAt = localStorage.getItem(TOKEN_EXPIRES_AT_KEY);
+    const storedRefreshExpiresAt = localStorage.getItem(REFRESH_TOKEN_EXPIRES_AT_KEY);
+
     if (userId) {
       let name = "";
       let email = "";
@@ -44,6 +61,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setCredentials({
           user: { id: Number(userId), name, email },
           token: storedToken || undefined,
+          refreshToken: storedRefreshToken || undefined,
+          expiresAt: storedExpiresAt || undefined,
+          refreshTokenExpiresAt: storedRefreshExpiresAt || undefined,
         }),
       );
 
@@ -54,6 +74,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setCredentials({
               user: { id: detail.id, name: detail.name, email: detail.email ?? "" },
               token: storedToken || undefined,
+              refreshToken: storedRefreshToken || undefined,
+              expiresAt: storedExpiresAt || undefined,
+              refreshTokenExpiresAt: storedRefreshExpiresAt || undefined,
             }),
           );
           localStorage.setItem(
@@ -75,6 +98,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const handleLogin = (
     userData: { id: number; name: string; email: string },
     authToken?: string,
+    refreshToken?: string,
+    expiresAt?: string,
+    refreshTokenExpiresAt?: string,
   ) => {
     localStorage.setItem(USER_ID_KEY, String(userData.id));
     localStorage.setItem(
@@ -87,11 +113,47 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (authToken) {
       localStorage.setItem(TOKEN_KEY, authToken);
     }
-    dispatch(setCredentials({ user: userData, token: authToken }));
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+    if (expiresAt) {
+      localStorage.setItem(TOKEN_EXPIRES_AT_KEY, expiresAt);
+    }
+    if (refreshTokenExpiresAt) {
+      localStorage.setItem(REFRESH_TOKEN_EXPIRES_AT_KEY, refreshTokenExpiresAt);
+    }
+    dispatch(
+      setCredentials({
+        user: userData,
+        token: authToken,
+        refreshToken,
+        expiresAt,
+        refreshTokenExpiresAt,
+      }),
+    );
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    // Call revoke endpoint if refresh token exists
+    if (refreshToken) {
+      try {
+        const axios = (await import("axios")).default;
+        const { env } = await import("@/config/env");
+        await axios.post(`${env.NEXT_PUBLIC_API_URL}/Auth/revoke-refresh-token`, {
+          token: refreshToken,
+        });
+      } catch (error) {
+        console.error("Logout request failed:", error);
+      }
+    }
+
+    // Clear all tokens and user data
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_EXPIRES_AT_KEY);
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(USER_INFO_KEY);
     dispatch(logout());
@@ -103,7 +165,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, token, login: handleLogin, logout: handleLogout }}
+      value={{
+        isAuthenticated,
+        user,
+        token,
+        login: handleLogin,
+        logout: handleLogout,
+      }}
     >
       {children}
     </AuthContext.Provider>

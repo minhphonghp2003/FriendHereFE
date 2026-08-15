@@ -21,6 +21,8 @@ export interface AuthResponse {
   email: string;
   token: string;
   expiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
 }
 
 export interface AuthUser {
