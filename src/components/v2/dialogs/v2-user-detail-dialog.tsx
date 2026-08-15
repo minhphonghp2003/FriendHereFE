@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { LoadingVideo } from "@/components/common/loading-video";
 import {
   Mail,
   Camera,
   UserPlus,
   UserCheck,
   UserX,
-  Loader2,
   Ban,
   Trash2,
   Tag,
@@ -52,6 +52,14 @@ import {
 } from "@/types/friendship";
 import type { FriendshipDto } from "@/types/friendship";
 import { toast } from "sonner";
+
+/** Same mapping as v1's settings edit dialog */
+const GENDER_LABELS: Record<number, string> = {
+  1: "Nam",
+  2: "Nữ",
+  3: "Gay",
+  4: "Les",
+};
 
 interface V2UserDetailDialogProps {
   /** null = closed; "me" = my profile; number = other user id */
@@ -114,18 +122,28 @@ export function V2UserDetailDialog({
   // ---- My profile editing ----
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [genderId, setGenderId] = useState("1");
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
-    if (isMe && userDetail) setName(userDetail.name);
+    if (isMe && userDetail) {
+      setName(userDetail.name);
+      setAge(userDetail.age != null ? String(userDetail.age) : "");
+      setGenderId(userDetail.genderId != null ? String(userDetail.genderId) : "1");
+    }
   }, [isMe, userDetail]);
 
   const handleSaveProfile = async () => {
     if (!userDetail) return;
     try {
       setSavingProfile(true);
-      const updated = await updateCurrentUser({ name: name.trim() });
+      const updated = await updateCurrentUser({
+        name: name.trim(),
+        age: age ? Number(age) : undefined,
+        genderId: Number(genderId),
+      });
       dispatch(
         setCredentials({ user: { id: updated.id, name: updated.name, email: updated.email } }),
       );
@@ -394,7 +412,7 @@ export function V2UserDetailDialog({
         <div className="dialog-content">
           {loadingUser ? (
             <div className="vud-loading">
-              <Loader2 className="vud-loading-icon" />
+              <LoadingVideo size="sm" />
             </div>
           ) : (
             <>
@@ -450,11 +468,37 @@ export function V2UserDetailDialog({
                         placeholder="Your name"
                         maxLength={50}
                       />
+                      <div className="profile-edit-row">
+                        <Input
+                          type="number"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          className="profile-name-input"
+                          placeholder="Age"
+                          min={1}
+                          max={150}
+                        />
+                        <select
+                          value={genderId}
+                          onChange={(e) => setGenderId(e.target.value)}
+                          className="profile-gender-select"
+                          aria-label="Gender"
+                        >
+                          <option value="1">Nam</option>
+                          <option value="2">Nữ</option>
+                          <option value="3">Gay</option>
+                          <option value="4">Les</option>
+                        </select>
+                      </div>
                       <div className="profile-edit-actions">
                         <Button
                           onClick={() => {
                             setIsEditing(false);
                             setName(userDetail?.name || "");
+                            setAge(userDetail?.age != null ? String(userDetail.age) : "");
+                            setGenderId(
+                              userDetail?.genderId != null ? String(userDetail.genderId) : "1",
+                            );
                           }}
                           variant="outline"
                           size="sm"
@@ -497,8 +541,17 @@ export function V2UserDetailDialog({
                       Edit Profile
                     </Button>
                   )}
-                  {!isMe && userDetail?.age != null && (
-                    <p className="profile-meta">{userDetail.age} years old</p>
+                  {/* Age + gender (my profile and others) */}
+                  {(userDetail?.age != null || userDetail?.genderId != null) && (
+                    <p className="profile-meta">
+                      {userDetail?.age != null && <span>{userDetail.age} years old</span>}
+                      {userDetail?.age != null && userDetail?.genderId != null && (
+                        <span className="profile-meta-dot"> · </span>
+                      )}
+                      {userDetail?.genderId != null && (
+                        <span>{GENDER_LABELS[userDetail.genderId] ?? "Other"}</span>
+                      )}
+                    </p>
                   )}
                   {status && (
                     <p className="profile-meta profile-meta-status">{status}</p>
@@ -506,7 +559,6 @@ export function V2UserDetailDialog({
                   {!isMe && (
                     <p className="profile-meta">
                       <span className="profile-meta-online">Online</span>
-                      {battery != null && <span> · Pin {battery}%</span>}
                       {distance != null && (
                         <span>
                           {" "}
@@ -544,7 +596,7 @@ export function V2UserDetailDialog({
                     </p>
                     {loadingFriends ? (
                       <div className="pf-loading">
-                        <Loader2 className="pf-loading-icon" />
+                        <LoadingVideo size="sm" />
                       </div>
                     ) : (
                       <div className="pf-list">
@@ -750,13 +802,6 @@ export function V2UserDetailDialog({
             align-items: center;
             justify-content: center;
             padding: 48px 0;
-          }
-
-          .vud-loading-icon {
-            width: 26px;
-            height: 26px;
-            color: white;
-            animation: vud-spin 1s linear infinite;
           }
 
           @keyframes vud-spin {
@@ -1009,6 +1054,33 @@ export function V2UserDetailDialog({
             width: 100%;
           }
 
+          .profile-edit-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+          }
+
+          .profile-edit-row input {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .profile-gender-select {
+            width: 110px;
+            flex-shrink: 0;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: white;
+            font-size: 13px;
+            outline: none;
+          }
+
+          .profile-meta-dot {
+            color: rgba(255, 255, 255, 0.3);
+          }
+
           .profile-name-input {
             width: 100%;
           }
@@ -1075,13 +1147,6 @@ export function V2UserDetailDialog({
             align-items: center;
             justify-content: center;
             padding: 24px 0;
-          }
-
-          .pf-loading-icon {
-            width: 22px;
-            height: 22px;
-            color: white;
-            animation: vud-spin 1s linear infinite;
           }
 
           .pf-list {

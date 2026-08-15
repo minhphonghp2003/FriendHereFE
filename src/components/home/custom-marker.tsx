@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
@@ -35,6 +35,14 @@ const MARKER_HEIGHT = 60;
 const MOMENT_WIDTH = 30;
 const MOMENT_HEIGHT = 30;
 
+export interface MarkerStatusAction {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  destructive?: boolean;
+  onClick: () => void;
+}
+
 interface CustomMarkerProps {
   position: google.maps.LatLngLiteral;
   name: string;
@@ -46,8 +54,12 @@ interface CustomMarkerProps {
   moments?: MomentDto[] | null;
   /** Optional marker size override (px). Defaults to 60 (v1 behavior). */
   size?: number;
-  /** When provided, renders action buttons inside the status box (status box also shows when empty if actions exist). */
-  statusActions?: React.ReactNode;
+  /**
+   * Action buttons rendered inside the status box. Clicks are handled with
+   * NATIVE listeners (the marker's own click listener is native DOM and runs
+   * before React's, so React stopPropagation can't isolate these buttons).
+   */
+  statusActions?: MarkerStatusAction[];
   onMomentClick?: (moment: MomentDto) => void;
   onClick?: () => void;
 }
@@ -73,6 +85,10 @@ export const CustomMarker = ({
   onClick,
 }: CustomMarkerProps) => {
   const [hovered, setHovered] = useState(false);
+  // Keep the latest action handlers in a ref so the native listeners (bound
+  // once) always call the current closures.
+  const actionsRef = useRef<MarkerStatusAction[]>([]);
+  actionsRef.current = statusActions ?? [];
 
   const color = useMemo(() => stringToColor(name), [name]);
   const firstLetter = name?.charAt(0).toUpperCase() || "?";
@@ -107,7 +123,7 @@ export const CustomMarker = ({
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
         }}
       >
-        {(status || statusActions) && (
+        {(status || (statusActions && statusActions.length > 0)) && (
           <div
             className={`absolute left-1/2 z-10 max-w-[200px] -translate-x-1/2 rounded-4xl border border-zinc-200 bg-white px-2.5 py-1 text-center text-[11px] leading-tight font-semibold text-zinc-700 shadow-md ${
               statusActions ? "pointer-events-auto flex items-center gap-1" : "pointer-events-none"
@@ -119,7 +135,36 @@ export const CustomMarker = ({
             ) : (
               <span className="block truncate text-zinc-400">Add status</span>
             )}
-            {statusActions}
+            {statusActions?.map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                title={action.label}
+                aria-label={action.label}
+                className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-zinc-500/10 p-0 text-zinc-700 transition-colors hover:bg-teal-600 hover:text-white ${
+                  action.destructive ? "hover:!bg-red-500" : ""
+                }`}
+                ref={(el) => {
+                  if (!el) return;
+                  // NATIVE listeners bound on the button itself (innermost
+                  // element): they run BEFORE the marker's ancestor listener,
+                  // and stopPropagation keeps the marker click from firing.
+                  // The action fires only on "click" (browsers synthesize it
+                  // from tap); touchend only isolates the event.
+                  const isolate = (e: Event) => {
+                    e.stopPropagation();
+                  };
+                  const run = (e: MouseEvent) => {
+                    e.stopPropagation();
+                    actionsRef.current.find((a) => a.key === action.key)?.onClick();
+                  };
+                  el.addEventListener("touchend", isolate, { passive: true });
+                  el.addEventListener("click", run as EventListener);
+                }}
+              >
+                {action.icon}
+              </button>
+            ))}
           </div>
         )}
         <div

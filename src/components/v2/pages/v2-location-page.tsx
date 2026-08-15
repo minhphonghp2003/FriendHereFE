@@ -199,33 +199,27 @@ export function V2LocationPage() {
                 moments={myLocation?.moments ?? null}
                 onMomentClick={() => openUserDetail(user?.id ?? 0)}
                 statusActions={
-                  statusEditorOpen ? undefined : (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openStatusEditor();
-                        }}
-                        className="status-box-action"
-                        aria-label="Edit status"
-                      >
-                        <Pencil className="status-box-action-icon" />
-                      </button>
-                      {myDisplayStatus && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClearStatus();
-                          }}
-                          disabled={savingStatus}
-                          className="status-box-action status-box-action-delete"
-                          aria-label="Delete status"
-                        >
-                          <XIcon className="status-box-action-icon" />
-                        </button>
-                      )}
-                    </>
-                  )
+                  statusEditorOpen
+                    ? []
+                    : [
+                        {
+                          key: "edit-status",
+                          label: "Edit status",
+                          icon: <Pencil className="h-[10px] w-[10px]" />,
+                          onClick: openStatusEditor,
+                        },
+                        ...(myDisplayStatus
+                          ? [
+                              {
+                                key: "delete-status",
+                                label: "Delete status",
+                                destructive: true,
+                                icon: <XIcon className="h-[10px] w-[10px]" />,
+                                onClick: () => handleClearStatus(),
+                              },
+                            ]
+                          : []),
+                      ]
                 }
               />
             )}
@@ -323,46 +317,6 @@ export function V2LocationPage() {
           height: 100%;
           overflow: hidden;
           background: #000;
-        }
-
-        /* Status box action buttons (rendered inside v1 CustomMarker's white status box) */
-        .status-box-action {
-          width: 18px;
-          height: 18px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(0, 0, 0, 0.06);
-          border: none;
-          border-radius: 50%;
-          color: #3f3f46;
-          cursor: pointer;
-          flex-shrink: 0;
-          padding: 0;
-          transition: all 0.2s;
-        }
-
-        .status-box-action:hover:not(:disabled) {
-          background: #2BB0AF;
-          color: white;
-        }
-
-        .status-box-action:active {
-          transform: scale(0.9);
-        }
-
-        .status-box-action:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .status-box-action-delete:hover:not(:disabled) {
-          background: #ef4444;
-        }
-
-        .status-box-action-icon {
-          width: 10px;
-          height: 10px;
         }
 
         .status-editor-popover {

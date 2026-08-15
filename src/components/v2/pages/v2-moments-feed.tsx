@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { useAuth } from "@/providers/auth-provider";
 import { toast } from "sonner";
 import type { MomentDto } from "@/types/moment";
@@ -122,8 +123,7 @@ export function V2MomentsFeed() {
       <div className="moments-content">
         {isLoading && moments.length === 0 ? (
           <div className="moments-loading">
-            <div className="loading-spinner" />
-            <p className="loading-text">Loading moments...</p>
+            <LoadingVideo size="md" />
           </div>
         ) : moments.length > 0 ? (
           <div className="moments-grid">
@@ -480,25 +480,6 @@ export function V2MomentsFeed() {
           justify-content: center;
           height: 300px;
           color: white;
-        }
-
-        .loading-spinner {
-          width: 32px;
-          height: 32px;
-          border: 3px solid rgba(255, 255, 255, 0.2);
-          border-top-color: white;
-          border-radius: 50%;
-          animation: v2-spin 1s linear infinite;
-        }
-
-        @keyframes v2-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-          margin-top: 12px;
-          font-size: 13px;
-          opacity: 0.7;
         }
 
         .moments-empty {

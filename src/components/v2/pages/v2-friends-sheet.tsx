@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, type TouchEvent } from "react";
-import { ChevronUp, Users, MessageCircle, Loader2, Navigation, ListOrdered } from "lucide-react";
+import { ChevronUp, Users, MessageCircle, Loader2, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { getOpponentConversation } from "@/services/chat";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT, type LocationSort } from "@/services/location";
@@ -349,7 +350,7 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
 
             {isLoading && nearbyFriends.length === 0 && (
               <div className="friends-list-loading">
-                <Loader2 className="friends-list-loading-icon" />
+                <LoadingVideo size="sm" />
               </div>
             )}
 
