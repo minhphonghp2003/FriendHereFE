@@ -9,7 +9,6 @@ import { useAuth } from "@/providers/auth-provider";
 import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { getOpponentConversation } from "@/services/chat";
-import { isVideoUrl } from "@/types/chat";
 import type { MomentDto } from "@/types/moment";
 
 export default function UserProfilePage() {
@@ -129,9 +128,12 @@ export default function UserProfilePage() {
             <>
               <div className="grid grid-cols-3 gap-1">
                 {moments.map((moment: MomentDto) => {
-                  const firstImage = moment.images?.[0];
-                  const thumb = firstImage?.thumbUrl ?? firstImage?.originalUrl;
-                  const hasVideo = moment.images?.some((img) => isVideoUrl(img.originalUrl));
+                  const thumb =
+                    moment.images?.[0]?.thumbUrl ??
+                    moment.images?.[0]?.originalUrl ??
+                    moment.video?.thumbUrl ??
+                    undefined;
+                  const hasVideo = !!moment.video;
                   return (
                     <button
                       key={moment.id}

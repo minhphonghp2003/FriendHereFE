@@ -5,6 +5,7 @@ import { Play, Pause } from "lucide-react";
 
 interface MomentVideoPlayerProps {
   src: string;
+  poster?: string;
   active?: boolean;
   fullscreen?: boolean;
   onToggleInfo?: () => void;
@@ -13,6 +14,7 @@ interface MomentVideoPlayerProps {
 
 export const MomentVideoPlayer = ({
   src,
+  poster,
   active = true,
   fullscreen = false,
   onToggleInfo,
@@ -120,6 +122,7 @@ export const MomentVideoPlayer = ({
         <video
           ref={videoRef}
           src={src}
+          poster={poster || undefined}
           autoPlay
           loop
           playsInline
