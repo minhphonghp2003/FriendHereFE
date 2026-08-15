@@ -55,7 +55,7 @@ export default function V2Layout({ children }: V2LayoutProps) {
         {/* Layout-level notifications (same as v1) */}
         <JoinRequestNotifications />
         <Dialog open={kicked} onOpenChange={() => {}}>
-          <DialogContent showCloseButton={false}>
+          <DialogContent showCloseButton={false} className="v2-kicked-dialog">
             <DialogHeader>
               <DialogTitle>Disconnected</DialogTitle>
               <DialogDescription>
@@ -76,6 +76,18 @@ export default function V2Layout({ children }: V2LayoutProps) {
             height: 100%;
             margin: 0;
             padding: 0;
+          }
+
+          /* Kicked dialog must float above EVERYTHING (moments overlay z-70,
+             sheets, other dialogs) — it's a blocking, session-ending state */
+          .v2-kicked-dialog {
+            z-index: 9999 !important;
+          }
+
+          /* Its backdrop is a sibling rendered just before the popup in the
+             portal — raise it with the next-sibling :has() selector */
+          [data-slot="dialog-overlay"]:has(+ .v2-kicked-dialog) {
+            z-index: 9998 !important;
           }
 
           /* Disable pinch/double-tap page zoom (map/image still zoom via their own
