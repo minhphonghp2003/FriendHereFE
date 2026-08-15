@@ -20,6 +20,7 @@ import { resetLocation } from "@/store/slices/location-slice";
 import type { LocationDto } from "@/lib/signalr/types";
 import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
+import { syncFcmTokenAfterAuth } from "@/lib/fcm";
 
 type ViewMode = "map" | "list";
 
@@ -150,6 +151,7 @@ export default function HomePage() {
     setReloading(true);
     dispatch(resetLocation());
     try {
+      await syncFcmTokenAfterAuth();
       await locationHub.stop();
       await locationHub.start();
       const pos = latitude !== null && longitude !== null ? { latitude, longitude } : undefined;
