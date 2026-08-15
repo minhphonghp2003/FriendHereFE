@@ -11,6 +11,7 @@ import { V2FriendsSheet } from "./v2-friends-sheet";
 import { Check, Pencil, X as XIcon } from "lucide-react";
 import { V2LocationSettingsDialog } from "./v2-location-settings-dialog";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
+import { useCurrentUser } from "@/hooks/users/use-users";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { LOCATION_SORT } from "@/services/location";
 import { locationHub } from "@/lib/signalr";
@@ -83,10 +84,17 @@ export function V2LocationPage() {
   // v1 pattern: const myLocation = locations.find((l) => l.userId === user?.id);
   const myLocation = locations.find((l) => l.userId === user?.id);
 
-  // BE first (SignalR echo), FE fallback (local dispatch)
+  // v1 parity: profile avatar from /User/me as FE fallback before SignalR echoes
+  const { data: currentUserProfile } = useCurrentUser();
+
+  // BE first (SignalR echo), FE fallback (local dispatch / profile API)
   const myDisplayStatus = myLocation?.status ?? myStatus ?? null;
   const myDisplayName = myLocation?.name ?? user?.name ?? "You";
-  const myAvatarThumb = myLocation?.image ?? undefined;
+  const myAvatarThumb =
+    myLocation?.image ??
+    currentUserProfile?.images?.[0]?.thumbUrl ??
+    currentUserProfile?.images?.[0]?.originalUrl ??
+    undefined;
 
   const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
 
@@ -182,6 +190,7 @@ export function V2LocationPage() {
       <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
         <div className="map-wrapper">
             <Map
+              key={mapColorScheme}
               defaultCenter={{ lat: 21.0285, lng: 105.8542 }}
               defaultZoom={15}
               mapId="friendhere-map"
