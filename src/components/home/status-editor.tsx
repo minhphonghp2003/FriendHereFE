@@ -62,13 +62,13 @@ export const StatusEditor = () => {
     <div ref={ref} className="relative">
       <button
         onClick={handleToggle}
-        className="border-border bg-card text-foreground hover:bg-muted flex max-w-[180px] items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-md transition-colors"
+        className="flex max-w-[180px] items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
       >
         <MessageSquare className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{status ? status : "Đặt trạng thái"}</span>
       </button>
       {open && (
-        <div className="border-border bg-card absolute right-0 z-40 mt-1 w-64 rounded-xl border p-3 shadow-lg">
+        <div className="absolute right-0 z-40 mt-1 w-64 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg">
           <input
             autoFocus
             value={value}
@@ -79,16 +79,16 @@ export const StatusEditor = () => {
               if (e.key === "Escape") setOpen(false);
             }}
             placeholder="VD: Đang đi làm, Đừng làm phiền"
-            className="border-border text-foreground focus:border-primary focus:ring-primary w-full rounded-lg border px-3 py-2 text-xs outline-none focus:ring-1"
+            className="focus:border-primary focus:ring-primary w-full rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-700 outline-none focus:ring-1"
           />
-          <div className="text-muted-foreground mt-1 text-right text-[10px]">
+          <div className="mt-1 text-right text-[10px] text-zinc-400">
             {value.length}/{STATUS_MAX_LENGTH}
           </div>
           <div className="mt-1 flex gap-2">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-semibold disabled:opacity-50"
+              className="bg-primary hover:bg-primary/90 flex flex-1 items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-semibold text-white disabled:opacity-50"
             >
               <Check className="h-3 w-3" />
               Lưu
@@ -97,7 +97,7 @@ export const StatusEditor = () => {
               <button
                 onClick={handleClear}
                 disabled={saving}
-                className="bg-muted text-foreground hover:bg-muted/80 flex-1 rounded-lg py-1.5 text-xs font-semibold disabled:opacity-50"
+                className="flex-1 rounded-lg bg-zinc-200 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-300 disabled:opacity-50"
               >
                 Xóa
               </button>

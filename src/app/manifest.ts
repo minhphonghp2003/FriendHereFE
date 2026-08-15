@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Trò chuyện thời gian thực và theo dõi vị trí",
     start_url: "/init",
     display: "standalone",
-    background_color: "#F3FBF8",
+    background_color: "#ffffff",
     theme_color: "#2BB0AF",
     orientation: "portrait",
     icons: [

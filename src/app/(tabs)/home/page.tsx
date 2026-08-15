@@ -258,7 +258,7 @@ export default function HomePage() {
             <button
               onClick={handleReload}
               disabled={reloading}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50 disabled:opacity-50"
+              className="text-primary flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold shadow-md transition-colors hover:bg-zinc-50 disabled:opacity-50"
             >
               {reloading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -269,7 +269,7 @@ export default function HomePage() {
             </button>
             <button
               onClick={handleToggleView}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
+              className="text-primary flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold shadow-md transition-colors hover:bg-zinc-50"
             >
               <List className="h-3.5 w-3.5" />
               Danh sách
@@ -312,7 +312,7 @@ export default function HomePage() {
           {!locationDenied && (
             <button
               onClick={handleToggleView}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-md transition-colors hover:bg-zinc-50"
+              className="text-primary flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold shadow-md transition-colors hover:bg-zinc-50"
             >
               <MapIcon className="h-3.5 w-3.5" />
               Bản đồ
