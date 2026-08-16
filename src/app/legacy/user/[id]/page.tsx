@@ -33,15 +33,15 @@ export default function UserProfilePage() {
     try {
       const res = await getOpponentConversation(userId);
       if (res.data) {
-        router.push(`/chat/${res.data}`);
+        router.push(`/legacy/chat/${res.data}`);
       } else {
         router.push(
-          `/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
+          `/legacy/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
         );
       }
     } catch {
       router.push(
-        `/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
+        `/legacy/chat/new?receiverId=${userId}&name=${encodeURIComponent(userProfile?.name ?? "")}`,
       );
     }
   }, [userId, userProfile, router]);

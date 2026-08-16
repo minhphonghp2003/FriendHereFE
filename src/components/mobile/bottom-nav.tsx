@@ -6,11 +6,11 @@ import { Home, Settings, MessageCircle, Image, Route } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
 
 const tabs = [
-  { href: "/home", label: "Trang chủ", icon: Home },
-  { href: "/moments", label: "Khoảnh khắc", icon: Image },
-  { href: "/timelines", label: "Hành trình", icon: Route },
-  { href: "/chat", label: "Tin nhắn", icon: MessageCircle },
-  { href: "/settings", label: "Cài đặt", icon: Settings },
+  { href: "/legacy/home", label: "Trang chủ", icon: Home },
+  { href: "/legacy/moments", label: "Khoảnh khắc", icon: Image },
+  { href: "/legacy/timelines", label: "Hành trình", icon: Route },
+  { href: "/legacy/chat", label: "Tin nhắn", icon: MessageCircle },
+  { href: "/legacy/settings", label: "Cài đặt", icon: Settings },
 ];
 
 export const BottomNav = () => {
@@ -41,7 +41,7 @@ export const BottomNav = () => {
             >
               <span className="relative">
                 <tab.icon className="h-6 w-6" />
-                {tab.href === "/chat" && totalUnread > 0 && (
+                {tab.href === "/legacy/chat" && totalUnread > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 min-w-[1.05rem] rounded-full bg-red-500 px-1 text-center text-[10px] leading-[1.05rem] font-bold text-white">
                     {totalUnread > 99 ? "99+" : totalUnread}
                   </span>

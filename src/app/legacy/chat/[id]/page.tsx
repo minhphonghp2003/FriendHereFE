@@ -387,17 +387,17 @@ export default function ChatScreenPage() {
   useEffect(() => {
     const unsubRemoved = appHub.onReceiveMemberRemoved((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/chat");
+        router.replace("/legacy/chat");
       }
     });
     const unsubLeft = appHub.onReceiveMemberLeft((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/chat");
+        router.replace("/legacy/chat");
       }
     });
     const unsubGroupDeleted = appHub.onReceiveGroupDeleted((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/chat");
+        router.replace("/legacy/chat");
       }
     });
     return () => {
@@ -1031,7 +1031,7 @@ export default function ChatScreenPage() {
             </div>
             {!isGroup && opponentId && (
               <button
-                onClick={() => router.push(`/user/${opponentId}`)}
+                onClick={() => router.push(`/legacy/user/${opponentId}`)}
                 className="hover:bg-muted text-muted-foreground rounded-full p-2"
                 title="Thông tin"
                 aria-label="Thông tin người dùng"
@@ -1111,7 +1111,7 @@ export default function ChatScreenPage() {
               >
                 {!isMe && !isSystem && (
                   <button
-                    onClick={() => router.push(`/user/${msg.senderId}`)}
+                    onClick={() => router.push(`/legacy/user/${msg.senderId}`)}
                     className="shrink-0 self-end"
                   >
                     {msg.senderAvatar?.thumbUrl ? (
@@ -1131,7 +1131,7 @@ export default function ChatScreenPage() {
                   {!isMe && !isSystem && (
                     <p
                       className="text-muted-foreground mb-0.5 ml-1 cursor-pointer text-[11px] font-medium hover:underline"
-                      onClick={() => router.push(`/user/${msg.senderId}`)}
+                      onClick={() => router.push(`/legacy/user/${msg.senderId}`)}
                     >
                       {msg.senderName}
                     </p>
@@ -1563,7 +1563,7 @@ export default function ChatScreenPage() {
         onOpenChange={setShowGroupSettings}
         conversation={currentConv ?? null}
         onNameChanged={(newName) => setConvName(newName)}
-        onExitGroup={() => router.replace("/chat")}
+        onExitGroup={() => router.replace("/legacy/chat")}
       />
     </div>
   );

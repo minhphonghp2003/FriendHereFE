@@ -6,10 +6,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: appName,
     short_name: appName,
-    description: "Trò chuyện thời gian thực và theo dõi vị trí",
-    start_url: "/init",
+    description: "Location sharing, moments, and real-time chat",
+    start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
+    background_color: "#000000",
     theme_color: "#2BB0AF",
     orientation: "portrait",
     icons: [
@@ -45,12 +45,44 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
         label: "FriendHere on mobile",
       },
+    ],
+    categories: ["social", "communication"],
+    shortcuts: [
       {
-        src: "/screenshot-wide.png",
-        sizes: "1920x1080",
-        type: "image/png",
-        form_factor: "wide",
-        label: "FriendHere on desktop",
+        name: "Location",
+        short_name: "Location",
+        description: "See friends on the map",
+        url: "/location",
+        icons: [
+          {
+            src: "/icon-192x192.png",
+            sizes: "192x192",
+          },
+        ],
+      },
+      {
+        name: "Moments",
+        short_name: "Moments",
+        description: "View and share moments",
+        url: "/moments",
+        icons: [
+          {
+            src: "/icon-192x192.png",
+            sizes: "192x192",
+          },
+        ],
+      },
+      {
+        name: "Chat",
+        short_name: "Chat",
+        description: "Message your friends",
+        url: "/chat",
+        icons: [
+          {
+            src: "/icon-192x192.png",
+            sizes: "192x192",
+          },
+        ],
       },
     ],
   };

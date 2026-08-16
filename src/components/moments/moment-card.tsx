@@ -190,7 +190,7 @@ export const MomentCard = ({
   };
 
   const handleViewProfile = () => {
-    router.push(`/user/${moment.userId}`);
+    router.push(`/legacy/user/${moment.userId}`);
   };
 
   const handleSendMessage = async () => {
@@ -199,15 +199,15 @@ export const MomentCard = ({
     try {
       const res = await getOpponentConversation(moment.userId);
       if (res.data) {
-        router.push(`/chat/${res.data}?momentId=${moment.id}`);
+        router.push(`/legacy/chat/${res.data}?momentId=${moment.id}`);
       } else {
         router.push(
-          `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+          `/legacy/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
         );
       }
     } catch {
       router.push(
-        `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+        `/legacy/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
       );
     } finally {
       setSendingMessage(false);

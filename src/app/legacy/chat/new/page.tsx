@@ -32,7 +32,7 @@ export default function NewChatPage() {
   }, [momentId]);
 
   useEffect(() => {
-    if (!receiverId) router.replace("/chat");
+    if (!receiverId) router.replace("/legacy/chat");
   }, [receiverId, router]);
 
   const handleSend = async () => {
@@ -55,7 +55,7 @@ export default function NewChatPage() {
         idempotencyKey: crypto.randomUUID(),
         momentId,
       });
-      router.replace(`/chat/${conversationId}`);
+      router.replace(`/legacy/chat/${conversationId}`);
     } catch (err) {
       setError("Không thể gửi tin nhắn");
       console.error(err);

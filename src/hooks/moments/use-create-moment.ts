@@ -17,7 +17,9 @@ export const useCreateMoment = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const mutate = async (input: CreateMomentInput): Promise<MomentDto> => {
+  const mutate = async (
+    input: CreateMomentInput,
+  ): Promise<{ moment: MomentDto; fileKeys: string[] }> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -43,7 +45,7 @@ export const useCreateMoment = () => {
         imageFileIds: isVideo ? null : presigned.map((item) => item.fileId),
         videoFileId: isVideo ? (presigned[0]?.fileId ?? null) : null,
       });
-      return data;
+      return { moment: data, fileKeys: presigned.map((item) => item.key) };
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to create moment"));
       throw err;

@@ -82,7 +82,7 @@ export default function InitPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/home");
+      router.replace("/");
     }
   }, [isAuthenticated, router]);
 

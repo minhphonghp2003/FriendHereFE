@@ -127,7 +127,7 @@ export default function ChatListPage() {
   const handleChatClick = useCallback(
     (conv: ConversationDto) => {
       if (conv.id) {
-        router.push(`/chat/${conv.id}`);
+        router.push(`/legacy/chat/${conv.id}`);
       }
     },
     [router],
@@ -377,7 +377,7 @@ export default function ChatListPage() {
       <div className="flex items-center justify-between p-4 pb-2">
         <h1 className="text-2xl font-bold">Tin nhắn</h1>
         <button
-          onClick={() => router.push("/chat/new-group")}
+          onClick={() => router.push("/legacy/chat/new-group")}
           aria-label="Tạo nhóm chat"
           className="hover:bg-muted rounded-full p-2"
         >
