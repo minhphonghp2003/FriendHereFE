@@ -369,48 +369,41 @@ function CreateMomentCard({
               </button>
             </div>
           ) : (
-            <div className="cm-preview-wrap">
-              <img
-                src={previewUrls[previewIndex] ?? undefined}
-                alt="New moment"
-                className="cm-video"
-              />
-              {/* Multi-image controls: dots + prev/next zones */}
-              {previewUrls.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
-                    disabled={previewIndex === 0}
-                    className="cm-nav-btn cm-nav-left"
-                    aria-label="Previous image"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={() =>
-                      setPreviewIndex((i) => Math.min(previewUrls.length - 1, i + 1))
-                    }
-                    disabled={previewIndex === previewUrls.length - 1}
-                    className="cm-nav-btn cm-nav-right"
-                    aria-label="Next image"
-                  >
-                    ›
-                  </button>
-                  <div className="cm-preview-dots">
-                    {previewUrls.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setPreviewIndex(i)}
-                        className={`cm-preview-dot ${i === previewIndex ? "active" : ""}`}
-                        aria-label={`Image ${i + 1}`}
-                      />
-                    ))}
-                  </div>
-                  <span className="cm-preview-count">
-                    {previewIndex + 1}/{previewUrls.length}
-                  </span>
-                </>
-              )}
+            /* Image preview: same card ratio as feed moments (9:16), rounded */
+            <div className="cm-card-zone">
+              <div className="cm-preview-wrap">
+                <img
+                  src={previewUrls[previewIndex] ?? undefined}
+                  alt="New moment"
+                  className="cm-video"
+                />
+                {/* Multi-image controls: prev/next + counter (no dots) */}
+                {previewUrls.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                      disabled={previewIndex === 0}
+                      className="cm-nav-btn cm-nav-left"
+                      aria-label="Previous image"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={() =>
+                        setPreviewIndex((i) => Math.min(previewUrls.length - 1, i + 1))
+                      }
+                      disabled={previewIndex === previewUrls.length - 1}
+                      className="cm-nav-btn cm-nav-right"
+                      aria-label="Next image"
+                    >
+                      ›
+                    </button>
+                    <span className="cm-preview-count">
+                      {previewIndex + 1}/{previewUrls.length}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -434,15 +427,26 @@ function CreateMomentCard({
             </div>
           )}
 
+          {/* Gallery input stays mounted in preview mode so the + button works */}
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            onChange={pickFromGallery}
+            className="cm-hidden-input"
+          />
+
           {/* Post details overlay */}
           {showDetails && (
             <div className="cm-details">
-              <div className="cm-details-bottom">
-                {/* Close (top right, same line as the exclude label) */}
-                <button onClick={reset} className="cm-close-x" aria-label="Close">
-                  <X className="cm-close-x-icon" />
-                </button>
+              {/* Close — pinned top-right of the screen, above the options
+                  panel; never overlaps its content */}
+              <button onClick={reset} className="cm-close-x" aria-label="Close">
+                <X className="cm-close-x-icon" />
+              </button>
 
+              <div className="cm-details-bottom">
                 {/* Exclude friends — visible for every visibility except OnlyMe.
                     Everyone starts INCLUDED (green); tap to exclude (red X). */}
                 {visibility !== "OnlyMe" && friends.length > 0 && (
@@ -570,6 +574,11 @@ function CreateMomentCard({
           background: #000;
         }
 
+        /* Inside the fixed-ratio image card, cover fills nicely */
+        .cm-card-zone img.cm-video {
+          object-fit: cover;
+        }
+
         .cm-canvas {
           display: none;
         }
@@ -667,7 +676,8 @@ function CreateMomentCard({
 
         /* Interactive elements re-enable pointer events — the media preview
            behind stays visible/untouchable-safe */
-        .cm-details-bottom {
+        .cm-details-bottom,
+        .cm-close-x {
           pointer-events: auto;
         }
 
@@ -675,6 +685,34 @@ function CreateMomentCard({
           position: relative;
           width: 100%;
           height: 100%;
+        }
+
+        /* Image mode: the preview sits in a 9:16 rounded card (same ratio as
+           feed moment items) with margins above the options panel */
+        .cm-card-zone {
+          position: absolute;
+          top: calc(env(safe-area-inset-top, 0px) + 8px);
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          align-items: stretch;
+          justify-content: center;
+          padding: 0 12px 14px;
+          pointer-events: none;
+        }
+
+        .cm-card-zone .cm-preview-wrap {
+          pointer-events: auto;
+          width: 100%;
+          height: auto;
+          max-height: 100%;
+          aspect-ratio: 9 / 16;
+          align-self: center;
+          border-radius: 18px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+          background: #000;
         }
 
         .cm-preview-toggle {
@@ -735,31 +773,6 @@ function CreateMomentCard({
         .cm-nav-left { left: 10px; }
         .cm-nav-right { right: 10px; }
 
-        .cm-preview-dots {
-          position: absolute;
-          bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          gap: 6px;
-          z-index: 3;
-        }
-
-        .cm-preview-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.4);
-          border: none;
-          padding: 0;
-          cursor: pointer;
-        }
-
-        .cm-preview-dot.active {
-          background: white;
-          transform: scale(1.25);
-        }
-
         .cm-preview-count {
           position: absolute;
           top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -777,11 +790,12 @@ function CreateMomentCard({
         .cm-media-actions {
           position: absolute;
           right: 14px;
-          top: calc(env(safe-area-inset-top, 0px) + 12px);
+          /* Below the close button (top-right) so they never collide */
+          top: calc(env(safe-area-inset-top, 0px) + 56px);
           display: flex;
           flex-direction: column;
           gap: 8px;
-          z-index: 4;
+          z-index: 9;
         }
 
         .cm-media-action-btn {
@@ -808,28 +822,30 @@ function CreateMomentCard({
           height: 17px;
         }
 
-        /* Close button — floats at the top-right of the bottom panel,
-           on the same line as the exclude label */
+        /* Close button — pinned at the top-right of the compose screen, above
+           the options panel; never overlaps the panel content */
         .cm-close-x {
           position: absolute;
-          top: 10px;
+          top: calc(env(safe-area-inset-top, 0px) + 10px);
           right: 12px;
-          width: 30px;
-          height: 30px;
+          width: 34px;
+          height: 34px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255, 255, 255, 0.12);
-          border: 1px solid rgba(255, 255, 255, 0.22);
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.25);
           border-radius: 50%;
           color: white;
           cursor: pointer;
           padding: 0;
           transition: all 0.2s;
+          z-index: 8;
         }
 
         .cm-close-x:hover {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(0, 0, 0, 0.75);
         }
 
         .cm-close-x:active {
@@ -837,8 +853,8 @@ function CreateMomentCard({
         }
 
         .cm-close-x-icon {
-          width: 15px;
-          height: 15px;
+          width: 16px;
+          height: 16px;
         }
 
         .cm-details-bottom {
