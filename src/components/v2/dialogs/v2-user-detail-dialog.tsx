@@ -28,6 +28,7 @@ import { getUserById, getCurrentUser, updateCurrentUser, setAvatar } from "@/ser
 import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload";
 import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
+import { V2UserMomentList, V2UserTimelineList } from "./v2-user-tab-lists";
 import {
   getMyFriendships,
   getFriendshipById,
@@ -97,6 +98,14 @@ export function V2UserDetailDialog({
 
   const isMe = effectiveUserId === "me";
   const otherId = typeof effectiveUserId === "number" ? effectiveUserId : null;
+  // Numeric id for per-user lists (moments/timelines) — my profile uses my id
+  const displayUserId: number = isMe ? (reduxUser?.id ?? 0) : (otherId ?? 0);
+
+  // Bottom tab: "moments" | "timelines" (reset when switching viewed user)
+  const [activeTab, setActiveTab] = useState<"moments" | "timelines">("moments");
+  useEffect(() => {
+    setActiveTab("moments");
+  }, [effectiveUserId]);
 
   // ---- User detail (v1 useUser pattern, inline) ----
   const [userDetail, setUserDetail] = useState<User | null>(null);
@@ -793,11 +802,63 @@ export function V2UserDetailDialog({
                   )}
                 </>
               )}
+
+              {/* ===== Moments / Timelines tabs (both roles) ===== */}
+              <div className="vud-tabs">
+                <button
+                  onClick={() => setActiveTab("moments")}
+                  className={`vud-tab ${activeTab === "moments" ? "active" : ""}`}
+                >
+                  Moments
+                </button>
+                <button
+                  onClick={() => setActiveTab("timelines")}
+                  className={`vud-tab ${activeTab === "timelines" ? "active" : ""}`}
+                >
+                  Timelines
+                </button>
+              </div>
+
+              {activeTab === "moments" && (
+                <V2UserMomentList
+                  userId={displayUserId}
+                  onMomentTap={() => {/* optional */}}
+                />
+              )}
+              {activeTab === "timelines" && <V2UserTimelineList userId={displayUserId} />}
             </>
           )}
         </div>
 
         <style jsx global>{`
+          /* ===== Moments / Timelines tabs ===== */
+          .vud-tabs {
+            display: flex;
+            gap: 6px;
+            margin-top: 18px;
+            padding: 3px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+          }
+
+          .vud-tab {
+            flex: 1;
+            padding: 9px 0;
+            border: none;
+            border-radius: 9px;
+            background: none;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+
+          .vud-tab.active {
+            background: #2BB0AF;
+            color: white;
+          }
+
           .vud-back-btn {
             display: flex;
             align-items: center;

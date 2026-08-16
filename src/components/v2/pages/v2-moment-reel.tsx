@@ -16,15 +16,16 @@ import {
   Loader2,
   Check,
   ChevronDown,
+  ChevronRight,
+  Route,
   Maximize2,
   X,
   Play,
   Pause,
 } from "lucide-react";
-import { TimelineChip } from "@/components/timelines/timeline-chip";
+import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { ReactionBottomSheet } from "@/components/moments/reaction-bottom-sheet";
 import { DownloadButton } from "@/components/common/download-button";
-import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
@@ -570,7 +571,16 @@ export function V2MomentReel({
               <div className="vm-badges-row">
                 {moment.timeline && (
                   <span className="vm-badge vm-badge-timeline">
-                    <TimelineChip timeline={moment.timeline} variant="light" />
+                    {/* v2 chip: routes to the v2 journey page */}
+                    <button
+                      className="vm-timeline-link"
+                      onClick={() => router.push(`/v2/timelines/${moment.timeline!.id}`)}
+                      aria-label={`Mở hành trình ${moment.timeline.caption}`}
+                    >
+                      <Route className="vm-timeline-link-icon" />
+                      <span className="vm-badge-text">{moment.timeline.caption}</span>
+                      <ChevronRight className="vm-timeline-link-chevron" />
+                    </button>
                   </span>
                 )}
                 {moment.location?.isShowed && (
@@ -1063,18 +1073,42 @@ export function V2MomentReel({
         }
 
         .vm-badge-timeline {
-          /* TimelineChip renders its own styles; clamp inside our pill */
+          /* Timeline chip wrapper; clamp inside our pill */
           display: inline-flex;
           align-items: center;
           overflow: hidden;
           padding: 0;
         }
 
-        .vm-badge-timeline > :global(*) {
+        /* v2 timeline chip → /v2/timelines/{id} journey page */
+        .vm-timeline-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          min-width: 0;
           max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: var(--vm-surface-2, #f4f4f5);
+          border: 1px solid var(--vm-border, #e4e4e7);
+          color: var(--vm-text-2, #52525b);
+          font-size: 11px;
+          font-weight: 500;
           white-space: nowrap;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .vm-timeline-link:hover {
+          border-color: rgba(43, 176, 175, 0.55);
+          color: #2BB0AF;
+        }
+
+        .vm-timeline-link-icon,
+        .vm-timeline-link-chevron {
+          width: 11px;
+          height: 11px;
+          flex-shrink: 0;
         }
 
         .vm-location {
