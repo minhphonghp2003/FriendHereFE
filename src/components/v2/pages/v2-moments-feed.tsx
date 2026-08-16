@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause } from "lucide-react";
+import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause, Plus } from "lucide-react";
 import { V2MomentReel } from "./v2-moment-reel";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
@@ -61,9 +61,11 @@ function CreateMomentCard({
 
   const [mode, setMode] = useState<CaptureMode>("camera");
   const [facing, setFacing] = useState<"user" | "environment">("environment");
-  const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
+  // Multi-image model: images[] (1..n) OR a single video
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isVideo, setIsVideo] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState<MomentVisibility>("Friends");
   const [allowComment, setAllowComment] = useState(true);
@@ -155,6 +157,32 @@ function CreateMomentCard({
     };
   }, [mode, facing]);
 
+  const addMediaFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    const video = files.find((f) => f.type.startsWith("video/"));
+    if (video) {
+      // A video is exclusive: exactly 1 file, replaces everything
+      setMediaFiles([video]);
+      setPreviewUrls([URL.createObjectURL(video)]);
+      setIsVideo(true);
+      setPreviewIndex(0);
+    } else {
+      // Append images to the current selection
+      setMediaFiles((prev) => {
+        const next = isVideo ? [...files] : [...prev, ...files];
+        setPreviewUrls((urls) => {
+          const base = isVideo ? [] : urls;
+          return [...base, ...files.map((f) => URL.createObjectURL(f))];
+        });
+        setPreviewIndex(next.length - 1);
+        return next;
+      });
+      setIsVideo(false);
+    }
+    setMode("preview");
+    setShowDetails(true);
+  };
+
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -169,22 +197,34 @@ function CreateMomentCard({
     canvas.toBlob((blob) => {
       if (!blob) return;
       const file = new File([blob], `moment-${Date.now()}.jpg`, { type: "image/jpeg" });
-      setMediaFile(file);
-      setMediaPreviewUrl(URL.createObjectURL(file));
-      setIsVideo(false);
-      setMode("preview");
-      setShowDetails(true);
+      addMediaFiles([file]);
     }, "image/jpeg", 0.92);
   };
 
   const pickFromGallery = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMediaFile(file);
-    setMediaPreviewUrl(URL.createObjectURL(file));
-    setIsVideo(file.type.startsWith("video/"));
-    setMode("preview");
-    setShowDetails(true);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    addMediaFiles(files);
+    // Allow re-picking the same file later
+    e.target.value = "";
+  };
+
+  const removeMediaAt = (index: number) => {
+    setMediaFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) {
+        // Nothing left → back to camera
+        setMode("camera");
+        setShowDetails(false);
+      } else {
+        setPreviewIndex((i) => Math.min(i, next.length - 1));
+      }
+      return next;
+    });
+    setPreviewUrls((urls) => {
+      URL.revokeObjectURL(urls[index]);
+      return urls.filter((_, i) => i !== index);
+    });
   };
 
   const reset = () => {
@@ -196,9 +236,11 @@ function CreateMomentCard({
       pv.removeAttribute("src");
       pv.load();
     }
-    setMediaFile(null);
-    if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
-    setMediaPreviewUrl(null);
+    previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    setMediaFiles([]);
+    setPreviewUrls([]);
+    setPreviewIndex(0);
+    setIsVideo(false);
     setIsPreviewPlaying(true);
     setCaption("");
     setAllowComment(true);
@@ -219,7 +261,7 @@ function CreateMomentCard({
   };
 
   const handleUpload = async () => {
-    if (!mediaFile) return;
+    if (mediaFiles.length === 0) return;
     try {
       const { moment, fileKeys } = await createMoment({
         caption: caption.trim() || undefined,
@@ -228,8 +270,8 @@ function CreateMomentCard({
         isShowLocation,
         // v1: comma-joined excluded friend ids (BE attaches the live location)
         excludedUserIds: excludedIds.length > 0 ? excludedIds.join(",") : undefined,
-        images: isVideo ? undefined : [mediaFile],
-        video: isVideo ? mediaFile : undefined,
+        images: isVideo ? undefined : mediaFiles,
+        video: isVideo ? mediaFiles[0] : undefined,
       });
       toast.success("Moment shared!");
       const createdId = moment.id;
@@ -289,6 +331,7 @@ function CreateMomentCard({
             ref={galleryInputRef}
             type="file"
             accept="image/*,video/*"
+            multiple
             onChange={pickFromGallery}
             className="cm-hidden-input"
           />
@@ -303,7 +346,7 @@ function CreateMomentCard({
             <div className="cm-preview-wrap">
               <video
                 ref={previewVideoRef}
-                src={mediaPreviewUrl ?? undefined}
+                src={previewUrls[previewIndex] ?? undefined}
                 className="cm-video"
                 autoPlay
                 loop
@@ -326,7 +369,69 @@ function CreateMomentCard({
               </button>
             </div>
           ) : (
-            <img src={mediaPreviewUrl ?? undefined} alt="New moment" className="cm-video" />
+            <div className="cm-preview-wrap">
+              <img
+                src={previewUrls[previewIndex] ?? undefined}
+                alt="New moment"
+                className="cm-video"
+              />
+              {/* Multi-image controls: dots + prev/next zones */}
+              {previewUrls.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                    disabled={previewIndex === 0}
+                    className="cm-nav-btn cm-nav-left"
+                    aria-label="Previous image"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() =>
+                      setPreviewIndex((i) => Math.min(previewUrls.length - 1, i + 1))
+                    }
+                    disabled={previewIndex === previewUrls.length - 1}
+                    className="cm-nav-btn cm-nav-right"
+                    aria-label="Next image"
+                  >
+                    ›
+                  </button>
+                  <div className="cm-preview-dots">
+                    {previewUrls.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPreviewIndex(i)}
+                        className={`cm-preview-dot ${i === previewIndex ? "active" : ""}`}
+                        aria-label={`Image ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="cm-preview-count">
+                    {previewIndex + 1}/{previewUrls.length}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Remove current image / add more (images only) */}
+          {!isVideo && (
+            <div className="cm-media-actions">
+              <button
+                onClick={() => removeMediaAt(previewIndex)}
+                className="cm-media-action-btn"
+                aria-label="Remove this image"
+              >
+                <X className="cm-media-action-icon" />
+              </button>
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                className="cm-media-action-btn"
+                aria-label="Add more images"
+              >
+                <Plus className="cm-media-action-icon" />
+              </button>
+            </div>
           )}
 
           {/* Post details overlay */}
@@ -425,7 +530,7 @@ function CreateMomentCard({
                 {/* Share */}
                 <button
                   onClick={handleUpload}
-                  disabled={isUploading || !mediaFile}
+                  disabled={isUploading || mediaFiles.length === 0}
                   className="cm-share-btn"
                 >
                   {isUploading ? (
@@ -600,6 +705,107 @@ function CreateMomentCard({
           width: 28px;
           height: 28px;
           fill: currentColor;
+        }
+
+        /* Multi-image preview controls */
+        .cm-nav-btn {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 38px;
+          height: 52px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.45);
+          border: none;
+          border-radius: 12px;
+          color: white;
+          font-size: 28px;
+          cursor: pointer;
+          padding: 0;
+          z-index: 3;
+        }
+
+        .cm-nav-btn:disabled {
+          opacity: 0.3;
+          cursor: default;
+        }
+
+        .cm-nav-left { left: 10px; }
+        .cm-nav-right { right: 10px; }
+
+        .cm-preview-dots {
+          position: absolute;
+          bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 6px;
+          z-index: 3;
+        }
+
+        .cm-preview-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.4);
+          border: none;
+          padding: 0;
+          cursor: pointer;
+        }
+
+        .cm-preview-dot.active {
+          background: white;
+          transform: scale(1.25);
+        }
+
+        .cm-preview-count {
+          position: absolute;
+          top: calc(env(safe-area-inset-top, 0px) + 12px);
+          left: 16px;
+          padding: 5px 12px;
+          border-radius: 12px;
+          background: rgba(0, 0, 0, 0.55);
+          color: white;
+          font-size: 11px;
+          font-weight: 700;
+          z-index: 3;
+        }
+
+        /* Remove / add-more buttons (image mode) */
+        .cm-media-actions {
+          position: absolute;
+          right: 14px;
+          top: calc(env(safe-area-inset-top, 0px) + 12px);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          z-index: 4;
+        }
+
+        .cm-media-action-btn {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          border-radius: 12px;
+          color: white;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .cm-media-action-btn:hover {
+          background: rgba(0, 0, 0, 0.75);
+        }
+
+        .cm-media-action-icon {
+          width: 17px;
+          height: 17px;
         }
 
         /* Close button — floats at the top-right of the bottom panel,
