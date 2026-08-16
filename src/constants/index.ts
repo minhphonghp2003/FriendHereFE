@@ -10,3 +10,6 @@ export const STORAGE_KEYS = {
   THEME: "theme",
   LOCALE: "locale",
 } as const;
+
+/** v2: last open page (home/moments) for app re-launch ("continue where you left off") */
+export const V2_LAST_PAGE_KEY = "v2_last_page";

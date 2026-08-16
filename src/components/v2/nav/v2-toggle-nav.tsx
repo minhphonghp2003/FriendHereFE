@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Camera, ChevronsUp } from "lucide-react";
+import { V2_LAST_PAGE_KEY } from "@/constants";
 
 export function V2ToggleNav() {
   const pathname = usePathname();
@@ -13,6 +14,17 @@ export function V2ToggleNav() {
   const targetRoute = isHome ? "/v2/moments" : "/v2/location";
   const Icon = isHome ? Camera : Home;
   const label = isHome ? "Moments" : "Home";
+
+  // Persist the last open page so the next app launch resumes there.
+  // Only the two root pages count (timeline detail etc. always resume home).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isMoments) {
+      window.localStorage.setItem(V2_LAST_PAGE_KEY, "moments");
+    } else if (isHome) {
+      window.localStorage.setItem(V2_LAST_PAGE_KEY, "home");
+    }
+  }, [isMoments, isHome]);
 
   // Move down (out of the way) while the nearby sheet is open or composing a post
   const [hidden, setHidden] = useState(false);

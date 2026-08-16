@@ -34,14 +34,14 @@ import type { MomentDto, MomentVisibility } from "@/types/moment";
 import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 import { toast } from "sonner";
 
-const COMMON_EMOJIS = ["ðŸ‘", "â¤ï¸", "ðŸ˜‚", "ðŸ˜®", "ðŸ˜¢", "ðŸ˜¡"];
+const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
-  OnlyMe: { icon: EyeOff, label: "Chá»‰ tÃ´i" },
-  Friends: { icon: Users, label: "Báº¡n bÃ¨" },
-  BestFriend: { icon: Star, label: "Báº¡n thÃ¢n" },
-  Lover: { icon: Heart, label: "NgÆ°á»i yÃªu" },
-  Public: { icon: Globe, label: "CÃ´ng khai" },
+  OnlyMe: { icon: EyeOff, label: "Chỉ tôi" },
+  Friends: { icon: Users, label: "Bạn bè" },
+  BestFriend: { icon: Star, label: "Bạn thân" },
+  Lover: { icon: Heart, label: "Người yêu" },
+  Public: { icon: Globe, label: "Công khai" },
 };
 
 const VISIBILITY_OPTIONS = Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[];
@@ -94,7 +94,7 @@ export function V2MomentReel({
   const sheetRef = useRef<HTMLDivElement | null>(null);
 
   // Publish the ACTUAL sheet height so the scroll-to-top button can anchor
-  // right above it (no pixel guessing) â€” only the ACTIVE reel reports it
+  // right above it (no pixel guessing) — only the ACTIVE reel reports it
   useEffect(() => {
     if (!active) return;
     const el = sheetRef.current;
@@ -112,7 +112,7 @@ export function V2MomentReel({
   }, [active]);
   const isOwner = currentUserId === moment.userId;
 
-  // ===== Audio: NO toggle â€” always try to play with sound. If the browser
+  // ===== Audio: NO toggle — always try to play with sound. If the browser
   // blocks unmuted autoplay (before first interaction), start muted and a
   // one-time global gesture listener un-mutes automatically. =====
   const [muted, setMuted] = useState(true);
@@ -141,7 +141,7 @@ export function V2MomentReel({
     if (active && !showViewer) {
       video.muted = muted;
       video.play().catch(() => {
-        // Unmuted autoplay blocked → retry muted, the unlock listener will
+        // Unmuted autoplay blocked ? retry muted, the unlock listener will
         // unmute after the first user gesture
         video.muted = true;
         setMuted(true);
@@ -232,7 +232,7 @@ export function V2MomentReel({
     if (reactTimeoutRef.current) clearTimeout(reactTimeoutRef.current);
     reactTimeoutRef.current = setTimeout(() => {
       addMomentReaction(moment.id, emoji).catch(() => {
-        toast.error("KhÃ´ng thá»ƒ tháº£ cáº£m xÃºc");
+        toast.error("Không thể thả cảm xúc");
       });
     }, 500);
   };
@@ -259,24 +259,24 @@ export function V2MomentReel({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("XÃ³a khoáº£nh kháº¯c nÃ y? HÃ nh Ä‘á»™ng khÃ´ng thá»ƒ hoÃ n tÃ¡c.")) return;
+    if (!window.confirm("Xóa khoảnh khắc này? Hành động không thể hoàn tác.")) return;
     try {
       await deleteMoment(moment.id);
-      toast.success("ÄÃ£ xÃ³a khoáº£nh kháº¯c");
+      toast.success("Đã xóa khoảnh khắc");
       onDelete?.(moment.id);
     } catch {
-      toast.error("KhÃ´ng thá»ƒ xÃ³a");
+      toast.error("Không thể xóa");
     }
   };
 
   const handleHideMoment = async () => {
-    if (!window.confirm("áº¨n khoáº£nh kháº¯c nÃ y khá»i feed cá»§a báº¡n?")) return;
+    if (!window.confirm("Ẩn khoảnh khắc này khỏi feed của bạn?")) return;
     try {
       await hideMoment(moment.id);
-      toast.success("ÄÃ£ áº©n khoáº£nh kháº¯c");
+      toast.success("Đã ẩn khoảnh khắc");
       onHide?.(moment.id);
     } catch {
-      toast.error("KhÃ´ng thá»ƒ áº©n");
+      toast.error("Không thể ẩn");
     }
   };
 
@@ -285,15 +285,15 @@ export function V2MomentReel({
       const updated = await changeVisibility(moment.id, vis);
       setLocalVisibility(updated.visibility);
       setShowVisibilityMenu(false);
-      toast.success("ÄÃ£ Ä‘á»•i quyá»n riÃªng tÆ°");
+      toast.success("Đã đổi quyền riêng tư");
     } catch {
-      toast.error("KhÃ´ng thá»ƒ Ä‘á»•i quyá»n riÃªng tÆ°");
+      toast.error("Không thể đổi quyền riêng tư");
     }
   };
 
   const visConfig = visibilityConfig[localVisibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
-  const displayName = isOwner ? "Báº¡n" : moment.userName;
+  const displayName = isOwner ? "Bạn" : moment.userName;
 
   const openViewer = useCallback(() => setShowViewer(true), []);
 
@@ -346,7 +346,7 @@ export function V2MomentReel({
         {moment.status === "Processing" ? (
           <div className="vm-processing">
             <Loader2 className="vm-processing-icon" />
-            <span>Äang xá»­ lÃ½...</span>
+            <span>Đang xử lý...</span>
           </div>
         ) : moment.video ? (
           <>
@@ -360,14 +360,14 @@ export function V2MomentReel({
                 className="vm-media"
               />
               {/* Tap video = play/pause (no fullscreen on tap) */}
-              <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Phát/Dừng">
+              <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Ph�t/D?ng">
                 {feedPaused && <Play className="vm-video-tap-icon" />}
               </button>
               {/* Fullscreen at the VIDEO's top-right */}
               <button
                 onClick={openViewer}
                 className="vm-expand-btn vm-expand-on-media"
-                aria-label="Toàn màn hình"
+                aria-label="To�n m�n h�nh"
               >
                 <Maximize2 className="vm-expand-icon" />
               </button>
@@ -402,7 +402,7 @@ export function V2MomentReel({
                   </div>
                 )}
               </div>
-              {/* No expand button for images â€” center tap opens the viewer */}
+              {/* No expand button for images — center tap opens the viewer */}
             </div>
           </>
         ) : null}
@@ -434,7 +434,7 @@ export function V2MomentReel({
                 <button
                   className="vm-author-sub vm-vis-toggle"
                   onClick={() => setShowVisibilityMenu((v) => !v)}
-                  aria-label="Äá»•i quyá»n riÃªng tÆ°"
+                  aria-label="Đổi quyền riêng tư"
                 >
                   <VisIcon className="vm-author-sub-icon" />
                   {visConfig.label}
@@ -452,14 +452,14 @@ export function V2MomentReel({
           <div className="vm-row-1-right">
             <span className="vm-date-pill">{formatDateTime(moment.createdAt)}</span>
 
-            {/* Direct delete (owner) / hide (others) â€” replaces the â‹¯ menu */}
+            {/* Direct delete (owner) / hide (others) — replaces the ⋯ menu */}
             {isOwner ? (
               <button
                 onClick={handleDelete}
                 disabled={deleting}
                 className="vm-action-btn"
-                aria-label="XÃ³a"
-                title="XÃ³a"
+                aria-label="Xóa"
+                title="Xóa"
               >
                 {deleting ? (
                   <Loader2 className="vm-action-icon spinning" />
@@ -472,8 +472,8 @@ export function V2MomentReel({
                 onClick={handleHideMoment}
                 disabled={hiding}
                 className="vm-action-btn"
-                aria-label="áº¨n"
-                title="áº¨n"
+                aria-label="Ẩn"
+                title="Ẩn"
               >
                 {hiding ? (
                   <Loader2 className="vm-action-icon spinning" />
@@ -507,7 +507,7 @@ export function V2MomentReel({
             <button
               onClick={() => setShowVisibilityMenu(false)}
               className="vm-vis-close"
-              aria-label="ÄÃ³ng"
+              aria-label="Đóng"
             >
               <X className="vm-vis-close-icon" />
             </button>
@@ -525,7 +525,7 @@ export function V2MomentReel({
                     <button
                       className="vm-timeline-link"
                       onClick={() => router.push(`/v2/timelines/${moment.timeline!.id}`)}
-                      aria-label={`Má»Ÿ hÃ nh trÃ¬nh ${moment.timeline.caption}`}
+                      aria-label={`Mở hành trình ${moment.timeline.caption}`}
                     >
                       <Route className="vm-timeline-link-icon" />
                       <span className="vm-badge-text">{moment.timeline.caption}</span>
@@ -548,18 +548,18 @@ export function V2MomentReel({
           </div>
         )}
 
-        {/* Row 2: engagement â€” role-split like v1.
-            Owner: reaction stack only (tap â†’ detail sheet); ROW HIDDEN when
+        {/* Row 2: engagement — role-split like v1.
+            Owner: reaction stack only (tap → detail sheet); ROW HIDDEN when
             there are no reactions at all (no empty placeholder).
             Others: horizontal quick emojis + send-message (chat with moment). */}
         {(!isOwner || groupedReactions.length > 0) && (
           <div className="vm-sheet-row-2">
             {isOwner ? (
-              /* Owner: overlapping reactor stack â†’ tap to see detail (v1) */
+              /* Owner: overlapping reactor stack → tap to see detail (v1) */
               <button
                 className="vm-owner-stack"
                 onClick={() => setShowReactions(true)}
-                aria-label="Xem cáº£m xÃºc"
+                aria-label="Xem cảm xúc"
               >
                 <span className="vm-stack-avatars">
                   {groupedReactions.slice(0, 3).map((g) => (
@@ -577,7 +577,7 @@ export function V2MomentReel({
                   key={emoji}
                   onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
                   className="vm-quick-react"
-                  aria-label={`Tháº£ ${emoji}`}
+                  aria-label={`Thả ${emoji}`}
                 >
                   {emoji}
                 </button>
@@ -591,18 +591,18 @@ export function V2MomentReel({
                 className="vm-engagement vm-send-btn"
                 onClick={handleSendMessage}
                 disabled={sendingMessage || !moment.allowComment}
-                aria-label="Nháº¯n tin"
-                title={!moment.allowComment ? "ÄÃ£ táº¯t bÃ¬nh luáº­n" : "Nháº¯n tin"}
+                aria-label="Nhắn tin"
+                title={!moment.allowComment ? "Đã tắt bình luận" : "Nhắn tin"}
               >
                 <MessageCircle className="vm-engagement-icon" />
-                {sendingMessage ? "..." : "Nháº¯n tin"}
+                {sendingMessage ? "..." : "Nhắn tin"}
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* ===== Fullscreen viewer â€” shared V2MomentViewer component ===== */}
+      {/* ===== Fullscreen viewer — shared V2MomentViewer component ===== */}
       {showViewer && (
         <V2MomentViewer
           moment={moment}
@@ -741,7 +741,7 @@ export function V2MomentReel({
           justify-content: center;
         }
 
-        /* Fullscreen button â€” pinned to the VIDEO's top-right (inside the
+        /* Fullscreen button — pinned to the VIDEO's top-right (inside the
            rounded media card) */
         .vm-expand-btn {
           position: absolute;
@@ -793,7 +793,7 @@ export function V2MomentReel({
           transform: scale(1.2);
         }
 
-        /* ===== Bottom sheet (translucent â€” neon backdrop shows through) ===== */
+        /* ===== Bottom sheet (translucent — neon backdrop shows through) ===== */
         .vm-sheet {
           position: relative;
           flex: 0 0 auto;
@@ -938,7 +938,7 @@ export function V2MomentReel({
           padding: 0;
         }
 
-        /* v2 timeline chip â†’ /v2/timelines/{id} journey page */
+        /* v2 timeline chip → /v2/timelines/{id} journey page */
         .vm-timeline-link {
           display: inline-flex;
           align-items: center;
@@ -1015,7 +1015,7 @@ export function V2MomentReel({
           min-height: 34px;
         }
 
-        /* Owner: overlapping emoji stack â†’ detail sheet */
+        /* Owner: overlapping emoji stack → detail sheet */
         .vm-owner-stack {
           display: flex;
           align-items: center;
@@ -1113,7 +1113,7 @@ export function V2MomentReel({
           height: 20px;
         }
 
-        /* Direct delete/hide action button (replaces the â‹¯ menu) */
+        /* Direct delete/hide action button (replaces the ⋯ menu) */
         .vm-action-btn {
           width: 32px;
           height: 32px;

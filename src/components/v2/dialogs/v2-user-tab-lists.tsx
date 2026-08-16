@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -116,7 +116,7 @@ export function V2UserMomentList({
   }
 
   if (moments.length === 0) {
-    return <p className="um-empty">ChÆ°a cÃ³ khoáº£nh kháº¯c nÃ o</p>;
+    return <p className="um-empty">Chưa có khoảnh khắc nào</p>;
   }
 
   return (
@@ -133,7 +133,7 @@ export function V2UserMomentList({
               setViewMoment(moment);
               setViewIndex(0);
             }}
-            aria-label="Xem khoáº£nh kháº¯c"
+            aria-label="Xem khoảnh khắc"
           >
             <div className="um-media">
               {mediaUrl ? (
@@ -186,7 +186,7 @@ export function V2UserMomentList({
           <Loader2 className="um-more-icon" />
         </div>
       )}
-      {!hasMore && <p className="um-end">ÄÃ£ hiá»ƒn thá»‹ táº¥t cáº£</p>}
+      {!hasMore && <p className="um-end">Đã hiển thị tất cả</p>}
 
       <style jsx global>{`
         .um-list {
@@ -419,7 +419,7 @@ export function V2UserMomentList({
 }
 
 /**
- * Per-user timeline list: tile per timeline. Tap â†’ v2 timeline journey page.
+ * Per-user timeline list: tile per timeline. Tap → v2 timeline journey page.
  */
 export function V2UserTimelineList({ userId }: { userId: number }) {
   const router = useRouter();
@@ -431,7 +431,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
 
   const fetchTimelines = useCallback(() => {
     setIsLoading(true);
-    // Own profile → dedicated my-timelines API; other users → user-timelines API
+    // Own profile ? dedicated my-timelines API; other users ? user-timelines API
     const fetcher = isMe
       ? getMyTimelines(null, PAGE_TAKE)
       : getUserTimelines(userId, null, PAGE_TAKE);
@@ -447,10 +447,10 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
 
   return (
     <div className="utl-wrap">
-      {/* Create button â€” v1 create flow (caption, date range, pick moments, partners) */}
+      {/* Create button — v1 create flow (caption, date range, pick moments, partners) */}
       <button className="utl-create-btn" onClick={() => setShowCreate(true)}>
         <Plus className="utl-create-icon" />
-        <span>Táº¡o hÃ nh trÃ¬nh</span>
+        <span>Tạo hành trình</span>
       </button>
 
       {isLoading ? (
@@ -458,7 +458,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
           <LoadingVideo size="sm" />
         </div>
       ) : timelines.length === 0 ? (
-        <p className="utl-empty">ChÆ°a cÃ³ hÃ nh trÃ¬nh nÃ o</p>
+        <p className="utl-empty">Chưa có hành trình nào</p>
       ) : (
         <div className="utl-list">
           {timelines.map((t) => (
@@ -466,7 +466,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
               key={t.id}
               className="utl-tile"
               onClick={() => router.push(`/v2/timelines/${t.id}`)}
-              aria-label={`Má»Ÿ hÃ nh trÃ¬nh ${t.caption}`}
+              aria-label={`Mở hành trình ${t.caption}`}
             >
               <div className="utl-icon-wrap">
                 <Route className="utl-icon" />
@@ -474,7 +474,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
               <div className="utl-info">
                 <span className="utl-caption">{t.caption}</span>
                 <span className="utl-sub">
-                  {t.momentCount} khoáº£nh kháº¯c Â· {shortDate(t.createdAt)}
+                  {t.momentCount} khoảnh khắc · {shortDate(t.createdAt)}
                 </span>
               </div>
               <div className="utl-partners">
@@ -655,7 +655,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
 
 /**
  * Create timeline (v1 CreateTimelineDialog logic, v2 styling):
- * caption + date range â†’ available moments (paginated) + partners â†’ create.
+ * caption + date range → available moments (paginated) + partners → create.
  */
 function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { user } = useAuthSafe();
@@ -722,7 +722,7 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
 
   const handleSubmit = async () => {
     if (selectedIds.length === 0) {
-      setError("Vui lÃ²ng chá»n Ã­t nháº¥t má»™t khoáº£nh kháº¯c.");
+      setError("Vui lòng chọn ít nhất một khoảnh khắc.");
       return;
     }
     setError(null);
@@ -733,10 +733,10 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
         partnerIds,
         momentIds: selectedIds,
       });
-      toast.success("ÄÃ£ táº¡o hÃ nh trÃ¬nh!");
+      toast.success("Đã tạo hành trình!");
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Táº¡o hÃ nh trÃ¬nh tháº¥t báº¡i");
+      setError(err instanceof Error ? err.message : "Tạo hành trình thất bại");
     } finally {
       setCreating(false);
     }
@@ -751,20 +751,20 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
         <div className="utc-head">
           <h3 className="utc-title">
             <Route className="utc-title-icon" />
-            Táº¡o hÃ nh trÃ¬nh
+            Tạo hành trình
           </h3>
-          <button onClick={onClose} className="utc-close" aria-label="ÄÃ³ng">
+          <button onClick={onClose} className="utc-close" aria-label="Đóng">
             <X className="utc-close-icon" />
           </button>
         </div>
 
         <div className="utc-body">
           <div className="utc-field">
-            <label className="utc-label" htmlFor="utc-caption">TiÃªu Ä‘á»</label>
+            <label className="utc-label" htmlFor="utc-caption">Tiêu đề</label>
             <input
               id="utc-caption"
               className="utc-input"
-              placeholder="VD: Chuyáº¿n Ä‘i mÃ¹a hÃ¨"
+              placeholder="VD: Chuyến đi mùa hè"
               value={caption}
               maxLength={100}
               onChange={(e) => setCaption(e.target.value)}
@@ -774,7 +774,7 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
           <div className="utc-field">
             <label className="utc-label">
               <CalendarDays className="utc-label-icon" />
-              Khoáº£ng thá»i gian
+              Khoảng thời gian
             </label>
             <div className="utc-range">
               <input
@@ -784,7 +784,7 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
                 max={toDate}
                 onChange={(e) => setFromDate(e.target.value)}
               />
-              <span className="utc-arrow">â†’</span>
+              <span className="utc-arrow">→</span>
               <input
                 type="date"
                 className="utc-input"
@@ -797,22 +797,22 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
 
           <div className="utc-field">
             <div className="utc-label-row">
-              <label className="utc-label">Chá»n khoáº£nh kháº¯c</label>
+              <label className="utc-label">Chọn khoảnh khắc</label>
               {available.length > 0 && (
                 <button className="utc-select-all" onClick={toggleAll}>
-                  {selectedIds.length === available.length ? "Bá» chá»n táº¥t cáº£" : "Chá»n táº¥t cáº£"}
+                  {selectedIds.length === available.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
                 </button>
               )}
             </div>
 
             {!hasRange ? (
-              <p className="utc-hint">Chá»n khoáº£ng thá»i gian</p>
+              <p className="utc-hint">Chọn khoảng thời gian</p>
             ) : loadingMoments ? (
               <div className="utc-moments-loading">
                 <LoadingVideo size="sm" />
               </div>
             ) : available.length === 0 ? (
-              <p className="utc-hint">KhÃ´ng cÃ³ khoáº£nh kháº¯c kháº£ dá»¥ng trong khoáº£ng nÃ y</p>
+              <p className="utc-hint">Không có khoảnh khắc khả dụng trong khoảng này</p>
             ) : (
               <div className="utc-moments">
                 {available.map((moment) => {
@@ -833,7 +833,7 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
                       </div>
                       <div className="utc-moment-info">
                         <span className="utc-moment-caption">
-                          {moment.caption || "KhÃ´ng cÃ³ chÃº thÃ­ch"}
+                          {moment.caption || "Không có chú thích"}
                         </span>
                         <span className="utc-moment-sub">
                           {moment.location?.isShowed && (
@@ -841,7 +841,7 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
                               <MapPin className="utc-moment-pin" />
                               {moment.location.placeName ||
                                 `${moment.location.latitude.toFixed(3)}, ${moment.location.longitude.toFixed(3)}`}
-                              {" Â· "}
+                              {" · "}
                             </>
                           )}
                           {new Date(moment.createdAt).toLocaleDateString("vi-VN")}
@@ -858,9 +858,9 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
           </div>
 
           <div className="utc-field">
-            <label className="utc-label">Báº¡n Ä‘á»“ng hÃ nh</label>
+            <label className="utc-label">Bạn đồng hành</label>
             {friends.length === 0 ? (
-              <p className="utc-hint">ChÆ°a cÃ³ báº¡n bÃ¨</p>
+              <p className="utc-hint">Chưa có bạn bè</p>
             ) : (
               <div className="utc-partners-row">
                 {friends.map((f) => {
@@ -897,12 +897,12 @@ function V2CreateTimeline({ onClose, onCreated }: { onClose: () => void; onCreat
             {creating ? (
               <>
                 <Loader2 className="utc-submit-icon spinning" />
-                Äang táº¡o...
+                Đang tạo...
               </>
             ) : (
               <>
                 <Check className="utc-submit-icon" />
-                Táº¡o ({selectedIds.length})
+                Tạo ({selectedIds.length})
               </>
             )}
           </button>
