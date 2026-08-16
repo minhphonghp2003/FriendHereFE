@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Trash2, Route, MapPin, Play } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2, MapPin, Play } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { useTimeline, useTimelineMoments, useDeleteTimeline } from "@/hooks/timelines";
 import { LoadingVideo } from "@/components/common/loading-video";
@@ -72,6 +72,18 @@ export default function V2TimelineDetailPage() {
   const firstMoment = sortedMoments[0];
   const lastMoment = sortedMoments[sortedMoments.length - 1];
 
+  // Entering the timeline detail: close all modals (userinfo sheet) and hide
+  // the header + nav button; leaving restores them
+  useEffect(() => {
+    window.dispatchEvent(new Event("v2:close-modals"));
+    window.dispatchEvent(new Event("v2:sheet-open")); // hides the nav button
+    window.dispatchEvent(new Event("v2:compose-open")); // hides the header
+    return () => {
+      window.dispatchEvent(new Event("v2:sheet-close"));
+      window.dispatchEvent(new Event("v2:compose-close"));
+    };
+  }, []);
+
   return (
     <div className="vt-page">
       {/* Header: back + title + delete */}
@@ -82,7 +94,6 @@ export default function V2TimelineDetailPage() {
         <div className="vt-header-text">
           <h1 className="vt-title">{timeline?.caption ?? "Hành trình"}</h1>
           <p className="vt-subtitle">
-            <Route className="vt-subtitle-icon" />
             <span>{timeline?.momentCount ?? moments.length} khoảnh khắc</span>
             {firstMoment && lastMoment && (
               <span> · {shortDate(firstMoment.createdAt)} – {shortDate(lastMoment.createdAt)}</span>
@@ -144,10 +155,6 @@ export default function V2TimelineDetailPage() {
             {/* Journey book: alternating entries connected by a dashed path.
                 Title lives in the header (no duplicated cover badge). */}
             <div className="vt-book">
-              <div className="vt-start-marker">
-                <Route className="vt-start-icon" />
-              </div>
-
               {sortedMoments.map((moment, index) => {
                 const isLeft = index % 2 === 0;
                 const isLast = index === sortedMoments.length - 1;
@@ -261,7 +268,11 @@ export default function V2TimelineDetailPage() {
           width: 100%;
           display: flex;
           flex-direction: column;
-          background: var(--vm-bg, #f4f4f5);
+          /* Neon-primary backdrop, same family as the moments page */
+          background:
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
+            var(--vm-bg, #f4f4f5);
           color: var(--vm-text, #18181b);
         }
 
@@ -432,18 +443,6 @@ export default function V2TimelineDetailPage() {
           max-width: 480px;
           margin: 0 auto;
           padding: 8px 16px 24px;
-        }
-
-        .vt-start-marker {
-          display: flex;
-          justify-content: center;
-          padding: 6px 0 10px;
-        }
-
-        .vt-start-icon {
-          width: 18px;
-          height: 18px;
-          color: #2BB0AF;
         }
 
         .vt-entry {
