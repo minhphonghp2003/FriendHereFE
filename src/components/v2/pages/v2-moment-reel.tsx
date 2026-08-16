@@ -243,15 +243,15 @@ export function V2MomentReel({
     try {
       const res = await getOpponentConversation(moment.userId);
       if (res.data) {
-        router.push(`/v2/chat/${res.data}?momentId=${moment.id}`);
+        router.push(`/chat/${res.data}?momentId=${moment.id}`);
       } else {
         router.push(
-          `/v2/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+          `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
         );
       }
     } catch {
       router.push(
-        `/v2/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+        `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
       );
     } finally {
       setSendingMessage(false);
@@ -524,7 +524,7 @@ export function V2MomentReel({
                     {/* v2 chip: routes to the v2 journey page */}
                     <button
                       className="vm-timeline-link"
-                      onClick={() => router.push(`/v2/timelines/${moment.timeline!.id}`)}
+                      onClick={() => router.push(`/timelines/${moment.timeline!.id}`)}
                       aria-label={`Mở hành trình ${moment.timeline.caption}`}
                     >
                       <Route className="vm-timeline-link-icon" />

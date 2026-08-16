@@ -28,9 +28,9 @@ export function V2Header() {
   // after a hard reload (mount events can fire before listeners attach).
   const [momentsBrowsing, setMomentsBrowsing] = useState(false);
   const [composing, setComposing] = useState(false);
-  const isMomentsPage = pathname?.startsWith("/v2/moments") ?? false;
-  const isTimelinePage = pathname?.startsWith("/v2/timelines") ?? false;
-  const isChatPage = pathname?.startsWith("/v2/chat") ?? false;
+  const isMomentsPage = pathname?.startsWith("/moments") ?? false;
+  const isTimelinePage = pathname?.startsWith("/timelines") ?? false;
+  const isChatPage = pathname?.startsWith("/chat") ?? false;
 
   useEffect(() => {
     const onIndex = (e: Event) => {
@@ -134,7 +134,7 @@ export function V2Header() {
             />
           </button>
           <button
-            onClick={() => router.push("/v2/chat")}
+            onClick={() => router.push("/chat")}
             className="header-float-btn"
             aria-label="Trò chuyện"
           >

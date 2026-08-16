@@ -28,7 +28,7 @@ export const TimelineCard = ({ timeline, currentUserId, onDeleted }: TimelineCar
 
   return (
     <button
-      onClick={() => router.push(`/timelines/${timeline.id}`)}
+      onClick={() => router.push(`/legacy/timelines/${timeline.id}`)}
       className="border-border bg-card hover:bg-muted/50 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors"
     >
       <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">

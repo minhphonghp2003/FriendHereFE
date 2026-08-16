@@ -72,7 +72,7 @@ export default function RegisterPage() {
       // Best-effort; never blocks the redirect.
       void syncFcmTokenAfterAuth();
 
-      router.replace("/home");
+      router.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng ký thất bại");
     } finally {

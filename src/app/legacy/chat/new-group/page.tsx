@@ -52,7 +52,7 @@ export default function NewGroupChatPage() {
     try {
       const conversationId = await createGroup(parsed.data);
       await appHub.joinConversation(conversationId).catch(() => {});
-      router.replace(`/chat/${conversationId}`);
+      router.replace(`/legacy/chat/${conversationId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể tạo nhóm chat");
     }

@@ -281,12 +281,12 @@ export function V2UserDetailDialog({
     try {
       const res = await getOpponentConversation(userDetail.id);
       if (res.data) {
-        router.push(`/v2/chat/${res.data}`);
+        router.push(`/chat/${res.data}`);
       } else {
-        router.push(`/v2/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
+        router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
       }
     } catch {
-      router.push(`/v2/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
+      router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
     }
   }, [isMe, userDetail, router]);
 

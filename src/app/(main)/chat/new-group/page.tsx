@@ -63,7 +63,7 @@ export default function V2NewGroupChatPage() {
     try {
       const conversationId = await createGroup(parsed.data);
       await appHub.joinConversation(conversationId).catch(() => {});
-      router.replace(`/v2/chat/${conversationId}`);
+      router.replace(`/chat/${conversationId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể tạo nhóm chat");
     }

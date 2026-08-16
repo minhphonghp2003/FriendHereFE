@@ -139,7 +139,7 @@ export default function V2ChatPage() {
 
   const handleChatClick = (conv: ConversationDto) => {
     if (!conv.id) return;
-    router.push(`/v2/chat/${conv.id}`);
+    router.push(`/chat/${conv.id}`);
   };
 
   const toggleMute = async (conv: ConversationDto) => {
@@ -334,7 +334,7 @@ export default function V2ChatPage() {
     <div className="vc2-page">
       <div className="vc2-header">
         <button
-          onClick={() => router.push("/v2/location")}
+          onClick={() => router.push("/location")}
           className="vc2-back-btn"
           aria-label="Quay lại"
         >
@@ -342,7 +342,7 @@ export default function V2ChatPage() {
         </button>
         <h1 className="vc2-title">Tin nhắn</h1>
         <button
-          onClick={() => router.push("/v2/chat/new-group")}
+          onClick={() => router.push("/chat/new-group")}
           aria-label="Tạo nhóm chat"
           className="vc2-new-group-btn"
         >

@@ -204,12 +204,12 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
     try {
       const res = await getOpponentConversation(userId);
       if (res.data) {
-        router.push(`/v2/chat/${res.data}`);
+        router.push(`/chat/${res.data}`);
       } else {
-        router.push(`/v2/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
+        router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
       }
     } catch {
-      router.push(`/v2/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
+      router.push(`/chat/new?receiverId=${userId}&name=${encodeURIComponent(name)}`);
     } finally {
       setChatLoadingId(null);
     }

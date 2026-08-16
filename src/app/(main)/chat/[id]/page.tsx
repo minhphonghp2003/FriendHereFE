@@ -404,17 +404,17 @@ export default function V2ChatDetailPage() {
   useEffect(() => {
     const unsubRemoved = appHub.onReceiveMemberRemoved((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/v2/chat");
+        router.replace("/chat");
       }
     });
     const unsubLeft = appHub.onReceiveMemberLeft((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/v2/chat");
+        router.replace("/chat");
       }
     });
     const unsubGroupDeleted = appHub.onReceiveGroupDeleted((data) => {
       if (data.conversationId === conversationId) {
-        router.replace("/v2/chat");
+        router.replace("/chat");
       }
     });
     return () => {
@@ -1511,7 +1511,7 @@ export default function V2ChatDetailPage() {
         onOpenChange={setShowGroupSettings}
         conversation={currentConv ?? null}
         onNameChanged={(newName) => setConvName(newName)}
-        onExitGroup={() => router.replace("/v2/chat")}
+        onExitGroup={() => router.replace("/chat")}
       />
 
       <style jsx global>{`

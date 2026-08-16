@@ -84,7 +84,7 @@ export default function AuthCallbackPage() {
     // PUT /fcm-token (prompts for notification permission if needed).
     void syncFcmTokenAfterAuth();
 
-    router.replace("/home");
+    router.replace("/");
   }, [router, login]);
 
   return (

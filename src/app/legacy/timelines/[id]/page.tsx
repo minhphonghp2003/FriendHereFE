@@ -51,7 +51,7 @@ export default function TimelineDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteTimeline(timelineId);
-      router.replace("/timelines");
+      router.replace("/legacy/timelines");
     } catch {}
   };
 

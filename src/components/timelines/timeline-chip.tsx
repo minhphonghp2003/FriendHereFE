@@ -17,7 +17,7 @@ export const TimelineChip = ({ timeline, variant = "dark" }: TimelineChipProps) 
     <button
       onClick={(e) => {
         e.stopPropagation();
-        router.push(`/timelines/${timeline.id}`);
+        router.push(`/legacy/timelines/${timeline.id}`);
       }}
       className={cn(
         "flex max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",

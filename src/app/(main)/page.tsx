@@ -2,17 +2,23 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { V2_LAST_PAGE_KEY } from "@/constants";
+import { USER_ID_KEY, V2_LAST_PAGE_KEY } from "@/constants";
 import { LoadingVideo } from "@/components/common/loading-video";
 
 export default function V2HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Resume the last open page (home/moments) from the previous session
+    // Not logged in → auth entry; otherwise resume the last open page
     const last =
       typeof window !== "undefined" ? window.localStorage.getItem(V2_LAST_PAGE_KEY) : null;
-    router.replace(last === "moments" ? "/v2/moments" : "/v2/location");
+    const userId =
+      typeof window !== "undefined" ? window.localStorage.getItem(USER_ID_KEY) : null;
+    if (!userId) {
+      router.replace("/init");
+      return;
+    }
+    router.replace(last === "moments" ? "/moments" : "/location");
   }, [router]);
 
   return (

@@ -1,6 +1,6 @@
 // Service worker with auto-update support
 // Bump CACHE_VERSION when you want to force a full refresh
-const CACHE_VERSION = "8";
+const CACHE_VERSION = "9";
 const CACHE_NAME = `friendhere-v${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline";
 
@@ -11,11 +11,9 @@ const PRECACHE_ROUTES = [
   "/register",
   "/forgot-password",
   "/reset-password",
-  "/home",
-  "/chat",
+  "/location",
   "/moments",
-  "/timelines",
-  "/settings",
+  "/chat",
   "/offline",
 ];
 
@@ -240,7 +238,7 @@ async function showCallNotification(data) {
       requireInteraction: true,
       vibrate: [500, 300, 500],
       data: {
-        deepLink: "/home",
+        deepLink: "/location",
         type: PUSH_TYPE.CALL_INCOMING,
         callId,
       },

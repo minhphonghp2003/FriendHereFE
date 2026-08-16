@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
-import { X, Play, Check } from "lucide-react";
+import { Play, Check } from "lucide-react";
 import { toChatMessageRenderType, isVideoUrl, MessageType } from "@/types/chat";
 import type { MessageDto, RepliedMessageDto } from "@/types/chat";
-import { ImageLightbox } from "@/components/common/image-lightbox";
-import { DownloadButton } from "@/components/common/download-button";
+import { V2MediaViewer, type V2MediaItem } from "@/components/v2/pages/v2-media-viewer";
 
 interface MessageBubbleProps {
   msg: MessageDto;
@@ -167,6 +166,26 @@ const MessageTicks = ({ status, isMe }: { status?: number; isMe: boolean }) => {
   );
 };
 
+/** Timestamp + read-tick line under media bubbles (emoji/sticker/gif) */
+const MetaLine = ({
+  msg,
+  isMe,
+  editedLabel,
+}: {
+  msg: MessageDto;
+  isMe: boolean;
+  editedLabel: string;
+}) => (
+  <p
+    className={`mt-0.5 flex items-center gap-1 text-[10px] ${isMe ? "text-white/70 self-end" : "text-muted-foreground"}`}
+    style={{ justifyContent: isMe ? "flex-end" : "flex-start" }}
+  >
+    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    {editedLabel}
+    <MessageTicks status={msg.status} isMe={isMe} />
+  </p>
+);
+
 export const MessageBubble = ({
   msg,
   isMe,
@@ -178,10 +197,17 @@ export const MessageBubble = ({
   onReplyClick,
 }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [videoIndex, setVideoIndex] = useState<number | null>(null);
+  const [mediaIndex, setMediaIndex] = useState<number | null>(null);
 
-  const handleVideoClose = useCallback(() => setVideoIndex(null), []);
+  // Combined media list (images + videos) for the shared v2 fullscreen viewer
+  const mediaItems: V2MediaItem[] = useMemo(() => {
+    if (renderType !== "File") return [];
+    return msg.attachments.map((a) => ({
+      type: isVideoUrl(a.originalUrl) ? ("video" as const) : ("image" as const),
+      url: a.originalUrl,
+      poster: a.thumbUrl || undefined,
+    }));
+  }, [renderType, msg.attachments]);
 
   const groupedReactions = useMemo(() => {
     const map = new Map<string, { count: number; mine: boolean }>();
@@ -219,9 +245,9 @@ export const MessageBubble = ({
     ) : null;
 
   useEffect(() => {
-    if (videoIndex === null) return;
+    if (mediaIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setVideoIndex(null);
+      if (e.key === "Escape") setMediaIndex(null);
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -229,7 +255,7 @@ export const MessageBubble = ({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [videoIndex]);
+  }, [mediaIndex]);
 
   if (renderType === "System") {
     return <p className="text-muted-foreground text-center text-xs">{msg.content}</p>;
@@ -253,6 +279,7 @@ export const MessageBubble = ({
         <BubbleWrapper msg={msg} onLongPress={onLongPress} className="text-4xl leading-none">
           {msg.content}
         </BubbleWrapper>
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
         {reactionRow}
       </div>
     );
@@ -268,6 +295,7 @@ export const MessageBubble = ({
         >
           <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
         </BubbleWrapper>
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
         {reactionRow}
       </div>
     );
@@ -287,6 +315,7 @@ export const MessageBubble = ({
             className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
           />
         </BubbleWrapper>
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
         {reactionRow}
       </div>
     );
@@ -295,6 +324,8 @@ export const MessageBubble = ({
   if (renderType === "File") {
     const images = msg.attachments.filter((a) => !isVideoUrl(a.originalUrl));
     const videos = msg.attachments.filter((a) => isVideoUrl(a.originalUrl));
+    // Map a media item back to its index in the combined viewer list
+    const mediaIndexOf = (url: string) => mediaItems.findIndex((m) => m.url === url);
     return (
       <BubbleWrapper
         msg={msg}
@@ -306,7 +337,10 @@ export const MessageBubble = ({
           {videos.map((v, i) => (
             <button
               key={`v-${i}`}
-              onClick={() => setVideoIndex(i)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMediaIndex(mediaIndexOf(v.originalUrl));
+              }}
               className="group relative block overflow-hidden rounded-lg"
             >
               <img
@@ -334,7 +368,10 @@ export const MessageBubble = ({
               {images.map((img, i) => (
                 <button
                   key={`i-${i}`}
-                  onClick={() => setLightboxIndex(i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMediaIndex(mediaIndexOf(img.originalUrl));
+                  }}
                   className="overflow-hidden rounded-lg"
                 >
                   <img
@@ -356,39 +393,12 @@ export const MessageBubble = ({
           <MessageTicks status={msg.status} isMe={isMe} />
         </p>
         {reactionRow}
-        {images.length > 0 && lightboxIndex !== null && (
-          <ImageLightbox
-            images={images}
-            initialIndex={lightboxIndex}
-            open
-            onClose={() => setLightboxIndex(null)}
+        {mediaIndex !== null && mediaItems[mediaIndex] && (
+          <V2MediaViewer
+            items={mediaItems}
+            initialIndex={mediaIndex}
+            onClose={() => setMediaIndex(null)}
           />
-        )}
-        {videoIndex !== null && videos[videoIndex] && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
-            onClick={handleVideoClose}
-          >
-            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-              <DownloadButton url={videos[videoIndex].originalUrl} />
-              <button
-                onClick={handleVideoClose}
-                className="rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
-                aria-label="Đóng video"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <video
-              src={videos[videoIndex].originalUrl}
-              poster={videos[videoIndex].thumbUrl || undefined}
-              controls
-              autoPlay
-              playsInline
-              className="max-h-[90vh] max-w-[90vw]"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
         )}
       </BubbleWrapper>
     );

@@ -9,13 +9,13 @@ export function V2ToggleNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isMoments = pathname?.startsWith("/v2/moments");
-  const isHome = pathname?.startsWith("/v2/location");
+  const isMoments = pathname?.startsWith("/moments");
+  const isHome = pathname?.startsWith("/location");
   // Chrome-less pages (chat, timeline detail) never show the nav button —
   // derived from pathname so it also holds after a hard reload
   const isChromeless =
-    !!pathname && pathname.startsWith("/v2/chat") || !!pathname && pathname.startsWith("/v2/timelines");
-  const targetRoute = isHome ? "/v2/moments" : "/v2/location";
+    !!pathname && pathname.startsWith("/chat") || !!pathname && pathname.startsWith("/timelines");
+  const targetRoute = isHome ? "/moments" : "/location";
   const Icon = isHome ? Camera : Home;
   const label = isHome ? "Moments" : "Home";
 

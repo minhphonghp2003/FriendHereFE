@@ -57,7 +57,7 @@ export default function LoginPage() {
       // Best-effort; never blocks the redirect.
       void syncFcmTokenAfterAuth();
 
-      router.replace("/home");
+      router.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {

@@ -161,7 +161,7 @@ export function V2UserMomentList({
                     className="um-timeline-chip"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/v2/timelines/${moment.timeline!.id}`);
+                      router.push(`/timelines/${moment.timeline!.id}`);
                     }}
                   >
                     <Route className="um-timeline-icon" />
@@ -465,7 +465,7 @@ export function V2UserTimelineList({ userId }: { userId: number }) {
             <button
               key={t.id}
               className="utl-tile"
-              onClick={() => router.push(`/v2/timelines/${t.id}`)}
+              onClick={() => router.push(`/timelines/${t.id}`)}
               aria-label={`Mở hành trình ${t.caption}`}
             >
               <div className="utl-icon-wrap">

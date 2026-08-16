@@ -32,7 +32,7 @@ export default function V2NewChatPage() {
 
   useEffect(() => {
     if (!receiverId) {
-      router.replace("/v2/chat");
+      router.replace("/chat");
     }
   }, [receiverId, router]);
 
@@ -66,7 +66,7 @@ export default function V2NewChatPage() {
       }
       const conversationId = res.data;
       await appHub.joinConversation(conversationId).catch(() => {});
-      router.replace(`/v2/chat/${conversationId}`);
+      router.replace(`/chat/${conversationId}`);
     } catch (err) {
       console.error("Failed to create conversation", err);
       setSending(false);

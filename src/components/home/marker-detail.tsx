@@ -111,12 +111,12 @@ export const MarkerDetail = ({
     try {
       const res = await getOpponentConversation(userDetail.id);
       if (res.data) {
-        router.push(`/chat/${res.data}`);
+        router.push(`/legacy/chat/${res.data}`);
       } else {
-        router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
+        router.push(`/legacy/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
       }
     } catch {
-      router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
+      router.push(`/legacy/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(name)}`);
     }
   }, [isCurrentUser, userDetail, name, router]);
 
@@ -216,7 +216,7 @@ export const MarkerDetail = ({
 
   const handleViewProfile = useCallback(() => {
     if (isCurrentUser || !userDetail) return;
-    router.push(`/user/${userDetail.id}`);
+    router.push(`/legacy/user/${userDetail.id}`);
   }, [isCurrentUser, userDetail, router]);
 
   if (loading) {

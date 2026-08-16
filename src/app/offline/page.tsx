@@ -27,7 +27,7 @@ export default function OfflinePage() {
             Try again
           </Button>
 
-          <Link href="/home" className="block">
+          <Link href="/" className="block">
             <Button variant="outline" className="h-11 w-full rounded-xl">
               Go to {env.NEXT_PUBLIC_APP_NAME}
             </Button>
