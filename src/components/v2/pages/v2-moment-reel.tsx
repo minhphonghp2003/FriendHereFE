@@ -804,7 +804,7 @@ export function V2MomentReel({
           position: relative;
           width: 100%;
           max-height: 100%;
-          aspect-ratio: 9 / 14;
+          aspect-ratio: 1 / 1; /* square media */
           margin: 0 auto;
           align-self: center;
           border-radius: 18px;

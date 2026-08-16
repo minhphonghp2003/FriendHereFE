@@ -23,18 +23,14 @@ export function V2Header() {
   const settingsModal = useV2Modal("header-settings");
   const profileModal = useV2Modal("header-profile");
 
-  // On the moments feed: hide while browsing reels (index > 0) OR while
-  // composing a new moment (preview mode)
+  // Hidden while browsing moments reels, composing, or on the timeline detail
+  // page (compose-open is also used as a generic "hide header" signal)
   const [momentsBrowsing, setMomentsBrowsing] = useState(false);
   const [composing, setComposing] = useState(false);
   const isMomentsPage = pathname?.startsWith("/v2/moments") ?? false;
+  const isTimelinePage = pathname?.startsWith("/v2/timelines") ?? false;
 
   useEffect(() => {
-    if (!isMomentsPage) {
-      setMomentsBrowsing(false);
-      setComposing(false);
-      return;
-    }
     const onIndex = (e: Event) => {
       setMomentsBrowsing(((e as CustomEvent<number>).detail ?? 0) > 0);
     };
@@ -48,7 +44,13 @@ export function V2Header() {
       window.removeEventListener("v2:compose-open", onComposeOpen);
       window.removeEventListener("v2:compose-close", onComposeClose);
     };
-  }, [isMomentsPage]);
+  }, []);
+
+  // Reset page-specific states when navigating away
+  useEffect(() => {
+    if (!isMomentsPage) setMomentsBrowsing(false);
+    if (!isMomentsPage && !isTimelinePage) setComposing(false);
+  }, [isMomentsPage, isTimelinePage]);
 
   const activeDialog: ActiveDialog = chatModal.isOpen
     ? "chat"

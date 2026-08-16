@@ -90,34 +90,34 @@ function CreateMomentCard({
   const [allowComment, setAllowComment] = useState(true);
   const [isShowLocation, setIsShowLocation] = useState(true);
   const [excludedIds, setExcludedIds] = useState<number[]>([]);
-  const [allFriends, setAllFriends] = useState<FriendshipDto[]>([]);
+  // Friends of the CURRENT visibility group (server-filtered per type)
+  const [friends, setFriends] = useState<FriendshipDto[]>([]);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
 
-  // Fetch ALL accepted friends once (no type filter — filtering per visibility
-  // is client-side so switching is instant).
+  // v1 parity: fetch friendships per visibility type — Friends/BestFriend/Lover
+  // query their own group; Public queries type 0 (all friends). OnlyMe skips.
   useEffect(() => {
-    getMyFriendships()
-      .then((res) => setAllFriends(res.data.filter(isAccepted)))
-      .catch(() => setAllFriends([]));
-  }, []);
-
-  // Filter on FE per visibility. Public can exclude ALL friends too.
-  const friends = (() => {
-    const type = VISIBILITY_TO_FRIEND_TYPE[visibility];
-    if (type === undefined) {
-      // Public (and OnlyMe): Public shows all friends; OnlyMe hides the strip
-      return visibility === "Public" ? allFriends : [];
+    if (mode !== "preview") return;
+    if (visibility === "OnlyMe") {
+      setFriends([]);
+      setExcludedIds([]);
+      return;
     }
-    return allFriends.filter((f) => {
-      const myType =
-        user?.id === f.user1Id
-          ? (Number(f.type1) || 0)
-          : (Number(f.type2) || 0);
-      return myType >= type;
-    });
-  })();
+    const type = VISIBILITY_TO_FRIEND_TYPE[visibility] ?? 0;
+    let cancelled = false;
+    getMyFriendships({ type, take: 100 })
+      .then((res) => {
+        if (!cancelled) setFriends(res.data.filter(isAccepted));
+      })
+      .catch(() => {
+        if (!cancelled) setFriends([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visibility, mode]);
 
   // New visibility group → fresh selection (none excluded)
   useEffect(() => {
@@ -451,15 +451,51 @@ function CreateMomentCard({
               </button>
 
               <div className="cm-details-bottom">
-                {/* Exclude friends — visible for every visibility except OnlyMe.
-                    Everyone starts INCLUDED (green); tap to exclude (red X). */}
+                <input
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Add a caption..."
+                  maxLength={500}
+                  className="cm-caption-input"
+                />
+
+                {/* Compact toggle pills: comments + location (same row) */}
+                <div className="cm-toggles">
+                  <button
+                    onClick={() => setAllowComment((v) => !v)}
+                    className={`cm-toggle-pill ${allowComment ? "active" : ""}`}
+                    aria-pressed={allowComment}
+                  >
+                    <MessageSquare className="cm-toggle-icon" />
+                    Comment
+                  </button>
+                  <button
+                    onClick={() => setIsShowLocation((v) => !v)}
+                    className={`cm-toggle-pill ${isShowLocation ? "active" : ""}`}
+                    aria-pressed={isShowLocation}
+                  >
+                    <MapPin className="cm-toggle-icon" />
+                    Location
+                  </button>
+                </div>
+
+                <div className="cm-visibility-row">
+                  {(Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[]).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setVisibility(v)}
+                      className={`cm-visibility-chip ${visibility === v ? "active" : ""}`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Exclude friends — directly below the visibility chips.
+                    Server-filtered per visibility group (Public = all friends).
+                    Everyone starts INCLUDED (green check); tap to exclude (red X). */}
                 {visibility !== "OnlyMe" && friends.length > 0 && (
                   <div className="cm-exclude-block">
-                    <span className="cm-exclude-label">
-                      {excludedIds.length > 0
-                        ? `Hidden from ${excludedIds.length} of ${friends.length}`
-                        : `Visible to all ${friends.length}`}
-                    </span>
                     <div className="cm-excluded-row">
                       {friends.map((f) => {
                         const friendUserId = user?.id === f.user1Id ? f.user2Id : f.user1Id;
@@ -495,45 +531,13 @@ function CreateMomentCard({
                         );
                       })}
                     </div>
+                    <span className="cm-exclude-label">
+                      {excludedIds.length > 0
+                        ? `Hidden from ${excludedIds.length} of ${friends.length}`
+                        : `Visible to all ${friends.length}`}
+                    </span>
                   </div>
                 )}
-
-                <input
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Add a caption..."
-                  maxLength={500}
-                  className="cm-caption-input"
-                />
-                <div className="cm-visibility-row">
-                  {(Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[]).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setVisibility(v)}
-                      className={`cm-visibility-chip ${visibility === v ? "active" : ""}`}
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Toggles: allow comments + show location (v1 params) */}
-                <div className="cm-toggles">
-                  <button
-                    onClick={() => setAllowComment((v) => !v)}
-                    className={`cm-toggle-chip ${allowComment ? "active" : ""}`}
-                  >
-                    <MessageSquare className="cm-toggle-icon" />
-                    Comments
-                  </button>
-                  <button
-                    onClick={() => setIsShowLocation((v) => !v)}
-                    className={`cm-toggle-chip ${isShowLocation ? "active" : ""}`}
-                  >
-                    <MapPin className="cm-toggle-icon" />
-                    Location
-                  </button>
-                </div>
 
                 {/* Share */}
                 <button
@@ -711,7 +715,7 @@ function CreateMomentCard({
           width: 100%;
           height: auto;
           max-height: 100%;
-          aspect-ratio: 9 / 16;
+          aspect-ratio: 1 / 1; /* square media, same as the feed */
           align-self: center;
           border-radius: 18px;
           overflow: hidden;
@@ -919,49 +923,44 @@ function CreateMomentCard({
           color: white;
         }
 
+        /* Compact toggle pills: share one row under the caption */
         .cm-toggles {
           display: flex;
-          gap: 8px;
+          gap: 6px;
         }
 
-        .cm-toggle-chip {
+        .cm-toggle-pill {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          padding: 10px 8px;
-          border-radius: 12px;
+          gap: 5px;
+          padding: 7px 8px;
+          border-radius: 999px;
           background: rgba(255, 255, 255, 0.08);
           border: 1px solid rgba(255, 255, 255, 0.16);
-          color: rgba(255, 255, 255, 0.55);
-          font-size: 12px;
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 11px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
-        .cm-toggle-chip.active {
+        .cm-toggle-pill.active {
           background: rgba(43, 176, 175, 0.2);
           border-color: rgba(43, 176, 175, 0.55);
           color: #2BB0AF;
         }
 
-        .cm-toggle-chip.alert {
-          background: rgba(239, 68, 68, 0.15);
-          border-color: rgba(239, 68, 68, 0.45);
-          color: #f87171;
-        }
-
         .cm-toggle-icon {
-          width: 14px;
-          height: 14px;
+          width: 13px;
+          height: 13px;
         }
 
         .cm-exclude-block {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 5px;
         }
 
         .cm-exclude-label {

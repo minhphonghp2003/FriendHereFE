@@ -464,6 +464,11 @@ export default function V2TimelineDetailPage() {
           position: relative;
         }
 
+        /* Space for the first marker (it hangs half above the first card) */
+        .vt-entry:first-child {
+          padding-top: 14px;
+        }
+
         .vt-entry-card {
           position: relative;
           max-width: 88%;
@@ -484,13 +489,13 @@ export default function V2TimelineDetailPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 11px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-          transform: translateY(-50%);
         }
 
-        .vt-marker.right { right: 0; transform: translate(50%, -50%); }
-        .vt-marker.left { left: 0; transform: translate(-50%, -50%); }
+        /* Keep markers INSIDE the card bounds so nothing is clipped */
+        .vt-marker.right { right: 8px; transform: translateY(-50%); }
+        .vt-marker.left { left: 8px; transform: translateY(-50%); }
         .vt-marker.end { background: var(--vm-surface-2, #e4e4e7); color: var(--vm-text-2, #52525b); }
 
         .vt-marker-icon {
@@ -502,7 +507,7 @@ export default function V2TimelineDetailPage() {
           position: relative;
           display: block;
           width: 100%;
-          aspect-ratio: 4 / 5;
+          aspect-ratio: 1 / 1; /* square media */
           border-radius: 16px;
           overflow: hidden;
           border: none;
