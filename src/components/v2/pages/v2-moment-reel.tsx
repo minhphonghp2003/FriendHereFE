@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   MapPin,
   MessageCircle,
-  MoreHorizontal,
   EyeOff,
   Eye,
   Users,
@@ -16,7 +15,7 @@ import {
   Trash2,
   Loader2,
   Check,
-  ChevronLeft,
+  ChevronDown,
   Maximize2,
   X,
   Play,
@@ -80,7 +79,6 @@ export function V2MomentReel({
   const { mutate: hideMoment, isLoading: hiding } = useHideMoment();
   const { mutate: changeVisibility, isLoading: changingVisibility } = useChangeMomentVisibility();
 
-  const [showMenu, setShowMenu] = useState(false);
   const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [showViewer, setShowViewer] = useState(false);
@@ -91,6 +89,25 @@ export function V2MomentReel({
   const reactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const viewerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+
+  // Publish the ACTUAL sheet height so the scroll-to-top button can anchor
+  // right above it (no pixel guessing) — only the ACTIVE reel reports it
+  useEffect(() => {
+    if (!active) return;
+    const el = sheetRef.current;
+    if (!el) return;
+    const publish = () => {
+      document.documentElement.style.setProperty(
+        "--vm-sheet-h",
+        `${Math.round(el.getBoundingClientRect().height)}px`,
+      );
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [active]);
   const isOwner = currentUserId === moment.userId;
 
   // ===== Audio: NO toggle — always try to play with sound. If the browser
@@ -263,7 +280,6 @@ export function V2MomentReel({
       const updated = await changeVisibility(moment.id, vis);
       setLocalVisibility(updated.visibility);
       setShowVisibilityMenu(false);
-      setShowMenu(false);
       toast.success("Đã đổi quyền riêng tư");
     } catch {
       toast.error("Không thể đổi quyền riêng tư");
@@ -330,6 +346,23 @@ export function V2MomentReel({
     }
   };
 
+  // ===== Viewer image tap zones: left/right = carousel, center = close =====
+  const handleViewerImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (moment.images.length <= 1) {
+      setShowViewer(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width / 3) {
+      setCarouselIndex((i) => Math.max(0, i - 1));
+    } else if (x > (rect.width * 2) / 3) {
+      setCarouselIndex((i) => Math.min(moment.images.length - 1, i + 1));
+    } else {
+      setShowViewer(false);
+    }
+  };
+
   // ===== Feed video tap-to-toggle =====
   const [feedPaused, setFeedPaused] = useState(false);
 
@@ -381,40 +414,42 @@ export function V2MomentReel({
             </button>
           </>
         ) : moment.images.length > 0 ? (
-          <div className="vm-media" onClick={handleMediaTap}>
-            <Image
-              src={moment.images[carouselIndex].originalUrl}
-              alt={moment.caption ?? ""}
-              fill
-              sizes="100vw"
-              className="vm-media-img"
-              priority={active}
-            />
-            {/* Carousel dots */}
-            {moment.images.length > 1 && (
-              <div className="vm-dots">
-                {moment.images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCarouselIndex(i);
-                    }}
-                    className={`vm-dot ${i === carouselIndex ? "active" : ""}`}
-                    aria-label={`Image ${i + 1}`}
-                  />
-                ))}
-              </div>
-            )}
+          <>
+            <div className="vm-media" onClick={handleMediaTap}>
+              <Image
+                src={moment.images[carouselIndex].originalUrl}
+                alt={moment.caption ?? ""}
+                fill
+                sizes="100vw"
+                className="vm-media-img"
+                priority={active}
+              />
+              {/* Carousel dots */}
+              {moment.images.length > 1 && (
+                <div className="vm-dots">
+                  {moment.images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCarouselIndex(i);
+                      }}
+                      className={`vm-dot ${i === carouselIndex ? "active" : ""}`}
+                      aria-label={`Image ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
             <button onClick={openViewer} className="vm-expand-btn" aria-label="Fullscreen">
               <Maximize2 className="vm-expand-icon" />
             </button>
-          </div>
+          </>
         ) : null}
       </div>
 
       {/* ===== Bottom sheet card ===== */}
-      <div className="vm-sheet">
+      <div className="vm-sheet" ref={sheetRef}>
         {/* Row 1: avatar + name/visibility | date pill + more menu */}
         <div className="vm-sheet-row-1">
           <button
@@ -435,95 +470,84 @@ export function V2MomentReel({
             </div>
             <div className="vm-author-text">
               <span className="vm-author-name">{displayName}</span>
-              <span className="vm-author-sub">
-                <VisIcon className="vm-author-sub-icon" />
-                {visConfig.label}
-              </span>
+              {isOwner ? (
+                <button
+                  className="vm-author-sub vm-vis-toggle"
+                  onClick={() => setShowVisibilityMenu((v) => !v)}
+                  aria-label="Đổi quyền riêng tư"
+                >
+                  <VisIcon className="vm-author-sub-icon" />
+                  {visConfig.label}
+                  <ChevronDown className="vm-vis-chevron" />
+                </button>
+              ) : (
+                <span className="vm-author-sub">
+                  <VisIcon className="vm-author-sub-icon" />
+                  {visConfig.label}
+                </span>
+              )}
             </div>
           </button>
 
           <div className="vm-row-1-right">
             <span className="vm-date-pill">{formatDateTime(moment.createdAt)}</span>
 
-            {/* More menu (top row, above the upload time flow) */}
-            <div className="vm-menu-anchor">
+            {/* Direct delete (owner) / hide (others) — replaces the ⋯ menu */}
+            {isOwner ? (
               <button
-                onClick={() => {
-                  setShowMenu((v) => !v);
-                  setShowVisibilityMenu(false);
-                }}
-                className="vm-menu-btn"
-                aria-label="Tùy chọn"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="vm-action-btn"
+                aria-label="Xóa"
+                title="Xóa"
               >
-                <MoreHorizontal className="vm-menu-icon" />
+                {deleting ? (
+                  <Loader2 className="vm-action-icon spinning" />
+                ) : (
+                  <Trash2 className="vm-action-icon" />
+                )}
               </button>
-              {showMenu && (
-                <>
-                  <div className="vm-menu-backdrop" onClick={() => setShowMenu(false)} />
-                  <div className="vm-menu">
-                    {showVisibilityMenu ? (
-                      <>
-                        <button
-                          onClick={() => setShowVisibilityMenu(false)}
-                          className="vm-menu-item vm-menu-back"
-                        >
-                          <ChevronLeft className="vm-menu-item-icon" />
-                          Quyền riêng tư
-                        </button>
-                        {VISIBILITY_OPTIONS.map((vis) => (
-                          <button
-                            key={vis}
-                            onClick={() => handleChangeVisibility(vis)}
-                            disabled={changingVisibility}
-                            className="vm-menu-item"
-                          >
-                            <span className="flex flex-1 items-center gap-2">
-                              {(() => {
-                                const Ico = visibilityConfig[vis].icon;
-                                return <Ico className="vm-menu-item-icon" />;
-                              })()}
-                              {visibilityConfig[vis].label}
-                            </span>
-                            {vis === localVisibility && (
-                              <Check className="vm-menu-item-icon vm-menu-check" />
-                            )}
-                          </button>
-                        ))}
-                      </>
-                    ) : isOwner ? (
-                      <>
-                        <button
-                          onClick={() => setShowVisibilityMenu(true)}
-                          className="vm-menu-item"
-                        >
-                          <Eye className="vm-menu-item-icon" />
-                          Đổi quyền riêng tư
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          disabled={deleting}
-                          className="vm-menu-item vm-menu-danger"
-                        >
-                          <Trash2 className="vm-menu-item-icon" />
-                          {deleting ? "Đang xóa..." : "Xóa"}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleHideMoment}
-                        disabled={hiding}
-                        className="vm-menu-item vm-menu-danger"
-                      >
-                        <EyeOff className="vm-menu-item-icon" />
-                        {hiding ? "Đang ẩn..." : "Ẩn"}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            ) : (
+              <button
+                onClick={handleHideMoment}
+                disabled={hiding}
+                className="vm-action-btn"
+                aria-label="Ẩn"
+                title="Ẩn"
+              >
+                {hiding ? (
+                  <Loader2 className="vm-action-icon spinning" />
+                ) : (
+                  <EyeOff className="vm-action-icon" />
+                )}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Owner: visibility picker (opened by tapping the visibility label) */}
+        {isOwner && showVisibilityMenu && (
+          <div className="vm-vis-picker">
+            <div className="vm-vis-backdrop" onClick={() => setShowVisibilityMenu(false)} />
+            <div className="vm-vis-popover">
+              {VISIBILITY_OPTIONS.map((vis) => {
+                const Ico = visibilityConfig[vis].icon;
+                return (
+                  <button
+                    key={vis}
+                    onClick={() => handleChangeVisibility(vis)}
+                    disabled={changingVisibility}
+                    className={`vm-vis-option ${vis === localVisibility ? "active" : ""}`}
+                  >
+                    <Ico className="vm-vis-option-icon" />
+                    <span className="flex-1 text-left">{visibilityConfig[vis].label}</span>
+                    {vis === localVisibility && <Check className="vm-vis-check" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Timeline + location (one compact line, ellipsized) + caption */}
         {(moment.timeline || moment.location?.isShowed || moment.caption) && (
@@ -674,15 +698,17 @@ export function V2MomentReel({
             </div>
           ) : (
             <>
-              <Image
-                src={moment.images[carouselIndex].originalUrl}
-                alt={moment.caption ?? ""}
-                fill
-                sizes="100vw"
-                className="vm-viewer-media-img"
-                priority
-              />
-              {/* Viewer carousel: dots only, tap sides handled by close/backdrop */}
+              {/* Tap zones: left/right thirds = prev/next image, center = close */}
+              <div className="vm-viewer-tap" onClick={handleViewerImageTap}>
+                <Image
+                  src={moment.images[carouselIndex].originalUrl}
+                  alt={moment.caption ?? ""}
+                  fill
+                  sizes="100vw"
+                  className="vm-viewer-media-img"
+                  priority
+                />
+              </div>
               {moment.images.length > 1 && (
                 <div className="vm-viewer-dots">
                   {moment.images.map((_, i) => (
@@ -728,17 +754,22 @@ export function V2MomentReel({
           flex-direction: column;
         }
 
-        /* ===== Media zone: upper ~55%. Media keeps a 4:5-ish aspect (contain)
-           so themed blank bars show above/below instead of hard cropping. ===== */
+        /* ===== Media zone: upper ~55%. Media box is rounded with margins on a
+           neon-primary backdrop; content keeps 4:5 aspect. ===== */
         .vm-media-zone {
           position: relative;
           flex: 1 1 55%;
           min-height: 0;
-          background: var(--vm-bg, #0a0a0a);
+          background:
+            radial-gradient(circle at 20% 25%, rgba(43, 176, 175, 0.35), transparent 55%),
+            radial-gradient(circle at 80% 75%, rgba(43, 176, 175, 0.28), transparent 55%),
+            var(--vm-bg, #f4f4f5);
           overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
+          padding: 10px 12px;
+          box-sizing: border-box;
         }
 
         .vm-media {
@@ -748,6 +779,10 @@ export function V2MomentReel({
           max-height: 100%;
           object-fit: cover;
           cursor: pointer;
+          border-radius: 18px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+          background: var(--vm-surface-2, #27272a);
         }
 
         .vm-media-img {
@@ -809,21 +844,21 @@ export function V2MomentReel({
 
         .vm-expand-btn {
           position: absolute;
-          top: calc(56px + env(safe-area-inset-top, 0px));
-          right: 12px;
-          width: 34px;
-          height: 34px;
+          top: calc(10px + env(safe-area-inset-top, 0px));
+          right: 14px;
+          width: 30px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: rgba(0, 0, 0, 0.5);
           backdrop-filter: blur(8px);
           border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 10px;
+          border-radius: 9px;
           color: white;
           cursor: pointer;
           padding: 0;
-          z-index: 5;
+          z-index: 6;
         }
 
         .vm-expand-icon {
@@ -1151,11 +1186,8 @@ export function V2MomentReel({
           height: 20px;
         }
 
-        .vm-menu-anchor {
-          position: relative;
-        }
-
-        .vm-menu-btn {
+        /* Direct delete/hide action button (replaces the ⋯ menu) */
+        .vm-action-btn {
           width: 32px;
           height: 32px;
           display: flex;
@@ -1167,43 +1199,82 @@ export function V2MomentReel({
           color: var(--vm-text-3, #71717a);
           cursor: pointer;
           padding: 0;
+          transition: all 0.2s;
         }
 
-        .vm-menu-btn:hover {
+        .vm-action-btn:hover:not(:disabled) {
           background: var(--vm-surface-2, #f4f4f5);
+          color: #ef4444;
         }
 
-        .vm-menu-icon {
-          width: 20px;
-          height: 20px;
+        .vm-action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
-        .vm-menu-backdrop {
+        .vm-action-icon {
+          width: 17px;
+          height: 17px;
+        }
+
+        .vm-action-icon.spinning {
+          animation: vm-spin 1s linear infinite;
+        }
+
+        /* Owner visibility toggle (below the author name) */
+        .vm-vis-toggle {
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 500;
+          color: var(--vm-text-3, #a1a1aa);
+          line-height: 1.1;
+        }
+
+        .vm-vis-toggle:hover {
+          color: var(--vm-text-2, #52525b);
+        }
+
+        .vm-vis-chevron {
+          width: 11px;
+          height: 11px;
+        }
+
+        /* Visibility picker popover */
+        .vm-vis-picker {
+          position: relative;
+        }
+
+        .vm-vis-backdrop {
           position: fixed;
           inset: 0;
           z-index: 10;
         }
 
-        .vm-menu {
+        .vm-vis-popover {
           position: absolute;
           top: calc(100% + 6px);
-          right: 0;
+          left: 0;
           z-index: 11;
-          min-width: 190px;
+          min-width: 180px;
           background: var(--vm-surface, white);
           border-radius: 14px;
           border: 1px solid var(--vm-border, #e4e4e7);
           box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
           padding: 6px;
-          overflow: hidden;
         }
 
-        .vm-menu-item {
+        .vm-vis-option {
           display: flex;
           align-items: center;
           gap: 10px;
           width: 100%;
-          padding: 10px 12px;
+          padding: 9px 12px;
           background: none;
           border: none;
           border-radius: 10px;
@@ -1211,36 +1282,31 @@ export function V2MomentReel({
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
-          text-align: left;
         }
 
-        .vm-menu-item:hover:not(:disabled) {
+        .vm-vis-option:hover:not(:disabled) {
           background: var(--vm-surface-2, #f4f4f5);
         }
 
-        .vm-menu-item:disabled {
+        .vm-vis-option:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
 
-        .vm-menu-danger {
-          color: #ef4444;
+        .vm-vis-option.active {
+          color: #2BB0AF;
+          background: rgba(43, 176, 175, 0.1);
         }
 
-        .vm-menu-back {
-          color: var(--vm-text-3, #a1a1aa);
-          border-bottom: 1px solid var(--vm-surface-2, #f4f4f5);
-          border-radius: 10px 10px 0 0;
-          margin-bottom: 4px;
+        .vm-vis-option-icon {
+          width: 15px;
+          height: 15px;
         }
 
-        .vm-menu-item-icon {
-          width: 16px;
-          height: 16px;
-        }
-
-        .vm-menu-check {
-          color: #16a34a;
+        .vm-vis-check {
+          width: 15px;
+          height: 15px;
+          color: #2BB0AF;
         }
 
         /* ===== Fullscreen viewer ===== */
@@ -1299,6 +1365,14 @@ export function V2MomentReel({
 
         .vm-viewer-media-img {
           object-fit: contain;
+        }
+
+        /* Tap layer for viewer images: left/right thirds navigate the carousel */
+        .vm-viewer-tap {
+          position: absolute;
+          inset: 0;
+          cursor: pointer;
+          z-index: 1;
         }
 
         /* Center play/pause */

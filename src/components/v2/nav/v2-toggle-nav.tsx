@@ -145,12 +145,13 @@ export function V2ToggleNav() {
         }
 
         /* Scroll-to-top mode: small circle like the posting close button.
-           Raised above the compact moment info sheet so it never overlaps it. */
+           Anchored right above the moment info sheet — the reel publishes its
+           actual height via --vm-sheet-h (no pixel guessing). */
         .v2-toggle-btn.scroll-top-mode {
           width: 38px;
           height: 38px;
           right: 20px;
-          bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+          bottom: calc(var(--vm-sheet-h, 150px) + 12px + env(safe-area-inset-bottom, 0px));
         }
 
         .v2-toggle-btn.scroll-top-mode .toggle-content {
