@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { TimelineChip } from "@/components/timelines/timeline-chip";
 import { ReactionBottomSheet } from "@/components/moments/reaction-bottom-sheet";
+import { DownloadButton } from "@/components/common/download-button";
 import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
@@ -256,6 +257,7 @@ export function V2MomentReel({
   };
 
   const handleDelete = async () => {
+    if (!window.confirm("Xóa khoảnh khắc này? Hành động không thể hoàn tác.")) return;
     try {
       await deleteMoment(moment.id);
       toast.success("Đã xóa khoảnh khắc");
@@ -266,6 +268,7 @@ export function V2MomentReel({
   };
 
   const handleHideMoment = async () => {
+    if (!window.confirm("Ẩn khoảnh khắc này khỏi feed của bạn?")) return;
     try {
       await hideMoment(moment.id);
       toast.success("Đã ẩn khoảnh khắc");
@@ -289,6 +292,9 @@ export function V2MomentReel({
   const visConfig = visibilityConfig[localVisibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
   const displayName = isOwner ? "Bạn" : moment.userName;
+  const downloadUrl = moment.video
+    ? moment.video.originalUrl
+    : moment.images[carouselIndex]?.originalUrl;
   const heroImage = moment.video?.thumbUrl || moment.images[carouselIndex]?.originalUrl || null;
 
   const openViewer = useCallback(() => setShowViewer(true), []);
@@ -346,20 +352,16 @@ export function V2MomentReel({
     }
   };
 
-  // ===== Viewer image tap zones: left/right = carousel, center = close =====
+  // ===== Viewer image tap zones: left/right = carousel; center does nothing
+  // (close via the X button) =====
   const handleViewerImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (moment.images.length <= 1) {
-      setShowViewer(false);
-      return;
-    }
+    if (moment.images.length <= 1) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) {
       setCarouselIndex((i) => Math.max(0, i - 1));
     } else if (x > (rect.width * 2) / 3) {
       setCarouselIndex((i) => Math.min(moment.images.length - 1, i + 1));
-    } else {
-      setShowViewer(false);
     }
   };
 
@@ -397,53 +399,60 @@ export function V2MomentReel({
           </div>
         ) : moment.video ? (
           <>
-            <video
-              ref={videoRef}
-              src={moment.video.originalUrl}
-              poster={moment.video.thumbUrl || undefined}
-              playsInline
-              loop
-              className="vm-media"
-            />
-            {/* Tap video = play/pause (no fullscreen on tap) */}
-            <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Play/Pause">
-              {feedPaused && <Play className="vm-video-tap-icon" />}
-            </button>
-            <button onClick={openViewer} className="vm-expand-btn" aria-label="Fullscreen">
-              <Maximize2 className="vm-expand-icon" />
-            </button>
+            <div className="vm-media-wrap">
+              <video
+                ref={videoRef}
+                src={moment.video.originalUrl}
+                poster={moment.video.thumbUrl || undefined}
+                playsInline
+                loop
+                className="vm-media"
+              />
+              {/* Tap video = play/pause (no fullscreen on tap) */}
+              <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Play/Pause">
+                {feedPaused && <Play className="vm-video-tap-icon" />}
+              </button>
+              {/* Fullscreen at the VIDEO's top-right */}
+              <button
+                onClick={openViewer}
+                className="vm-expand-btn vm-expand-on-media"
+                aria-label="Fullscreen"
+              >
+                <Maximize2 className="vm-expand-icon" />
+              </button>
+            </div>
           </>
         ) : moment.images.length > 0 ? (
           <>
-            <div className="vm-media" onClick={handleMediaTap}>
-              <Image
-                src={moment.images[carouselIndex].originalUrl}
-                alt={moment.caption ?? ""}
-                fill
-                sizes="100vw"
-                className="vm-media-img"
-                priority={active}
-              />
-              {/* Carousel dots */}
-              {moment.images.length > 1 && (
-                <div className="vm-dots">
-                  {moment.images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCarouselIndex(i);
-                      }}
-                      className={`vm-dot ${i === carouselIndex ? "active" : ""}`}
-                      aria-label={`Image ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="vm-media-wrap">
+              <div className="vm-media" onClick={handleMediaTap}>
+                <Image
+                  src={moment.images[carouselIndex].originalUrl}
+                  alt={moment.caption ?? ""}
+                  fill
+                  sizes="100vw"
+                  className="vm-media-img"
+                  priority={active}
+                />
+                {/* Carousel dots */}
+                {moment.images.length > 1 && (
+                  <div className="vm-dots">
+                    {moment.images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCarouselIndex(i);
+                        }}
+                        className={`vm-dot ${i === carouselIndex ? "active" : ""}`}
+                        aria-label={`Image ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* No expand button for images — center tap opens the viewer */}
             </div>
-            <button onClick={openViewer} className="vm-expand-btn" aria-label="Fullscreen">
-              <Maximize2 className="vm-expand-icon" />
-            </button>
           </>
         ) : null}
       </div>
@@ -525,11 +534,10 @@ export function V2MomentReel({
           </div>
         </div>
 
-        {/* Owner: visibility picker (opened by tapping the visibility label) */}
-        {isOwner && showVisibilityMenu && (
-          <div className="vm-vis-picker">
-            <div className="vm-vis-backdrop" onClick={() => setShowVisibilityMenu(false)} />
-            <div className="vm-vis-popover">
+        {/* Owner: horizontal visibility selector (replaces the label row) */}
+        {isOwner && showVisibilityMenu ? (
+          <div className="vm-vis-row">
+            <div className="vm-vis-options">
               {VISIBILITY_OPTIONS.map((vis) => {
                 const Ico = visibilityConfig[vis].icon;
                 return (
@@ -537,17 +545,23 @@ export function V2MomentReel({
                     key={vis}
                     onClick={() => handleChangeVisibility(vis)}
                     disabled={changingVisibility}
-                    className={`vm-vis-option ${vis === localVisibility ? "active" : ""}`}
+                    className={`vm-vis-chip ${vis === localVisibility ? "active" : ""}`}
                   >
-                    <Ico className="vm-vis-option-icon" />
-                    <span className="flex-1 text-left">{visibilityConfig[vis].label}</span>
-                    {vis === localVisibility && <Check className="vm-vis-check" />}
+                    <Ico className="vm-vis-chip-icon" />
+                    {visibilityConfig[vis].label}
                   </button>
                 );
               })}
             </div>
+            <button
+              onClick={() => setShowVisibilityMenu(false)}
+              className="vm-vis-close"
+              aria-label="Đóng"
+            >
+              <X className="vm-vis-close-icon" />
+            </button>
           </div>
-        )}
+        ) : null}
 
         {/* Timeline + location (one compact line, ellipsized) + caption */}
         {(moment.timeline || moment.location?.isShowed || moment.caption) && (
@@ -634,6 +648,10 @@ export function V2MomentReel({
           <button onClick={() => setShowViewer(false)} className="vm-viewer-close" aria-label="Close">
             <X className="vm-viewer-close-icon" />
           </button>
+          {/* Download (fullscreen only) — v1 DownloadButton */}
+          {downloadUrl && (
+            <DownloadButton url={downloadUrl} className="vm-viewer-download" />
+          )}
           {moment.video ? (
             /* Custom player: center play/pause + bottom seeker/time (no native controls) */
             <div className="vm-viewer-player" onClick={handleViewerTap}>
@@ -748,41 +766,54 @@ export function V2MomentReel({
           position: relative;
           height: 100%;
           width: 100%;
-          background: var(--vm-bg, #f4f4f5);
           overflow: hidden;
           display: flex;
           flex-direction: column;
+          /* Neon-primary backdrop spans the WHOLE reel (media + info sheet) */
+          background:
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
+            var(--vm-bg, #f4f4f5);
         }
 
-        /* ===== Media zone: upper ~55%. Media box is rounded with margins on a
-           neon-primary backdrop; content keeps 4:5 aspect. ===== */
+        /* ===== Media zone: fills all space above the sheet; media is a 9:16
+           rounded card with margins, nearly touching the sheet ===== */
         .vm-media-zone {
           position: relative;
-          flex: 1 1 55%;
+          flex: 1 1 auto;
           min-height: 0;
-          background:
-            radial-gradient(circle at 20% 25%, rgba(43, 176, 175, 0.35), transparent 55%),
-            radial-gradient(circle at 80% 75%, rgba(43, 176, 175, 0.28), transparent 55%),
-            var(--vm-bg, #f4f4f5);
           overflow: hidden;
           display: flex;
-          align-items: center;
+          align-items: stretch;
           justify-content: center;
-          padding: 10px 12px;
+          padding: 10px 12px 0;
           box-sizing: border-box;
         }
 
-        .vm-media {
+        .vm-media-wrap {
           position: relative;
           width: 100%;
-          aspect-ratio: 4 / 5;
           max-height: 100%;
-          object-fit: cover;
-          cursor: pointer;
+          aspect-ratio: 9 / 14;
+          margin: 0 auto;
+          align-self: center;
           border-radius: 18px;
           overflow: hidden;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
           background: var(--vm-surface-2, #27272a);
+        }
+
+        .vm-media {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          cursor: pointer;
+        }
+
+        .vm-media-img {
+          object-fit: cover;
         }
 
         .vm-media-img {
@@ -842,10 +873,12 @@ export function V2MomentReel({
           justify-content: center;
         }
 
+        /* Fullscreen button — pinned to the VIDEO's top-right (inside the
+           rounded media card) */
         .vm-expand-btn {
           position: absolute;
-          top: calc(10px + env(safe-area-inset-top, 0px));
-          right: 14px;
+          top: 8px;
+          right: 8px;
           width: 30px;
           height: 30px;
           display: flex;
@@ -892,11 +925,13 @@ export function V2MomentReel({
           transform: scale(1.2);
         }
 
-        /* ===== Bottom sheet ===== */
+        /* ===== Bottom sheet (translucent — neon backdrop shows through) ===== */
         .vm-sheet {
           position: relative;
           flex: 0 0 auto;
-          background: var(--vm-surface, white);
+          background: color-mix(in srgb, var(--vm-surface, white) 86%, transparent);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
           border-radius: 24px 24px 0 0;
           padding: 10px 14px calc(8px + env(safe-area-inset-bottom, 0px));
           box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.15);
@@ -1245,68 +1280,87 @@ export function V2MomentReel({
           height: 11px;
         }
 
-        /* Visibility picker popover */
-        .vm-vis-picker {
-          position: relative;
-        }
-
-        .vm-vis-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 10;
-        }
-
-        .vm-vis-popover {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          z-index: 11;
-          min-width: 180px;
-          background: var(--vm-surface, white);
-          border-radius: 14px;
-          border: 1px solid var(--vm-border, #e4e4e7);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-          padding: 6px;
-        }
-
-        .vm-vis-option {
+        /* Owner: horizontal visibility selector row */
+        .vm-vis-row {
           display: flex;
           align-items: center;
-          gap: 10px;
-          width: 100%;
-          padding: 9px 12px;
-          background: none;
-          border: none;
-          border-radius: 10px;
-          color: var(--vm-text-2, #3f3f46);
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
+          gap: 6px;
+          animation: vm-vis-in 0.2s ease-out;
         }
 
-        .vm-vis-option:hover:not(:disabled) {
+        @keyframes vm-vis-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .vm-vis-options {
+          display: flex;
+          gap: 4px;
+          flex: 1;
+          min-width: 0;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .vm-vis-options::-webkit-scrollbar {
+          display: none;
+        }
+
+        .vm-vis-chip {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 10px;
+          border-radius: 999px;
           background: var(--vm-surface-2, #f4f4f5);
+          border: 1px solid var(--vm-border, #e4e4e7);
+          color: var(--vm-text-2, #52525b);
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s;
         }
 
-        .vm-vis-option:disabled {
+        .vm-vis-chip:hover:not(:disabled) {
+          border-color: rgba(43, 176, 175, 0.5);
+        }
+
+        .vm-vis-chip.active {
+          background: #2BB0AF;
+          border-color: #2BB0AF;
+          color: white;
+        }
+
+        .vm-vis-chip:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
 
-        .vm-vis-option.active {
-          color: #2BB0AF;
-          background: rgba(43, 176, 175, 0.1);
+        .vm-vis-chip-icon {
+          width: 12px;
+          height: 12px;
         }
 
-        .vm-vis-option-icon {
-          width: 15px;
-          height: 15px;
+        .vm-vis-close {
+          width: 26px;
+          height: 26px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--vm-surface-2, #f4f4f5);
+          border: 1px solid var(--vm-border, #e4e4e7);
+          border-radius: 50%;
+          color: var(--vm-text-2, #52525b);
+          cursor: pointer;
+          padding: 0;
         }
 
-        .vm-vis-check {
-          width: 15px;
-          height: 15px;
-          color: #2BB0AF;
+        .vm-vis-close-icon {
+          width: 13px;
+          height: 13px;
         }
 
         /* ===== Fullscreen viewer ===== */
@@ -1322,25 +1376,34 @@ export function V2MomentReel({
 
         .vm-viewer-close {
           position: absolute;
-          top: calc(56px + env(safe-area-inset-top, 0px));
-          right: 16px;
+          top: calc(env(safe-area-inset-top, 0px) + 10px);
+          right: 12px;
           width: 38px;
           height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(255, 255, 255, 0.12);
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(8px);
           border: 1px solid rgba(255, 255, 255, 0.25);
           border-radius: 50%;
           color: white;
           cursor: pointer;
           padding: 0;
-          z-index: 2;
+          z-index: 3;
         }
 
         .vm-viewer-close-icon {
           width: 18px;
           height: 18px;
+        }
+
+        /* Download button — left of the close button in the viewer */
+        .vm-viewer-download {
+          position: absolute;
+          top: calc(env(safe-area-inset-top, 0px) + 10px);
+          right: 58px;
+          z-index: 3;
         }
 
         /* Custom video player wrapper */
