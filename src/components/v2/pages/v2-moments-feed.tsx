@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause } from "lucide-react";
-import { MomentCard } from "@/components/moments/moment-card";
+import { V2MomentReel } from "./v2-moment-reel";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
@@ -885,7 +885,6 @@ export function V2MomentsFeed() {
   const containerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef(loadMore);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showInfo, setShowInfo] = useState(true);
 
   // v1 chat pattern: track uploaded file keys and resolve them when the BE
   // broadcasts ReceiveFileMarkedSuccess (file finished processing).
@@ -951,8 +950,6 @@ export function V2MomentsFeed() {
     return () => window.removeEventListener("v2:moments-scroll-top", scrollTop);
   }, []);
 
-  const handleToggleInfo = useCallback(() => setShowInfo((v) => !v), []);
-
   const handleDeleted = useCallback(
     (id: number) => {
       refetch();
@@ -970,14 +967,11 @@ export function V2MomentsFeed() {
       {/* Items 2..n: moments */}
       {moments.map((moment, i) => (
         <div key={moment.id} className="v2-reel-item">
-          <MomentCard
-            fullscreen
+          <V2MomentReel
             moment={moment}
             currentUserId={user?.id}
             onDelete={handleDeleted}
             active={i + 1 === currentIndex}
-            showInfo={showInfo}
-            onToggleInfo={handleToggleInfo}
           />
           {/* Processing badge while the BE hasn't marked this moment's file as
               ready (ReceiveFileMarkedSuccess) */}

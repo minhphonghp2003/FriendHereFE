@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { usePathname } from "next/navigation";
 import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
@@ -14,12 +15,30 @@ type ActiveDialog = "chat" | "settings" | "profile" | null;
 
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
+  const pathname = usePathname();
   const { data: currentUser } = useCurrentUser();
 
   // Single active modal across the whole v2 app
   const chatModal = useV2Modal("header-chat");
   const settingsModal = useV2Modal("header-settings");
   const profileModal = useV2Modal("header-profile");
+
+  // On the moments feed: hide while browsing reels (index > 0); visible on the
+  // create card (index 0)
+  const [momentsBrowsing, setMomentsBrowsing] = useState(false);
+  const isMomentsPage = pathname?.startsWith("/v2/moments") ?? false;
+
+  useEffect(() => {
+    if (!isMomentsPage) {
+      setMomentsBrowsing(false);
+      return;
+    }
+    const onIndex = (e: Event) => {
+      setMomentsBrowsing(((e as CustomEvent<number>).detail ?? 0) > 0);
+    };
+    window.addEventListener("v2:moments-index", onIndex);
+    return () => window.removeEventListener("v2:moments-index", onIndex);
+  }, [isMomentsPage]);
 
   const activeDialog: ActiveDialog = chatModal.isOpen
     ? "chat"
@@ -67,7 +86,7 @@ export function V2Header() {
 
   return (
     <>
-      <header className="v2-header">
+      <header className={`v2-header ${momentsBrowsing ? "v2-header-hidden" : ""}`}>
         <div className="header-left">
           <button
             className={`user-avatar-section ${activeDialog === "profile" ? "header-btn-active" : ""}`}
@@ -148,6 +167,14 @@ export function V2Header() {
           z-index: 1000;
           animation: header-float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           pointer-events: auto;
+          transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+        }
+
+        /* Hidden while browsing moments (reels) — slides up out of the way */
+        .v2-header.v2-header-hidden {
+          transform: translateY(-110%);
+          opacity: 0;
+          pointer-events: none;
         }
 
         @keyframes header-float-in {

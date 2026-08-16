@@ -110,6 +110,28 @@ export default function V2Layout({ children }: V2LayoutProps) {
             z-index: 9998 !important;
           }
 
+          /* ===== v2 theme tokens (follows system light/dark) ===== */
+          .v2-app {
+            --vm-bg: #f4f4f5;
+            --vm-surface: #ffffff;
+            --vm-surface-2: #f4f4f5;
+            --vm-border: #e4e4e7;
+            --vm-text: #18181b;
+            --vm-text-2: #52525b;
+            --vm-text-3: #a1a1aa;
+          }
+
+          :global(.dark) .v2-app,
+          .v2-app.dark {
+            --vm-bg: #09090b;
+            --vm-surface: #18181b;
+            --vm-surface-2: #27272a;
+            --vm-border: #3f3f46;
+            --vm-text: #fafafa;
+            --vm-text-2: #d4d4d8;
+            --vm-text-3: #71717a;
+          }
+
           /* Disable pinch/double-tap page zoom (map/image still zoom via their own
              gesture handling). maximumScale=1 in the viewport covers iOS Safari. */
           .v2-app {

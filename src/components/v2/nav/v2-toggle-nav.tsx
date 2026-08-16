@@ -144,12 +144,13 @@ export function V2ToggleNav() {
                       inset 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
-        /* Scroll-to-top mode: small circle like the posting close button
-           (translucent white bg, thin border, dark double-up arrow) */
+        /* Scroll-to-top mode: small circle like the posting close button.
+           Raised above the compact moment info sheet so it never overlaps it. */
         .v2-toggle-btn.scroll-top-mode {
           width: 38px;
           height: 38px;
-          right: 26px;
+          right: 20px;
+          bottom: calc(200px + env(safe-area-inset-bottom, 0px));
         }
 
         .v2-toggle-btn.scroll-top-mode .toggle-content {
