@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -26,6 +26,7 @@ import {
 import { useDeleteMoment, useHideMoment, useChangeMomentVisibility } from "@/hooks/moments";
 import { ReactionBottomSheet } from "@/components/moments/reaction-bottom-sheet";
 import { DownloadButton } from "@/components/common/download-button";
+import { V2MomentViewer } from "./v2-moment-viewer";
 import { addMomentReaction } from "@/services/moment";
 import { getOpponentConversation } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
@@ -33,14 +34,14 @@ import type { MomentDto, MomentVisibility } from "@/types/moment";
 import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 import { toast } from "sonner";
 
-const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
+const COMMON_EMOJIS = ["ðŸ‘", "â¤ï¸", "ðŸ˜‚", "ðŸ˜®", "ðŸ˜¢", "ðŸ˜¡"];
 
 const visibilityConfig: Record<MomentVisibility, { icon: typeof EyeOff; label: string }> = {
-  OnlyMe: { icon: EyeOff, label: "Chỉ tôi" },
-  Friends: { icon: Users, label: "Bạn bè" },
-  BestFriend: { icon: Star, label: "Bạn thân" },
-  Lover: { icon: Heart, label: "Người yêu" },
-  Public: { icon: Globe, label: "Công khai" },
+  OnlyMe: { icon: EyeOff, label: "Chá»‰ tÃ´i" },
+  Friends: { icon: Users, label: "Báº¡n bÃ¨" },
+  BestFriend: { icon: Star, label: "Báº¡n thÃ¢n" },
+  Lover: { icon: Heart, label: "NgÆ°á»i yÃªu" },
+  Public: { icon: Globe, label: "CÃ´ng khai" },
 };
 
 const VISIBILITY_OPTIONS = Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[];
@@ -90,11 +91,10 @@ export function V2MomentReel({
   const [localVisibility, setLocalVisibility] = useState<MomentVisibility>(moment.visibility);
   const reactTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const viewerVideoRef = useRef<HTMLVideoElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
 
   // Publish the ACTUAL sheet height so the scroll-to-top button can anchor
-  // right above it (no pixel guessing) — only the ACTIVE reel reports it
+  // right above it (no pixel guessing) â€” only the ACTIVE reel reports it
   useEffect(() => {
     if (!active) return;
     const el = sheetRef.current;
@@ -112,7 +112,7 @@ export function V2MomentReel({
   }, [active]);
   const isOwner = currentUserId === moment.userId;
 
-  // ===== Audio: NO toggle — always try to play with sound. If the browser
+  // ===== Audio: NO toggle â€” always try to play with sound. If the browser
   // blocks unmuted autoplay (before first interaction), start muted and a
   // one-time global gesture listener un-mutes automatically. =====
   const [muted, setMuted] = useState(true);
@@ -140,7 +140,7 @@ export function V2MomentReel({
     if (active && !showViewer) {
       video.muted = muted;
       video.play().catch(() => {
-        // Unmuted autoplay blocked → retry muted, the unlock listener will
+        // Unmuted autoplay blocked â†’ retry muted, the unlock listener will
         // unmute after the first user gesture
         video.muted = true;
         setMuted(true);
@@ -166,15 +166,6 @@ export function V2MomentReel({
       video.removeEventListener("pause", onPause);
     };
   }, []);
-
-  // Viewer video: play on open, pause on close
-  useEffect(() => {
-    const video = viewerVideoRef.current;
-    if (!video) return;
-    if (showViewer) {
-      video.play().catch(() => {});
-    }
-  }, [showViewer]);
 
   useEffect(() => {
     setLocalReactions(moment.reactions);
@@ -231,7 +222,7 @@ export function V2MomentReel({
     if (reactTimeoutRef.current) clearTimeout(reactTimeoutRef.current);
     reactTimeoutRef.current = setTimeout(() => {
       addMomentReaction(moment.id, emoji).catch(() => {
-        toast.error("Không thể thả cảm xúc");
+        toast.error("KhÃ´ng thá»ƒ tháº£ cáº£m xÃºc");
       });
     }, 500);
   };
@@ -258,24 +249,24 @@ export function V2MomentReel({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Xóa khoảnh khắc này? Hành động không thể hoàn tác.")) return;
+    if (!window.confirm("XÃ³a khoáº£nh kháº¯c nÃ y? HÃ nh Ä‘á»™ng khÃ´ng thá»ƒ hoÃ n tÃ¡c.")) return;
     try {
       await deleteMoment(moment.id);
-      toast.success("Đã xóa khoảnh khắc");
+      toast.success("ÄÃ£ xÃ³a khoáº£nh kháº¯c");
       onDelete?.(moment.id);
     } catch {
-      toast.error("Không thể xóa");
+      toast.error("KhÃ´ng thá»ƒ xÃ³a");
     }
   };
 
   const handleHideMoment = async () => {
-    if (!window.confirm("Ẩn khoảnh khắc này khỏi feed của bạn?")) return;
+    if (!window.confirm("áº¨n khoáº£nh kháº¯c nÃ y khá»i feed cá»§a báº¡n?")) return;
     try {
       await hideMoment(moment.id);
-      toast.success("Đã ẩn khoảnh khắc");
+      toast.success("ÄÃ£ áº©n khoáº£nh kháº¯c");
       onHide?.(moment.id);
     } catch {
-      toast.error("Không thể ẩn");
+      toast.error("KhÃ´ng thá»ƒ áº©n");
     }
   };
 
@@ -284,57 +275,17 @@ export function V2MomentReel({
       const updated = await changeVisibility(moment.id, vis);
       setLocalVisibility(updated.visibility);
       setShowVisibilityMenu(false);
-      toast.success("Đã đổi quyền riêng tư");
+      toast.success("ÄÃ£ Ä‘á»•i quyá»n riÃªng tÆ°");
     } catch {
-      toast.error("Không thể đổi quyền riêng tư");
+      toast.error("KhÃ´ng thá»ƒ Ä‘á»•i quyá»n riÃªng tÆ°");
     }
   };
 
   const visConfig = visibilityConfig[localVisibility] || visibilityConfig.Friends;
   const VisIcon = visConfig.icon;
-  const displayName = isOwner ? "Bạn" : moment.userName;
-  const downloadUrl = moment.video
-    ? moment.video.originalUrl
-    : moment.images[carouselIndex]?.originalUrl;
-  const heroImage = moment.video?.thumbUrl || moment.images[carouselIndex]?.originalUrl || null;
+  const displayName = isOwner ? "Báº¡n" : moment.userName;
 
   const openViewer = useCallback(() => setShowViewer(true), []);
-
-  // ===== Viewer video custom controls =====
-  const [viewerPlaying, setViewerPlaying] = useState(true);
-  const [viewerTime, setViewerTime] = useState(0);
-  const [viewerDuration, setViewerDuration] = useState(0);
-
-  const formatTime = (s: number): string => {
-    if (!Number.isFinite(s)) return "0:00";
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${String(sec).padStart(2, "0")}`;
-  };
-
-  const toggleViewerPlay = () => {
-    const video = viewerVideoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  };
-
-  const handleViewerTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Tap sides = seek ±5s (v1 double-tap behavior simplified to single tap);
-    // center handled by the play button itself
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const video = viewerVideoRef.current;
-    if (!video) return;
-    if (x < rect.width / 3) {
-      video.currentTime = Math.max(0, video.currentTime - 5);
-    } else if (x > (rect.width * 2) / 3) {
-      video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
-    }
-  };
 
   // ===== Media tap zones (image): left/right = carousel, center = viewer =====
   const handleMediaTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -350,19 +301,6 @@ export function V2MomentReel({
       setCarouselIndex((i) => Math.min(moment.images.length - 1, i + 1));
     } else {
       openViewer();
-    }
-  };
-
-  // ===== Viewer image tap zones: left/right = carousel; center does nothing
-  // (close via the X button) =====
-  const handleViewerImageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (moment.images.length <= 1) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width / 3) {
-      setCarouselIndex((i) => Math.max(0, i - 1));
-    } else if (x > (rect.width * 2) / 3) {
-      setCarouselIndex((i) => Math.min(moment.images.length - 1, i + 1));
     }
   };
 
@@ -396,7 +334,7 @@ export function V2MomentReel({
         {moment.status === "Processing" ? (
           <div className="vm-processing">
             <Loader2 className="vm-processing-icon" />
-            <span>Đang xử lý...</span>
+            <span>Äang xá»­ lÃ½...</span>
           </div>
         ) : moment.video ? (
           <>
@@ -452,7 +390,7 @@ export function V2MomentReel({
                   </div>
                 )}
               </div>
-              {/* No expand button for images — center tap opens the viewer */}
+              {/* No expand button for images â€” center tap opens the viewer */}
             </div>
           </>
         ) : null}
@@ -484,7 +422,7 @@ export function V2MomentReel({
                 <button
                   className="vm-author-sub vm-vis-toggle"
                   onClick={() => setShowVisibilityMenu((v) => !v)}
-                  aria-label="Đổi quyền riêng tư"
+                  aria-label="Äá»•i quyá»n riÃªng tÆ°"
                 >
                   <VisIcon className="vm-author-sub-icon" />
                   {visConfig.label}
@@ -502,14 +440,14 @@ export function V2MomentReel({
           <div className="vm-row-1-right">
             <span className="vm-date-pill">{formatDateTime(moment.createdAt)}</span>
 
-            {/* Direct delete (owner) / hide (others) — replaces the ⋯ menu */}
+            {/* Direct delete (owner) / hide (others) â€” replaces the â‹¯ menu */}
             {isOwner ? (
               <button
                 onClick={handleDelete}
                 disabled={deleting}
                 className="vm-action-btn"
-                aria-label="Xóa"
-                title="Xóa"
+                aria-label="XÃ³a"
+                title="XÃ³a"
               >
                 {deleting ? (
                   <Loader2 className="vm-action-icon spinning" />
@@ -522,8 +460,8 @@ export function V2MomentReel({
                 onClick={handleHideMoment}
                 disabled={hiding}
                 className="vm-action-btn"
-                aria-label="Ẩn"
-                title="Ẩn"
+                aria-label="áº¨n"
+                title="áº¨n"
               >
                 {hiding ? (
                   <Loader2 className="vm-action-icon spinning" />
@@ -557,7 +495,7 @@ export function V2MomentReel({
             <button
               onClick={() => setShowVisibilityMenu(false)}
               className="vm-vis-close"
-              aria-label="Đóng"
+              aria-label="ÄÃ³ng"
             >
               <X className="vm-vis-close-icon" />
             </button>
@@ -575,7 +513,7 @@ export function V2MomentReel({
                     <button
                       className="vm-timeline-link"
                       onClick={() => router.push(`/v2/timelines/${moment.timeline!.id}`)}
-                      aria-label={`Mở hành trình ${moment.timeline.caption}`}
+                      aria-label={`Má»Ÿ hÃ nh trÃ¬nh ${moment.timeline.caption}`}
                     >
                       <Route className="vm-timeline-link-icon" />
                       <span className="vm-badge-text">{moment.timeline.caption}</span>
@@ -598,18 +536,18 @@ export function V2MomentReel({
           </div>
         )}
 
-        {/* Row 2: engagement — role-split like v1.
-            Owner: reaction stack only (tap → detail sheet); ROW HIDDEN when
+        {/* Row 2: engagement â€” role-split like v1.
+            Owner: reaction stack only (tap â†’ detail sheet); ROW HIDDEN when
             there are no reactions at all (no empty placeholder).
             Others: horizontal quick emojis + send-message (chat with moment). */}
         {(!isOwner || groupedReactions.length > 0) && (
           <div className="vm-sheet-row-2">
             {isOwner ? (
-              /* Owner: overlapping reactor stack → tap to see detail (v1) */
+              /* Owner: overlapping reactor stack â†’ tap to see detail (v1) */
               <button
                 className="vm-owner-stack"
                 onClick={() => setShowReactions(true)}
-                aria-label="Xem cảm xúc"
+                aria-label="Xem cáº£m xÃºc"
               >
                 <span className="vm-stack-avatars">
                   {groupedReactions.slice(0, 3).map((g) => (
@@ -627,7 +565,7 @@ export function V2MomentReel({
                   key={emoji}
                   onClick={(e) => handleReact(emoji, e.clientX, e.clientY)}
                   className="vm-quick-react"
-                  aria-label={`Thả ${emoji}`}
+                  aria-label={`Tháº£ ${emoji}`}
                 >
                   {emoji}
                 </button>
@@ -641,117 +579,24 @@ export function V2MomentReel({
                 className="vm-engagement vm-send-btn"
                 onClick={handleSendMessage}
                 disabled={sendingMessage || !moment.allowComment}
-                aria-label="Nhắn tin"
-                title={!moment.allowComment ? "Đã tắt bình luận" : "Nhắn tin"}
+                aria-label="Nháº¯n tin"
+                title={!moment.allowComment ? "ÄÃ£ táº¯t bÃ¬nh luáº­n" : "Nháº¯n tin"}
               >
                 <MessageCircle className="vm-engagement-icon" />
-                {sendingMessage ? "..." : "Nhắn tin"}
+                {sendingMessage ? "..." : "Nháº¯n tin"}
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* ===== Fullscreen viewer (contain fit) ===== */}
+      {/* ===== Fullscreen viewer â€” shared V2MomentViewer component ===== */}
       {showViewer && (
-        <div className="vm-viewer">
-          <button onClick={() => setShowViewer(false)} className="vm-viewer-close" aria-label="Close">
-            <X className="vm-viewer-close-icon" />
-          </button>
-          {/* Download (fullscreen only) — v1 DownloadButton */}
-          {downloadUrl && (
-            <DownloadButton url={downloadUrl} className="vm-viewer-download" />
-          )}
-          {moment.video ? (
-            /* Custom player: center play/pause + bottom seeker/time (no native controls) */
-            <div className="vm-viewer-player" onClick={handleViewerTap}>
-              <video
-                ref={viewerVideoRef}
-                src={moment.video.originalUrl}
-                poster={moment.video.thumbUrl || undefined}
-                autoPlay
-                loop
-                playsInline
-                /* Opened from a user gesture → sound is allowed */
-                muted={false}
-                className="vm-viewer-media"
-                onTimeUpdate={(e) => setViewerTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setViewerDuration(e.currentTarget.duration || 0)}
-                onPlay={() => setViewerPlaying(true)}
-                onPause={() => setViewerPlaying(false)}
-              />
-
-              {/* Center play/pause */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleViewerPlay();
-                }}
-                className="vm-viewer-play"
-                aria-label={viewerPlaying ? "Dừng" : "Phát"}
-              >
-                {viewerPlaying ? (
-                  <Pause className="vm-viewer-play-icon" />
-                ) : (
-                  <Play className="vm-viewer-play-icon vm-viewer-play-play" />
-                )}
-              </button>
-
-              {/* Bottom seeker + time */}
-              <div className="vm-viewer-seek" onClick={(e) => e.stopPropagation()}>
-                <span className="vm-viewer-time">{formatTime(viewerTime)}</span>
-                <div className="vm-viewer-seekbar">
-                  <div
-                    className="vm-viewer-seek-fill"
-                    style={{ width: viewerDuration ? `${(viewerTime / viewerDuration) * 100}%` : "0%" }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={viewerDuration || 0}
-                    step={0.1}
-                    value={viewerTime}
-                    onChange={(e) => {
-                      const t = Number(e.target.value);
-                      const video = viewerVideoRef.current;
-                      if (video) video.currentTime = t;
-                      setViewerTime(t);
-                    }}
-                    aria-label="Thanh tiến độ video"
-                    className="vm-viewer-seek-input"
-                  />
-                </div>
-                <span className="vm-viewer-time">{formatTime(viewerDuration)}</span>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Tap zones: left/right thirds = prev/next image, center = close */}
-              <div className="vm-viewer-tap" onClick={handleViewerImageTap}>
-                <Image
-                  src={moment.images[carouselIndex].originalUrl}
-                  alt={moment.caption ?? ""}
-                  fill
-                  sizes="100vw"
-                  className="vm-viewer-media-img"
-                  priority
-                />
-              </div>
-              {moment.images.length > 1 && (
-                <div className="vm-viewer-dots">
-                  {moment.images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCarouselIndex(i)}
-                      className={`vm-dot ${i === carouselIndex ? "active" : ""}`}
-                      aria-label={`Image ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <V2MomentViewer
+          moment={moment}
+          initialIndex={carouselIndex}
+          onClose={() => setShowViewer(false)}
+        />
       )}
 
       <ReactionBottomSheet
@@ -883,7 +728,7 @@ export function V2MomentReel({
           justify-content: center;
         }
 
-        /* Fullscreen button — pinned to the VIDEO's top-right (inside the
+        /* Fullscreen button â€” pinned to the VIDEO's top-right (inside the
            rounded media card) */
         .vm-expand-btn {
           position: absolute;
@@ -935,7 +780,7 @@ export function V2MomentReel({
           transform: scale(1.2);
         }
 
-        /* ===== Bottom sheet (translucent — neon backdrop shows through) ===== */
+        /* ===== Bottom sheet (translucent â€” neon backdrop shows through) ===== */
         .vm-sheet {
           position: relative;
           flex: 0 0 auto;
@@ -1080,7 +925,7 @@ export function V2MomentReel({
           padding: 0;
         }
 
-        /* v2 timeline chip → /v2/timelines/{id} journey page */
+        /* v2 timeline chip â†’ /v2/timelines/{id} journey page */
         .vm-timeline-link {
           display: inline-flex;
           align-items: center;
@@ -1157,7 +1002,7 @@ export function V2MomentReel({
           min-height: 34px;
         }
 
-        /* Owner: overlapping emoji stack → detail sheet */
+        /* Owner: overlapping emoji stack â†’ detail sheet */
         .vm-owner-stack {
           display: flex;
           align-items: center;
@@ -1255,7 +1100,7 @@ export function V2MomentReel({
           height: 20px;
         }
 
-        /* Direct delete/hide action button (replaces the ⋯ menu) */
+        /* Direct delete/hide action button (replaces the â‹¯ menu) */
         .vm-action-btn {
           width: 32px;
           height: 32px;
@@ -1397,188 +1242,6 @@ export function V2MomentReel({
           height: 13px;
         }
 
-        /* ===== Fullscreen viewer ===== */
-        .vm-viewer {
-          position: fixed;
-          inset: 0;
-          z-index: 9998;
-          background: rgba(0, 0, 0, 0.97);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .vm-viewer-close {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 10px);
-          right: 12px;
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(0, 0, 0, 0.55);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          border-radius: 50%;
-          color: white;
-          cursor: pointer;
-          padding: 0;
-          z-index: 3;
-        }
-
-        .vm-viewer-close-icon {
-          width: 18px;
-          height: 18px;
-        }
-
-        /* Download button — left of the close button in the viewer */
-        .vm-viewer-download {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 10px);
-          right: 58px;
-          z-index: 3;
-        }
-
-        /* Custom video player wrapper */
-        .vm-viewer-player {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        }
-
-        .vm-viewer-media {
-          max-width: 100%;
-          max-height: 100%;
-          width: auto;
-          height: 100%;
-          object-fit: contain;
-          pointer-events: none;
-        }
-
-        .vm-viewer-media-img {
-          object-fit: contain;
-        }
-
-        /* Tap layer for viewer images: left/right thirds navigate the carousel */
-        .vm-viewer-tap {
-          position: absolute;
-          inset: 0;
-          cursor: pointer;
-          z-index: 1;
-        }
-
-        /* Center play/pause */
-        .vm-viewer-play {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 64px;
-          height: 64px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(6px);
-          border: 2px solid rgba(255, 255, 255, 0.7);
-          border-radius: 50%;
-          color: white;
-          cursor: pointer;
-          padding: 0;
-          z-index: 2;
-          transition: transform 0.15s;
-        }
-
-        .vm-viewer-play:active {
-          transform: translate(-50%, -50%) scale(0.92);
-        }
-
-        .vm-viewer-play-icon {
-          width: 26px;
-          height: 26px;
-          fill: currentColor;
-        }
-
-        .vm-viewer-play-play {
-          margin-left: 3px;
-        }
-
-        /* Bottom seeker + time */
-        .vm-viewer-seek {
-          position: absolute;
-          bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-          left: 0;
-          right: 0;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 0 20px;
-          z-index: 2;
-        }
-
-        .vm-viewer-time {
-          font-size: 12px;
-          font-weight: 600;
-          color: white;
-          font-variant-numeric: tabular-nums;
-          flex-shrink: 0;
-          min-width: 34px;
-        }
-
-        .vm-viewer-seekbar {
-          position: relative;
-          flex: 1;
-          height: 14px;
-          display: flex;
-          align-items: center;
-        }
-
-        .vm-viewer-seek-fill {
-          position: absolute;
-          left: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          height: 4px;
-          border-radius: 999px;
-          background: white;
-          pointer-events: none;
-        }
-
-        .vm-viewer-seekbar::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          right: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          height: 4px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.3);
-        }
-
-        .vm-viewer-seek-input {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          opacity: 0;
-          cursor: pointer;
-          margin: 0;
-          z-index: 3;
-        }
-
-        .vm-viewer-dots {
-          position: absolute;
-          bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          gap: 6px;
-        }
       `}</style>
     </div>
   );

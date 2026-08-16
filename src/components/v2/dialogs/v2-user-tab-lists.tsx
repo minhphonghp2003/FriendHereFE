@@ -9,7 +9,7 @@ import { getUserTimelines, createTimeline as createTimelineService } from "@/ser
 import { getMyFriendships } from "@/services/friendship";
 import { isAccepted, type FriendshipDto } from "@/types/friendship";
 import { useAppSelector } from "@/store/hooks";
-import { DownloadButton } from "@/components/common/download-button";
+import { V2MomentViewer } from "@/components/v2/pages/v2-moment-viewer";
 import type { MomentDto } from "@/types/moment";
 import type { TimelineDto } from "@/types/timeline";
 import { toast } from "sonner";
@@ -404,139 +404,15 @@ export function V2UserMomentList({
           font-size: 11px;
           color: rgba(255, 255, 255, 0.35);
           margin: 8px 0 0;
-        }
-
-        /* ===== v2 fullscreen moment viewer (like the feed's) ===== */
-        .umv-viewer {
-          position: fixed;
-          inset: 0;
-          z-index: 9998;
-          background: rgba(0, 0, 0, 0.97);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .umv-close {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 10px);
-          right: 12px;
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(0, 0, 0, 0.55);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          border-radius: 50%;
-          color: white;
-          cursor: pointer;
-          padding: 0;
-          z-index: 3;
-        }
-
-        .umv-close-icon {
-          width: 18px;
-          height: 18px;
-        }
-
-        .umv-stage {
-          position: absolute;
-          inset: 0;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .umv-media,
-        .umv-media-video {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-        }
-
-        .umv-count {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 12px);
-          left: 16px;
-          padding: 5px 12px;
-          border-radius: 12px;
-          background: rgba(0, 0, 0, 0.55);
-          color: white;
-          font-size: 11px;
-          font-weight: 700;
-        }
-
-        .umv-download {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 10px);
-          right: 58px;
-          z-index: 3;
-        }
       `}</style>
 
-      {/* v2 fullscreen media viewer (like the moment page): contain-fit media,
-          side taps navigate the carousel, X closes, download available */}
+      {/* Same fullscreen viewer component as the moment feed */}
       {viewMoment && (
-        <div className="umv-viewer">
-          <button
-            onClick={() => setViewMoment(null)}
-            className="umv-close"
-            aria-label="Đóng"
-          >
-            <X className="umv-close-icon" />
-          </button>
-          {(() => {
-            const url = viewMoment.images[viewIndex]?.originalUrl;
-            if (url) {
-              return (
-                <div
-                  className="umv-stage"
-                  onClick={(e) => {
-                    // Side thirds navigate; center does nothing
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    if (viewMoment.images.length > 1) {
-                      if (x < rect.width / 3) {
-                        setViewIndex((i) => Math.max(0, i - 1));
-                      } else if (x > (rect.width * 2) / 3) {
-                        setViewIndex((i) => Math.min(viewMoment.images.length - 1, i + 1));
-                      }
-                    }
-                  }}
-                >
-                  <img src={url} alt={viewMoment.caption ?? ""} className="umv-media" />
-                  {viewMoment.images.length > 1 && (
-                    <span className="umv-count">
-                      {viewIndex + 1}/{viewMoment.images.length}
-                    </span>
-                  )}
-                </div>
-              );
-            }
-            if (viewMoment.video) {
-              return (
-                <video
-                  src={viewMoment.video.originalUrl}
-                  poster={viewMoment.video.thumbUrl || undefined}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="umv-media-video"
-                />
-              );
-            }
-            return null;
-          })()}
-          {viewMoment.images[viewIndex]?.originalUrl && (
-            <DownloadButton
-              url={viewMoment.images[viewIndex].originalUrl}
-              className="umv-download"
-            />
-          )}
-        </div>
+        <V2MomentViewer
+          moment={viewMoment}
+          initialIndex={viewIndex}
+          onClose={() => setViewMoment(null)}
+        />
       )}
     </div>
   );
