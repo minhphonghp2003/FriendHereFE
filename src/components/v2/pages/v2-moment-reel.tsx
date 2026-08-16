@@ -243,15 +243,15 @@ export function V2MomentReel({
     try {
       const res = await getOpponentConversation(moment.userId);
       if (res.data) {
-        router.push(`/chat/${res.data}?momentId=${moment.id}`);
+        router.push(`/v2/chat/${res.data}?momentId=${moment.id}`);
       } else {
         router.push(
-          `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+          `/v2/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
         );
       }
     } catch {
       router.push(
-        `/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
+        `/v2/chat/new?receiverId=${moment.userId}&name=${encodeURIComponent(moment.userName)}&momentId=${moment.id}`,
       );
     } finally {
       setSendingMessage(false);

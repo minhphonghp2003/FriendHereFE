@@ -281,19 +281,20 @@ export function V2UserDetailDialog({
     try {
       const res = await getOpponentConversation(userDetail.id);
       if (res.data) {
-        router.push(`/chat/${res.data}`);
+        router.push(`/v2/chat/${res.data}`);
       } else {
-        router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
+        router.push(`/v2/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
       }
     } catch {
-      router.push(`/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
+      router.push(`/v2/chat/new?receiverId=${userDetail.id}&name=${encodeURIComponent(userDetail.name)}`);
     }
   }, [isMe, userDetail, router]);
 
   const handleViewProfile = useCallback(() => {
+    // Already a user sheet — navigate the sheet to that user (v2-native)
     if (isMe || !userDetail) return;
-    router.push(`/user/${userDetail.id}`);
-  }, [isMe, userDetail, router]);
+    setViewingUserId(userDetail.id);
+  }, [isMe, userDetail]);
 
   // ---- My friends list (inline, only for me) ----
   const [friendships, setFriendships] = useState<FriendshipDto[]>([]);
@@ -601,7 +602,7 @@ export function V2UserDetailDialog({
                           disabled={savingProfile || !name.trim()}
                           size="sm"
                         >
-                          {savingProfile ? "Saving..." : "Save"}
+                          {savingProfile ? "Đang lưu..." : "Lưu"}
                         </Button>
                       </div>
                     </div>
@@ -611,7 +612,7 @@ export function V2UserDetailDialog({
                       onClick={isMe ? undefined : handleViewProfile}
                     >
                       {name_display}
-                      {isMe && <span className="profile-name-tag">(You)</span>}
+                      {isMe && <span className="profile-name-tag">(Bạn)</span>}
                     </h3>
                   )}
                   {email && (

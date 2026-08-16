@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MessageCircle, Settings, RefreshCw } from "lucide-react";
 import { RootState } from "@/store";
 import { useCurrentUser } from "@/hooks/users/use-users";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
-import { V2ChatDialog } from "@/components/v2/dialogs/v2-chat-dialog";
 import { V2SettingsDialog } from "@/components/v2/dialogs/v2-settings-dialog";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 
-type ActiveDialog = "chat" | "settings" | "profile" | null;
+type ActiveDialog = "settings" | "profile" | null;
 
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const pathname = usePathname();
+  const router = useRouter();
   const { data: currentUser } = useCurrentUser();
 
   // Single active modal across the whole v2 app
-  const chatModal = useV2Modal("header-chat");
   const settingsModal = useV2Modal("header-settings");
   const profileModal = useV2Modal("header-profile");
 
@@ -52,13 +51,11 @@ export function V2Header() {
     if (!isMomentsPage && !isTimelinePage) setComposing(false);
   }, [isMomentsPage, isTimelinePage]);
 
-  const activeDialog: ActiveDialog = chatModal.isOpen
-    ? "chat"
-    : settingsModal.isOpen
-      ? "settings"
-      : profileModal.isOpen
-        ? "profile"
-        : null;
+  const activeDialog: ActiveDialog = settingsModal.isOpen
+    ? "settings"
+    : profileModal.isOpen
+      ? "profile"
+      : null;
 
   const toggleDialog = (modal: { open: () => void; close: () => void; isOpen: boolean }) => {
     if (modal.isOpen) {
@@ -134,10 +131,9 @@ export function V2Header() {
             />
           </button>
           <button
-            onClick={() => toggleDialog(chatModal)}
-            className={`header-float-btn ${chatModal.isOpen ? 'header-btn-active' : ''}`}
+            onClick={() => router.push("/v2/chat")}
+            className="header-float-btn"
             aria-label="Trò chuyện"
-            aria-expanded={chatModal.isOpen}
           >
             <MessageCircle className="header-float-icon" fill="currentColor" />
             {unreadCount > 0 && (
@@ -155,7 +151,6 @@ export function V2Header() {
         </div>
       </header>
 
-      <V2ChatDialog open={chatModal.isOpen} onOpenChange={(open) => !open && chatModal.close()} />
       <V2SettingsDialog open={settingsModal.isOpen} onOpenChange={(open) => !open && settingsModal.close()} />
       <V2UserDetailDialog
         userId={profileModal.isOpen ? "me" : null}

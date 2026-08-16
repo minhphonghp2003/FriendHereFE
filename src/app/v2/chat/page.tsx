@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -31,10 +31,6 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import type { ConversationDto, DiscoverableGroupDto } from "@/types/chat";
-import { getMessagePreview, toChatMessageRenderType, JoinRequestStatus } from "@/types/chat";
-import { handleApiError } from "@/lib/axios";
-import type { AxiosError } from "axios";
 import {
   useDiscoverableGroups,
   useCreateJoinRequest,
@@ -42,26 +38,38 @@ import {
   useCancelJoinRequest,
 } from "@/hooks/chat";
 import { LoadingVideo } from "@/components/common/loading-video";
+import {
+  JoinRequestStatus,
+  toChatMessageRenderType,
+  getMessagePreview,
+  type ConversationDto,
+  type DiscoverableGroupDto,
+} from "@/types/chat";
 
-type ChatTab = "all" | "archived" | "discover";
+const PAGE_TAKE = 20;
+const getNameDisplay = (name?: string | null) =>
+  name?.trim()?.charAt(0)?.toUpperCase() ?? "?";
 
-const getNameDisplay = (name: string) => {
-  const cleaned = name.trim();
-  return cleaned.length > 4 ? cleaned.slice(0, 4) : cleaned;
-};
+type Tab = "all" | "archived" | "discover";
+
+interface MenuState {
+  convId: number;
+  x: number;
+  y: number;
+}
 
 export default function V2ChatPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAuth();
-  const { conversations, conversationsHasMore } = useAppSelector((s) => s.chat);
+  const conversations = useAppSelector((s) => s.chat.conversations);
+
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [tab, setTab] = useState<ChatTab>("all");
-  const [menuState, setMenuState] = useState<{ convId: number; x: number; y: number } | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const prevIdRef = useRef<number | null>(null);
+  const [tab, setTab] = useState<Tab>("all");
+  const [menuState, setMenuState] = useState<MenuState | null>(null);
 
+  // ===== Discoverable groups (v1 hooks) =====
   const {
     groups: discoverableGroups,
     isLoading: loadingDiscoverable,
@@ -73,111 +81,93 @@ export default function V2ChatPage() {
   const { mutate: cancelRequest, isLoading: cancelling } = useCancelJoinRequest();
   const [localPendingIds, setLocalPendingIds] = useState<Set<number>>(new Set());
 
-  const inbox = conversations.filter((c) => !c.isArchived);
-  const archived = conversations.filter((c) => c.isArchived);
-  const visible = tab === "all" ? inbox : archived;
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const fetchConversations = useCallback(
-    async (prevId: number | null = null) => {
-      try {
-        const res = await getConversations(prevId, 20);
-        if (prevId === null) {
-          dispatch(setConversations({ data: res.data, hasMore: res.hasMore }));
-        } else {
-          dispatch(addConversations({ data: res.data, hasMore: res.hasMore }));
-        }
-        prevIdRef.current = res.prevId;
-      } catch (err) {
-        console.error("Failed to fetch conversations", err);
-      }
-    },
-    [dispatch],
-  );
-
+  // ===== v2 chrome: hide header + nav button while on this page =====
   useEffect(() => {
-    setLoading(true);
-    fetchConversations().finally(() => setLoading(false));
-  }, [fetchConversations]);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsubBlocked = appHub.onReceiveChatBlocked(() => {
-      fetchConversations();
-    });
-    const unsubUnblocked = appHub.onReceiveChatUnblocked(() => {
-      fetchConversations();
-    });
+    window.dispatchEvent(new Event("v2:close-modals"));
+    window.dispatchEvent(new Event("v2:sheet-open")); // hides the nav button
+    window.dispatchEvent(new Event("v2:compose-open")); // hides the header
     return () => {
-      unsubBlocked();
-      unsubUnblocked();
+      window.dispatchEvent(new Event("v2:sheet-close"));
+      window.dispatchEvent(new Event("v2:compose-close"));
     };
-  }, [user, fetchConversations]);
-
-  const handleScroll = useCallback(() => {
-    if (!listRef.current || loadingMore) return;
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
-      if (conversationsHasMore) {
-        setLoadingMore(true);
-        fetchConversations(prevIdRef.current).finally(() => setLoadingMore(false));
-      }
-    }
-  }, [conversationsHasMore, fetchConversations, loadingMore]);
-
-  const handleChatClick = useCallback(
-    (conv: ConversationDto) => {
-      if (conv.id) {
-        router.push(`/chat/${conv.id}`);
-      }
-    },
-    [router],
-  );
-
-  const openMenu = useCallback((e: React.MouseEvent, conv: ConversationDto) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMenuState({
-      convId: conv.id ?? 0,
-      x: Math.max(8, Math.min(rect.left, window.innerWidth - 184)),
-      y: rect.bottom + 4,
-    });
   }, []);
 
-  const closeMenu = useCallback(() => setMenuState(null), []);
-
-  const toggleMute = useCallback(
-    async (conv: ConversationDto) => {
-      const id = conv.id;
-      if (!id) return;
-      const next = !conv.isMuted;
-      dispatch(updateConversationState({ conversationId: id, patch: { isMuted: next } }));
-      try {
-        await setConversationMuted(id, next);
-      } catch (err) {
-        dispatch(updateConversationState({ conversationId: id, patch: { isMuted: !next } }));
-      } finally {
-        setMenuState(null);
+  const loadConversations = useCallback(async (prevId?: number) => {
+    try {
+      const res = await getConversations(prevId, PAGE_TAKE);
+      if (prevId) {
+        dispatch(addConversations({ data: res.data, hasMore: res.hasMore }));
+      } else {
+        dispatch(setConversations({ data: res.data, hasMore: res.hasMore }));
       }
-    },
-    [dispatch],
-  );
+    } catch (err) {
+      console.error("Failed to fetch conversations", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [dispatch]);
 
-  const toggleArchive = useCallback(
-    async (conv: ConversationDto) => {
-      const id = conv.id;
-      if (!id) return;
-      const next = !conv.isArchived;
-      dispatch(updateConversationState({ conversationId: id, patch: { isArchived: next } }));
-      try {
-        await setConversationArchived(id, next);
-      } catch (err) {
-        dispatch(updateConversationState({ conversationId: id, patch: { isArchived: !next } }));
-      } finally {
-        setMenuState(null);
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Realtime block/unblock (same as v1 list)
+  useEffect(() => {
+    const unsubBlock = appHub.onReceiveChatBlocked(() => loadConversations());
+    const unsubUnblock = appHub.onReceiveChatUnblocked(() => loadConversations());
+    return () => {
+      unsubBlock();
+      unsubUnblock();
+    };
+  }, [loadConversations]);
+
+  const handleScroll = () => {
+    const el = listRef.current;
+    if (!el || loadingMore || tab === "discover") return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
+      const last = conversations[conversations.length - 1];
+      if (last?.id) {
+        setLoadingMore(true);
+        loadConversations(last.id);
       }
-    },
-    [dispatch],
-  );
+    }
+  };
+
+  const handleChatClick = (conv: ConversationDto) => {
+    if (!conv.id) return;
+    router.push(`/v2/chat/${conv.id}`);
+  };
+
+  const toggleMute = async (conv: ConversationDto) => {
+    if (!conv.id) return;
+    try {
+      await setConversationMuted(conv.id, !conv.isMuted);
+      dispatch(
+        updateConversationState({ conversationId: conv.id, patch: { isMuted: !conv.isMuted } }),
+      );
+    } catch (err) {
+      console.error("Failed to mute conversation", err);
+    } finally {
+      setMenuState(null);
+    }
+  };
+
+  const toggleArchive = async (conv: ConversationDto) => {
+    if (!conv.id) return;
+    try {
+      await setConversationArchived(conv.id, !conv.isArchived);
+      dispatch(
+        updateConversationState({ conversationId: conv.id, patch: { isArchived: !conv.isArchived } }),
+      );
+    } catch (err) {
+      console.error("Failed to archive conversation", err);
+    } finally {
+      setMenuState(null);
+    }
+  };
 
   const handleDelete = useCallback(
     async (conv: ConversationDto) => {
@@ -209,11 +199,10 @@ export default function V2ChatPage() {
         if (group.isRestricted) {
           await createRequest(group.id);
           setLocalPendingIds((prev) => new Set(prev).add(group.id));
-          refetchDiscoverable();
         } else {
           await joinGroup(group.id);
-          refetchDiscoverable();
         }
+        refetchDiscoverable();
       } catch (err) {
         console.error("Failed to join group", err);
       }
@@ -240,6 +229,13 @@ export default function V2ChatPage() {
     [cancelRequest, refetchDiscoverable],
   );
 
+  const openMenu = (e: React.MouseEvent, conv: ConversationDto) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenuState({ convId: conv.id!, x: Math.min(rect.left - 120, window.innerWidth - 190), y: rect.bottom + 4 });
+  };
+
+  const closeMenu = () => setMenuState(null);
+
   const renderRow = (conv: ConversationDto) => {
     const menuOpen = menuState?.convId === conv.id;
     const lastPreview = getMessagePreview(conv.lastMessage);
@@ -255,90 +251,66 @@ export default function V2ChatPage() {
       <div
         key={conv.id}
         onClick={() => handleChatClick(conv)}
-        className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors"
+        className="vc2-row"
       >
-        <div className="relative shrink-0">
-          <div className="bg-muted flex h-12 w-12 items-center justify-center overflow-hidden rounded-full">
+        <div className="vc2-avatar-wrap">
+          <div className="vc2-avatar">
             {conv.image?.thumbUrl ? (
-              <img src={conv.image.thumbUrl} alt="" className="h-full w-full object-cover" />
+              <img src={conv.image.thumbUrl} alt="" className="vc2-avatar-img" />
             ) : (
-              <span className="text-muted-foreground text-lg font-bold">
-                {conv.name?.charAt(0).toUpperCase() ?? "?"}
-              </span>
+              <span className="vc2-avatar-letter">{getNameDisplay(conv.name)}</span>
             )}
           </div>
-          {conv.isOnline && (
-            <div className="absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-900" />
-          )}
+          {conv.isOnline && <div className="vc2-online-dot" />}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 truncate font-semibold">
-              <span className="truncate">{conv.name}</span>
-              {conv.isMuted && <BellOff className="text-muted-foreground h-3.5 w-3.5 shrink-0" />}
+        <div className="vc2-row-body">
+          <div className="vc2-row-top">
+            <p className="vc2-name">
+              <span className="vc2-name-text">{conv.name}</span>
+              {conv.isMuted && <BellOff className="vc2-muted-icon" />}
             </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {conv.isBlocked && <Ban className="h-3.5 w-3.5 shrink-0 text-red-500" />}
+            <div className="vc2-row-badges">
+              {conv.isBlocked && <Ban className="vc2-blocked-icon" />}
               {(conv.unreadCount ?? 0) > 0 && (
-                <span className="bg-primary min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-xs text-white">
-                  {conv.unreadCount}
-                </span>
+                <span className="vc2-unread">{conv.unreadCount}</span>
               )}
             </div>
           </div>
-          <p className="text-muted-foreground mt-0.5 truncate text-xs">
-            {conv.isBlocked ? "Đã chặn" : preview}
-          </p>
+          <p className="vc2-preview">{conv.isBlocked ? "Đã chặn" : preview}</p>
         </div>
         <button
           onClick={(e) => (menuOpen ? closeMenu() : openMenu(e, conv))}
-          className="hover:bg-muted text-muted-foreground shrink-0 rounded-full p-1.5"
+          className="vc2-menu-btn"
           aria-label="Tùy chọn cuộc trò chuyện"
         >
-          <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="vc2-menu-icon" />
         </button>
+
         {menuOpen && menuState && (
           <>
             <div
-              className="fixed inset-0 z-20"
+              className="vc2-menu-backdrop"
               onClick={(e) => {
                 e.stopPropagation();
                 closeMenu();
               }}
             />
             <div
-              className="bg-background border-border fixed z-30 w-44 rounded-xl border p-1 shadow-lg"
+              className="vc2-menu"
               style={{ left: menuState.x, top: menuState.y }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => toggleMute(conv)}
-                className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm"
-              >
-                {conv.isMuted ? (
-                  <Bell className="h-4 w-4 shrink-0" />
-                ) : (
-                  <BellOff className="h-4 w-4 shrink-0" />
-                )}
+              <button onClick={() => toggleMute(conv)} className="vc2-menu-item">
+                {conv.isMuted ? <Bell className="vc2-menu-item-icon" /> : <BellOff className="vc2-menu-item-icon" />}
                 {conv.isMuted ? "Bật thông báo" : "Tắt thông báo"}
               </button>
-              <button
-                onClick={() => toggleArchive(conv)}
-                className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm"
-              >
-                {conv.isArchived ? (
-                  <ArchiveRestore className="h-4 w-4 shrink-0" />
-                ) : (
-                  <Archive className="h-4 w-4 shrink-0" />
-                )}
+              <button onClick={() => toggleArchive(conv)} className="vc2-menu-item">
+                {conv.isArchived ? <ArchiveRestore className="vc2-menu-item-icon" /> : <Archive className="vc2-menu-item-icon" />}
                 {conv.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
               </button>
-              <div className="border-border my-1 border-t" />
-              <button
-                onClick={() => handleDelete(conv)}
-                className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600"
-              >
-                <Trash2 className="h-4 w-4 shrink-0" />
+              <div className="vc2-menu-divider" />
+              <button onClick={() => handleDelete(conv)} className="vc2-menu-item danger">
+                <Trash2 className="vc2-menu-item-icon" />
                 Xóa cuộc trò chuyện
               </button>
             </div>
@@ -348,82 +320,57 @@ export default function V2ChatPage() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-full flex-col">
-        <h1 className="p-4 pb-0 text-2xl font-bold">Tin nhắn</h1>
-        <div className="flex flex-1 items-center justify-center">
-          <LoadingVideo size="md" />
-        </div>
-      </div>
-    );
-  }
+  const visible = conversations.filter((c) => (tab === "archived" ? c.isArchived : !c.isArchived));
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between p-4 pb-2">
-        <h1 className="text-2xl font-bold">Tin nhắn</h1>
+    <div className="vc2-page">
+      <div className="vc2-header">
+        <h1 className="vc2-title">Tin nhắn</h1>
         <button
-          onClick={() => router.push("/chat/new-group")}
+          onClick={() => router.push("/v2/chat/new-group")}
           aria-label="Tạo nhóm chat"
-          className="hover:bg-muted rounded-full p-2"
+          className="vc2-new-group-btn"
         >
-          <UserPlus className="h-5 w-5" />
+          <UserPlus className="vc2-new-group-icon" />
         </button>
       </div>
-      <div className="flex items-center gap-2 px-4 pb-2">
-        <button
-          onClick={() => {
-            setTab("all");
-            setMenuState(null);
-          }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "all" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-        >
-          Tất cả
-        </button>
-        <button
-          onClick={() => {
-            setTab("archived");
-            setMenuState(null);
-          }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "archived" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-        >
-          Đã lưu trữ
-        </button>
-        <button
-          onClick={() => {
-            setTab("discover");
-            setMenuState(null);
-          }}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "discover" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
-        >
-          Khám phá
-        </button>
+
+      <div className="vc2-tabs">
+        {(["all", "archived", "discover"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => {
+              setTab(t);
+              setMenuState(null);
+            }}
+            className={`vc2-tab ${tab === t ? "active" : ""}`}
+          >
+            {t === "all" ? "Tất cả" : t === "archived" ? "Đã lưu trữ" : "Khám phá"}
+          </button>
+        ))}
       </div>
-      <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
+
+      <div ref={listRef} onScroll={handleScroll} className="vc2-list">
         {tab === "discover" ? (
           <>
             {loadingDiscoverable && discoverableGroups.length === 0 ? (
-              <div className="flex items-center justify-center py-16">
+              <div className="vc2-center-block">
                 <LoadingVideo size="sm" />
               </div>
             ) : discoverableError ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <p className="text-muted-foreground text-sm">{discoverableError.message}</p>
-                <button
-                  onClick={refetchDiscoverable}
-                  className="bg-success hover:bg-success/90 text-success-foreground rounded-full px-4 py-1.5 text-sm font-medium"
-                >
+              <div className="vc2-center-block">
+                <p className="vc2-empty-text">{discoverableError.message}</p>
+                <button onClick={() => refetchDiscoverable()} className="vc2-retry-btn">
                   Thử lại
                 </button>
               </div>
             ) : discoverableGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-                <Users className="mb-3 h-12 w-12" />
-                <p className="text-sm">Không có nhóm để tham gia</p>
+              <div className="vc2-center-block">
+                <Users className="vc2-empty-icon" />
+                <p className="vc2-empty-text">Không có nhóm để tham gia</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="vc2-groups">
                 {discoverableGroups.map((group) => {
                   const status = group.joinRequestStatus ?? null;
                   const isPending =
@@ -431,40 +378,29 @@ export default function V2ChatPage() {
                   const canCancel = isPending && !!group.joinRequestId;
                   const processing = requesting || joining || (canCancel && cancelling);
                   return (
-                    <div
-                      key={group.id}
-                      className="border-border flex items-center gap-3 rounded-lg border p-3"
-                    >
-                      <div className="bg-muted text-muted-foreground flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold">
+                    <div key={group.id} className="vc2-group-card">
+                      <div className="vc2-avatar sm">
                         {group.image?.thumbUrl ? (
-                          <img
-                            src={group.image.thumbUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
+                          <img src={group.image.thumbUrl} alt="" className="vc2-avatar-img" />
                         ) : (
-                          getNameDisplay(group.name)
+                          <span className="vc2-avatar-letter">{getNameDisplay(group.name)}</span>
                         )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                          <span className="truncate">{group.name}</span>
-                          {group.isRestricted && (
-                            <Lock className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                          )}
+                      <div className="vc2-row-body">
+                        <p className="vc2-name">
+                          <span className="vc2-name-text">{group.name}</span>
+                          {group.isRestricted && <Lock className="vc2-muted-icon" />}
                         </p>
-                        <p className="text-muted-foreground text-xs">
-                          {group.memberCount} thành viên
-                        </p>
+                        <p className="vc2-preview">{group.memberCount} thành viên</p>
                       </div>
                       {isPending ? (
                         <button
                           onClick={() => handleCancelRequest(group)}
                           disabled={cancelling}
-                          className="border-border text-muted-foreground hover:bg-muted shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+                          className="vc2-ghost-btn"
                         >
                           {cancelling ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="vc2-spin" />
                           ) : (
                             "Hủy"
                           )}
@@ -473,16 +409,12 @@ export default function V2ChatPage() {
                         <button
                           onClick={() => handleJoinGroup(group)}
                           disabled={processing}
-                          className="bg-success hover:bg-success/90 text-success-foreground shrink-0 rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+                          className="vc2-primary-btn"
                         >
                           {processing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="vc2-spin" />
                           ) : group.isRestricted ? (
-                            status === JoinRequestStatus.Rejected ? (
-                              "Yêu cầu lại"
-                            ) : (
-                              "Yêu cầu"
-                            )
+                            status === JoinRequestStatus.Rejected ? "Yêu cầu lại" : "Yêu cầu"
                           ) : (
                             "Tham gia"
                           )}
@@ -496,25 +428,421 @@ export default function V2ChatPage() {
           </>
         ) : (
           <>
-            {visible.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
-                <MessageCircle className="mb-3 h-12 w-12" />
-                <p className="text-sm">
-                  {tab === "all"
-                    ? "Chưa có tin nhắn"
-                    : "Chưa có cuộc trò chuyện nào được lưu trữ"}
+            {loading ? (
+              <div className="vc2-center-block">
+                <LoadingVideo size="md" />
+              </div>
+            ) : visible.length === 0 ? (
+              <div className="vc2-center-block">
+                <MessageCircle className="vc2-empty-icon" />
+                <p className="vc2-empty-text">
+                  {tab === "all" ? "Chưa có tin nhắn" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
                 </p>
               </div>
-            )}
-            {visible.map((conv) => renderRow(conv))}
-            {loadingMore && (
-              <div className="flex justify-center py-4">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-blue-600" />
-              </div>
+            ) : (
+              <>
+                {visible.map((conv) => renderRow(conv))}
+                {loadingMore && (
+                  <div className="vc2-center-block slim">
+                    <Loader2 className="vc2-spin" />
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
       </div>
+
+      <style jsx global>{`
+        .vc2-page {
+          height: 100%;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          /* Neon backdrop like the moments page */
+          background:
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
+            var(--vm-bg, #f4f4f5);
+          color: var(--vm-text, #18181b);
+        }
+
+        .vc2-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 20px 4px;
+          padding-top: calc(12px + env(safe-area-inset-top, 0px));
+        }
+
+        .vc2-title {
+          font-size: 24px;
+          font-weight: 800;
+          margin: 0;
+        }
+
+        .vc2-new-group-btn {
+          width: 38px;
+          height: 38px;
+          border: none;
+          border-radius: 50%;
+          background: var(--vm-surface, #fff);
+          color: #2bb0af;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+          transition: transform 0.2s;
+        }
+
+        .vc2-new-group-btn:active {
+          transform: scale(0.92);
+        }
+
+        .vc2-new-group-icon {
+          width: 18px;
+          height: 18px;
+        }
+
+        .vc2-tabs {
+          display: flex;
+          gap: 8px;
+          padding: 8px 20px 10px;
+        }
+
+        .vc2-tab {
+          border: 1px solid var(--vm-border, #e4e4e7);
+          background: var(--vm-surface, #fff);
+          color: var(--vm-text-2, #52525b);
+          border-radius: 999px;
+          padding: 6px 16px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .vc2-tab.active {
+          background: linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%);
+          border-color: transparent;
+          color: white;
+          box-shadow: 0 4px 14px rgba(43, 176, 175, 0.4);
+        }
+
+        .vc2-list {
+          flex: 1;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 4px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .vc2-row,
+        .vc2-group-card {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 8px;
+          border-radius: 14px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+
+        .vc2-row:active {
+          background: rgba(43, 176, 175, 0.08);
+        }
+
+        .vc2-group-card {
+          border: 1px solid var(--vm-border, #e4e4e7);
+          background: var(--vm-surface, #fff);
+          margin-bottom: 8px;
+        }
+
+        .vc2-avatar-wrap {
+          position: relative;
+          flex-shrink: 0;
+        }
+
+        .vc2-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--vm-surface-2, #f4f4f5);
+          flex-shrink: 0;
+        }
+
+        .vc2-avatar.sm {
+          width: 44px;
+          height: 44px;
+        }
+
+        .vc2-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .vc2-avatar-letter {
+          font-size: 17px;
+          font-weight: 800;
+          color: var(--vm-text-2, #52525b);
+        }
+
+        .vc2-online-dot {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          width: 13px;
+          height: 13px;
+          border-radius: 50%;
+          background: #22c55e;
+          border: 2.5px solid var(--vm-bg, #f4f4f5);
+        }
+
+        .vc2-row-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .vc2-row-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .vc2-name {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin: 0;
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--vm-text, #18181b);
+          min-width: 0;
+        }
+
+        .vc2-name-text {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .vc2-muted-icon {
+          width: 13px;
+          height: 13px;
+          flex-shrink: 0;
+          color: var(--vm-text-3, #a1a1aa);
+        }
+
+        .vc2-row-badges {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
+        .vc2-blocked-icon {
+          width: 13px;
+          height: 13px;
+          color: #ef4444;
+        }
+
+        .vc2-unread {
+          background: #2bb0af;
+          color: white;
+          font-size: 11px;
+          font-weight: 800;
+          min-width: 19px;
+          height: 19px;
+          padding: 0 5px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .vc2-preview {
+          margin: 0;
+          font-size: 13px;
+          color: var(--vm-text-3, #a1a1aa);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .vc2-menu-btn {
+          width: 30px;
+          height: 30px;
+          border: none;
+          background: none;
+          color: var(--vm-text-3, #a1a1aa);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .vc2-menu-icon {
+          width: 17px;
+          height: 17px;
+        }
+
+        .vc2-menu-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 20;
+        }
+
+        .vc2-menu {
+          position: fixed;
+          z-index: 30;
+          width: 180px;
+          background: var(--vm-surface, #fff);
+          border: 1px solid var(--vm-border, #e4e4e7);
+          border-radius: 14px;
+          padding: 4px;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .vc2-menu-item {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border: none;
+          background: none;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--vm-text, #18181b);
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .vc2-menu-item:active {
+          background: var(--vm-surface-2, #f4f4f5);
+        }
+
+        .vc2-menu-item.danger {
+          color: #ef4444;
+        }
+
+        .vc2-menu-item-icon {
+          width: 15px;
+          height: 15px;
+        }
+
+        .vc2-menu-divider {
+          height: 1px;
+          background: var(--vm-border, #e4e4e7);
+          margin: 4px 6px;
+        }
+
+        .vc2-center-block {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 32px 20px;
+        }
+
+        .vc2-center-block.slim {
+          flex: 0 0 auto;
+          padding: 14px;
+        }
+
+        .vc2-empty-icon {
+          width: 46px;
+          height: 46px;
+          color: var(--vm-text-3, #a1a1aa);
+          opacity: 0.6;
+        }
+
+        .vc2-empty-text {
+          margin: 0;
+          font-size: 14px;
+          color: var(--vm-text-3, #a1a1aa);
+        }
+
+        .vc2-retry-btn {
+          border: none;
+          border-radius: 999px;
+          padding: 7px 18px;
+          font-size: 13px;
+          font-weight: 700;
+          color: white;
+          background: linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%);
+          cursor: pointer;
+        }
+
+        .vc2-groups {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding-top: 4px;
+        }
+
+        .vc2-primary-btn {
+          border: none;
+          border-radius: 999px;
+          padding: 7px 16px;
+          font-size: 13px;
+          font-weight: 700;
+          color: white;
+          background: linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%);
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .vc2-primary-btn:disabled {
+          opacity: 0.6;
+        }
+
+        .vc2-ghost-btn {
+          border: 1px solid var(--vm-border, #e4e4e7);
+          border-radius: 999px;
+          padding: 7px 16px;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--vm-text-2, #52525b);
+          background: var(--vm-surface, #fff);
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .vc2-ghost-btn:disabled {
+          opacity: 0.6;
+        }
+
+        .vc2-spin {
+          width: 16px;
+          height: 16px;
+          animation: vc2-rotate 1s linear infinite;
+        }
+
+        @keyframes vc2-rotate {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
