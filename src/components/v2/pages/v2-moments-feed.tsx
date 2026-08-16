@@ -1,779 +1,844 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Camera, Plus, Heart, MessageCircle, Share2 } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, UserX } from "lucide-react";
+import { MomentCard } from "@/components/moments/moment-card";
+import { LoadingVideo } from "@/components/common/loading-video";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
-import { LoadingVideo } from "@/components/common/loading-video";
 import { useAuth } from "@/providers/auth-provider";
+import { getMyFriendships } from "@/services/friendship";
+import { isAccepted, type FriendshipDto } from "@/types/friendship";
+import type { MomentDto, MomentVisibility } from "@/types/moment";
+import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 import { toast } from "sonner";
-import type { MomentDto } from "@/types/moment";
 
+const PAGE_TAKE = 10;
+const LOAD_MORE_THRESHOLD = 3;
+
+/** v1 VISIBILITY_TO_FRIEND_TYPE: which friend groups each visibility can exclude */
+const VISIBILITY_TO_FRIEND_TYPE: Partial<Record<MomentVisibility, number>> = {
+  Friends: 0,
+  BestFriend: 1,
+  Lover: 2,
+};
+
+/** Capture mode of the create card */
+type CaptureMode = "camera" | "preview";
+
+/**
+ * Item 1 of the feed: full-screen camera for creating a new moment.
+ * - Live camera preview (getUserMedia, front/back switch)
+ * - Capture button (photo) + tap-to-pick-from-gallery
+ * - Caption + visibility, then upload via v1 useCreateMoment
+ */
+function CreateMomentCard({
+  onCreated,
+}: {
+  onCreated: () => void;
+}) {
+  const { user } = useAuth();
+  const { mutate: createMoment, isLoading: isUploading } = useCreateMoment();
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const [mode, setMode] = useState<CaptureMode>("camera");
+  const [facing, setFacing] = useState<"user" | "environment">("environment");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [visibility, setVisibility] = useState<MomentVisibility>("Friends");
+  const [allowComment, setAllowComment] = useState(true);
+  const [isShowLocation, setIsShowLocation] = useState(true);
+  const [excludedIds, setExcludedIds] = useState<number[]>([]);
+  const [friends, setFriends] = useState<FriendshipDto[]>([]);
+  const [showExcluded, setShowExcluded] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+
+  // v1: friends eligible for exclusion depend on the chosen visibility
+  useEffect(() => {
+    const type = VISIBILITY_TO_FRIEND_TYPE[visibility];
+    if (type === undefined) {
+      setFriends([]);
+      setExcludedIds([]);
+      return;
+    }
+    getMyFriendships({ type })
+      .then((res) => setFriends(res.data.filter(isAccepted)))
+      .catch(() => setFriends([]));
+  }, [visibility]);
+
+  const toggleExcluded = (friendUserId: number) => {
+    setExcludedIds((prev) =>
+      prev.includes(friendUserId)
+        ? prev.filter((id) => id !== friendUserId)
+        : [...prev, friendUserId],
+    );
+  };
+
+  // Start/stop the camera when the card enters capture mode
+  useEffect(() => {
+    if (mode !== "camera") return;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+        setCameraError(null);
+      } catch (err) {
+        console.error("Camera access failed:", err);
+        setCameraError("Camera unavailable — pick from gallery instead.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [mode, facing]);
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !video.videoWidth) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `moment-${Date.now()}.jpg`, { type: "image/jpeg" });
+      setMediaFile(file);
+      setMediaPreviewUrl(URL.createObjectURL(file));
+      setIsVideo(false);
+      setMode("preview");
+      setShowDetails(true);
+    }, "image/jpeg", 0.92);
+  };
+
+  const pickFromGallery = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMediaFile(file);
+    setMediaPreviewUrl(URL.createObjectURL(file));
+    setIsVideo(file.type.startsWith("video/"));
+    setMode("preview");
+    setShowDetails(true);
+  };
+
+  const reset = () => {
+    setMediaFile(null);
+    if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
+    setMediaPreviewUrl(null);
+    setCaption("");
+    setAllowComment(true);
+    setIsShowLocation(true);
+    setExcludedIds([]);
+    setShowExcluded(false);
+    setShowDetails(false);
+    setMode("camera");
+  };
+
+  const handleUpload = async () => {
+    if (!mediaFile) return;
+    try {
+      await createMoment({
+        caption: caption.trim() || undefined,
+        visibility,
+        allowComment,
+        isShowLocation,
+        // v1: comma-joined excluded friend ids (BE attaches the live location)
+        excludedUserIds: excludedIds.length > 0 ? excludedIds.join(",") : undefined,
+        images: isVideo ? undefined : [mediaFile],
+        video: isVideo ? mediaFile : undefined,
+      });
+      toast.success("Moment shared!");
+      reset();
+      onCreated();
+    } catch (err) {
+      console.error("Failed to create moment:", err);
+      toast.error("Failed to share moment");
+    }
+  };
+
+  return (
+    <div className="cm-card">
+      {/* Camera preview / captured media */}
+      {mode === "camera" ? (
+        <>
+          <video ref={videoRef} className="cm-video" playsInline muted autoPlay />
+          <canvas ref={canvasRef} className="cm-canvas" />
+
+          {cameraError && (
+            <div className="cm-error">
+              <p>{cameraError}</p>
+            </div>
+          )}
+
+          {/* Camera controls */}
+          <div className="cm-controls">
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="cm-gallery-btn"
+              aria-label="Pick from gallery"
+            >
+              <ImageIcon className="cm-gallery-icon" />
+            </button>
+
+            <button
+              onClick={capturePhoto}
+              disabled={!!cameraError}
+              className="cm-shutter-btn"
+              aria-label="Capture photo"
+            >
+              <div className="cm-shutter-inner" />
+            </button>
+
+            <button
+              onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
+              className="cm-gallery-btn"
+              aria-label="Switch camera"
+            >
+              <SwitchCamera className="cm-gallery-icon" />
+            </button>
+          </div>
+
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={pickFromGallery}
+            className="cm-hidden-input"
+          />
+
+          <div className="cm-hint">Swipe up to browse moments</div>
+        </>
+      ) : (
+        <>
+          {isVideo ? (
+            <video src={mediaPreviewUrl ?? undefined} className="cm-video" controls autoPlay loop muted playsInline />
+          ) : (
+            <img src={mediaPreviewUrl ?? undefined} alt="New moment" className="cm-video" />
+          )}
+
+          {/* Post details overlay */}
+          {showDetails && (
+            <div className="cm-details">
+              <div className="cm-details-top">
+                <button onClick={reset} className="cm-details-close" aria-label="Discard">
+                  <X className="cm-details-close-icon" />
+                </button>
+                <span className="cm-details-title">New moment</span>
+              </div>
+
+              <div className="cm-details-bottom">
+                <input
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Add a caption..."
+                  maxLength={500}
+                  className="cm-caption-input"
+                />
+                <div className="cm-visibility-row">
+                  {(Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[]).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        setVisibility(v);
+                        setExcludedIds([]);
+                      }}
+                      className={`cm-visibility-chip ${visibility === v ? "active" : ""}`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Toggles: allow comments + show location (v1 params) */}
+                <div className="cm-toggles">
+                  <button
+                    onClick={() => setAllowComment((v) => !v)}
+                    className={`cm-toggle-chip ${allowComment ? "active" : ""}`}
+                  >
+                    <MessageSquare className="cm-toggle-icon" />
+                    Comments
+                  </button>
+                  <button
+                    onClick={() => setIsShowLocation((v) => !v)}
+                    className={`cm-toggle-chip ${isShowLocation ? "active" : ""}`}
+                  >
+                    <MapPin className="cm-toggle-icon" />
+                    Location
+                  </button>
+                  {friends.length > 0 && (
+                    <button
+                      onClick={() => setShowExcluded((v) => !v)}
+                      className={`cm-toggle-chip ${excludedIds.length > 0 ? "alert" : ""}`}
+                    >
+                      <UserX className="cm-toggle-icon" />
+                      {excludedIds.length > 0 ? `Exclude ${excludedIds.length}` : "Exclude"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Excluded friends picker (v1 logic: friends of the visibility group) */}
+                {showExcluded && friends.length > 0 && (
+                  <div className="cm-excluded-row">
+                    {friends.map((f) => {
+                      const friendUserId = user?.id === f.user1Id ? f.user2Id : f.user1Id;
+                      const isSelected = excludedIds.includes(friendUserId);
+                      return (
+                        <button
+                          key={f.id}
+                          onClick={() => toggleExcluded(friendUserId)}
+                          className={`cm-friend-chip ${isSelected ? "excluded" : ""}`}
+                        >
+                          {f.otherUserImage?.thumbUrl ? (
+                            <img
+                              src={f.otherUserImage.thumbUrl}
+                              alt={f.otherUserName}
+                              className="cm-friend-avatar"
+                            />
+                          ) : (
+                            <span className="cm-friend-avatar cm-friend-initial">
+                              {f.otherUserName?.charAt(0).toUpperCase() || "?"}
+                            </span>
+                          )}
+                          <span className="cm-friend-name">
+                            {f.otherUserName.split(" ").slice(-1)[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading || !mediaFile}
+                  className="cm-share-btn"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="cm-share-icon spinning" />
+                      Sharing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="cm-share-icon" />
+                      Share
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <style jsx global>{`
+        .cm-card {
+          position: relative;
+          height: 100%;
+          width: 100%;
+          background: #000;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cm-video {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          background: #000;
+        }
+
+        .cm-canvas {
+          display: none;
+        }
+
+        .cm-error {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          text-align: center;
+          background: rgba(0, 0, 0, 0.75);
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 14px;
+        }
+
+        .cm-controls {
+          position: absolute;
+          bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+          left: 0;
+          right: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-around;
+          padding: 0 40px;
+        }
+
+        .cm-shutter-btn {
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          border: 4px solid white;
+          background: transparent;
+          cursor: pointer;
+          padding: 4px;
+          transition: transform 0.15s;
+        }
+
+        .cm-shutter-btn:active {
+          transform: scale(0.92);
+        }
+
+        .cm-shutter-inner {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background: white;
+        }
+
+        .cm-gallery-btn {
+          width: 46px;
+          height: 46px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 14px;
+          color: white;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .cm-gallery-icon {
+          width: 20px;
+          height: 20px;
+        }
+
+        .cm-hidden-input {
+          display: none;
+        }
+
+        .cm-hint {
+          position: absolute;
+          top: calc(70px + env(safe-area-inset-top, 0px));
+          left: 50%;
+          transform: translateX(-50%);
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.55);
+          background: rgba(0, 0, 0, 0.4);
+          padding: 6px 14px;
+          border-radius: 12px;
+          white-space: nowrap;
+        }
+
+        .cm-details {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent 30%, transparent 55%, rgba(0,0,0,0.75));
+        }
+
+        .cm-details-top {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: calc(60px + env(safe-area-inset-top, 0px)) 16px 0;
+        }
+
+        .cm-details-close {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.55);
+          border: none;
+          border-radius: 50%;
+          color: white;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .cm-details-close-icon {
+          width: 18px;
+          height: 18px;
+        }
+
+        .cm-details-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .cm-details-bottom {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .cm-caption-input {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          padding: 12px 14px;
+          color: white;
+          font-size: 14px;
+          outline: none;
+          backdrop-filter: blur(10px);
+        }
+
+        .cm-caption-input::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .cm-visibility-row {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .cm-visibility-row::-webkit-scrollbar {
+          display: none;
+        }
+
+        .cm-visibility-chip {
+          flex-shrink: 0;
+          padding: 7px 14px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          color: rgba(255, 255, 255, 0.75);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .cm-visibility-chip.active {
+          background: #2BB0AF;
+          border-color: #2BB0AF;
+          color: white;
+        }
+
+        .cm-toggles {
+          display: flex;
+          gap: 8px;
+        }
+
+        .cm-toggle-chip {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px 8px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          color: rgba(255, 255, 255, 0.55);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .cm-toggle-chip.active {
+          background: rgba(43, 176, 175, 0.2);
+          border-color: rgba(43, 176, 175, 0.55);
+          color: #2BB0AF;
+        }
+
+        .cm-toggle-chip.alert {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.45);
+          color: #f87171;
+        }
+
+        .cm-toggle-icon {
+          width: 14px;
+          height: 14px;
+        }
+
+        .cm-excluded-row {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 0;
+          scrollbar-width: none;
+        }
+
+        .cm-excluded-row::-webkit-scrollbar {
+          display: none;
+        }
+
+        .cm-friend-chip {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: 8px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: all 0.2s;
+        }
+
+        .cm-friend-chip.excluded {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.55);
+        }
+
+        .cm-friend-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          object-fit: cover;
+          overflow: hidden;
+        }
+
+        .cm-friend-initial {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #2BB0AF 0%, #1a8a89 100%);
+          color: white;
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .cm-friend-name {
+          max-width: 56px;
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.7);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .cm-share-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 14px;
+          border: none;
+          border-radius: 14px;
+          background: #2BB0AF;
+          color: white;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .cm-share-btn:hover:not(:disabled) {
+          background: #1a8a89;
+        }
+
+        .cm-share-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .cm-share-icon {
+          width: 16px;
+          height: 16px;
+        }
+
+        .cm-share-icon.spinning {
+          animation: cm-spin 1s linear infinite;
+        }
+
+        @keyframes cm-spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * TikTok/Reels-style vertical snap feed.
+ * Item 1 = create-moment camera card; items 2..n = fullscreen moments.
+ */
 export function V2MomentsFeed() {
   const { user } = useAuth();
   const {
     data: moments,
     isLoading,
-    refetch: getMoments,
+    refetch,
     loadMore,
     hasMore,
-  } = useFeedMoments(10);
-  const { mutate: createMoment, isLoading: isCreating } = useCreateMoment();
-  
-  const createModal = useV2Modal("moments-create");
-  const detailModal = useV2Modal("moments-detail");
-  const [selectedMoment, setSelectedMoment] = useState<MomentDto | null>(null);
-  const [newMomentMedia, setNewMomentMedia] = useState<File | null>(null);
-  const [newMomentCaption, setNewMomentCaption] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  } = useFeedMoments(PAGE_TAKE);
 
-  const openCreateDialog = () => {
-    createModal.open();
-  };
+  const containerRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef(loadMore);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showInfo, setShowInfo] = useState(true);
 
-  const openMomentDetail = (moment: MomentDto) => {
-    setSelectedMoment(moment);
-    detailModal.open();
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setNewMomentMedia(file);
-    }
-  };
-
-  const handleCreateMoment = async () => {
-    if (!newMomentMedia) {
-      toast.error("Please select a photo or video");
-      return;
-    }
-
-    try {
-      const isVideo = newMomentMedia.type.startsWith("video/");
-      await createMoment({
-        caption: newMomentCaption || undefined,
-        visibility: "Friends",
-        allowComment: true,
-        isShowLocation: false,
-        images: isVideo ? undefined : [newMomentMedia],
-        video: isVideo ? newMomentMedia : undefined,
-      });
-      
-      setNewMomentMedia(null);
-      setNewMomentCaption("");
-      createModal.close();
-      
-      // Reload moments
-      await getMoments();
-      
-      toast.success("Moment created successfully!");
-    } catch (error) {
-      console.error("Failed to create moment:", error);
-      toast.error("Failed to create moment");
-    }
-  };
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+  }, [loadMore]);
 
   const handleScroll = useCallback(() => {
-    if (!scrollRef.current || !hasMore || isLoading) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 200) {
-      loadMore();
-    }
-  }, [hasMore, isLoading, loadMore]);
+    const el = containerRef.current;
+    if (!el || el.clientHeight === 0) return;
+    const index = Math.round(el.scrollTop / el.clientHeight);
+    setCurrentIndex(index);
 
-  const getMomentMedia = (moment: MomentDto) => {
-    if (moment.video?.originalUrl) {
-      return {
-        type: "video" as const,
-        url: moment.video.originalUrl,
-      };
+    // moments start at feed index 1 (index 0 = create card)
+    const momentsSeen = Math.max(0, index); // index 1 => 1st moment visible
+    if (hasMore && moments.length - momentsSeen <= LOAD_MORE_THRESHOLD) {
+      loadMoreRef.current();
     }
-    if (moment.images[0]?.originalUrl) {
-      return {
-        type: "image" as const,
-        url: moment.images[0].originalUrl,
-      };
-    }
-    return null;
-  };
+  }, [hasMore, moments.length]);
 
-  const getMomentStats = (moment: MomentDto) => {
-    const reactions = moment.reactions?.length ?? 0;
-    const isLiked = moment.reactions?.some((r) => r.userId === user?.id) ?? false;
-    return { reactions, isLiked };
-  };
+  const handleToggleInfo = useCallback(() => setShowInfo((v) => !v), []);
+
+  const handleDeleted = useCallback(
+    (id: number) => {
+      refetch();
+    },
+    [refetch],
+  );
 
   return (
-    <div className="v2-moments-container" ref={scrollRef} onScroll={handleScroll}>
-      {/* Header */}
-      <div className="moments-header">
-        <h1 className="moments-title">Moments</h1>
-        <div className="moments-header-actions">
-          <span className="moments-count">{moments.length}</span>
-        </div>
+    <div className="v2-reels-container" ref={containerRef} onScroll={handleScroll}>
+      {/* Item 1: create moment camera */}
+      <div className="v2-reel-item">
+        <CreateMomentCard onCreated={() => refetch()} />
       </div>
 
-      {/* Moments Grid */}
-      <div className="moments-content">
-        {isLoading && moments.length === 0 ? (
-          <div className="moments-loading">
+      {/* Items 2..n: moments */}
+      {moments.map((moment, i) => (
+        <div key={moment.id} className="v2-reel-item">
+          <MomentCard
+            fullscreen
+            moment={moment}
+            currentUserId={user?.id}
+            onDelete={handleDeleted}
+            active={i + 1 === currentIndex}
+            showInfo={showInfo}
+            onToggleInfo={handleToggleInfo}
+          />
+        </div>
+      ))}
+
+      {/* Loading + end states */}
+      {isLoading && moments.length === 0 && (
+        <div className="v2-reel-item">
+          <div className="v2-reels-loading">
             <LoadingVideo size="md" />
           </div>
-        ) : moments.length > 0 ? (
-          <div className="moments-grid">
-            {moments.map((moment) => {
-              const media = getMomentMedia(moment);
-              if (!media) return null;
-              
-              const stats = getMomentStats(moment);
-              const initials = moment.userName?.charAt(0) || "?";
-              
-              return (
-                <div
-                  key={moment.id}
-                  className="moment-card"
-                  onClick={() => openMomentDetail(moment)}
-                >
-                  <div className="moment-media">
-                    {media.type === "image" ? (
-                      <img
-                        src={media.url}
-                        alt={moment.caption || "Moment"}
-                        className="moment-image"
-                      />
-                    ) : (
-                      <video
-                        src={media.url}
-                        className="moment-video"
-                        muted
-                        loop
-                        playsInline
-                      />
-                    )}
-                    
-                    <div className="moment-user-overlay">
-                      <span className="moment-user-initial">{initials}</span>
-                    </div>
-
-                    <div className="moment-stats">
-                      {stats.isLiked && (
-                        <div className="moment-stat-item liked">
-                          <Heart className="moment-stat-icon" fill="white" />
-                        </div>
-                      )}
-                      {stats.reactions > 0 && (
-                        <div className="moment-stat-item">
-                          <span>{stats.reactions}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="moments-empty">
-            <Camera className="empty-icon" />
-            <h3 className="empty-title">No moments yet</h3>
-            <p className="empty-description">
-              Be the first to share a moment with your friends
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Action Button */}
-      <button
-        className="create-moment-btn"
-        onClick={openCreateDialog}
-        aria-label="Create new moment"
-      >
-        <div className="create-btn-content">
-          <Plus className="create-icon" />
         </div>
-      </button>
-
-      {/* Create Dialog */}
-      <Dialog open={createModal.isOpen} onOpenChange={(open) => !open && createModal.close()}>
-        <DialogContent className="create-moment-dialog v2-native-sheet" showCloseButton={false}>
-          <div className="create-dialog-content">
-            <div className="create-dialog-body">
-              <div className="media-preview">
-                {newMomentMedia ? (
-                  newMomentMedia.type.startsWith("image/") ? (
-                    <img
-                      src={URL.createObjectURL(newMomentMedia)}
-                      alt="Preview"
-                      className="preview-image"
-                    />
-                  ) : (
-                    <video
-                      src={URL.createObjectURL(newMomentMedia)}
-                      className="preview-video"
-                      controls
-                    />
-                  )
-                ) : (
-                  <div className="preview-placeholder">
-                    <Camera className="placeholder-icon" />
-                    <p className="placeholder-text">
-                      Add a photo or video
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="caption-section">
-                <Textarea
-                  placeholder="Add a caption..."
-                  value={newMomentCaption}
-                  onChange={(e) => setNewMomentCaption(e.target.value)}
-                  className="caption-input"
-                  maxLength={500}
-                  rows={3}
-                />
-                <p className="caption-counter">
-                  {newMomentCaption.length}/500
-                </p>
-              </div>
-
-              <div className="create-actions">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={handleFileSelect}
-                  className="hidden-file-input"
-                />
-                
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  className="select-media-btn"
-                >
-                  {newMomentMedia ? "Change Media" : "Select Media"}
-                </Button>
-
-                <Button
-                  onClick={handleCreateMoment}
-                  disabled={!newMomentMedia || isCreating}
-                  className="submit-btn"
-                >
-                  {isCreating ? "Sharing..." : "Share Moment"}
-                </Button>
-              </div>
-            </div>
+      )}
+      {!isLoading && moments.length === 0 && (
+        <div className="v2-reel-item">
+          <div className="v2-reels-empty">
+            <p>No moments yet</p>
+            <span>Capture one with the camera above</span>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Moment Detail Modal */}
-      {selectedMoment && (
-        <Dialog open={detailModal.isOpen && !!selectedMoment} onOpenChange={(open) => !open && detailModal.close()}>
-          <DialogContent className="moment-detail-dialog" showCloseButton={false}>
-            <div className="moment-detail-content">
-              <div className="detail-media">
-                {(() => {
-                  const media = getMomentMedia(selectedMoment);
-                  if (!media) return null;
-                  return media.type === "image" ? (
-                    <img
-                      src={media.url}
-                      alt={selectedMoment.caption || "Moment"}
-                      className="detail-image"
-                    />
-                  ) : (
-                    <video
-                      src={media.url}
-                      className="detail-video"
-                      controls
-                      autoPlay
-                    />
-                  );
-                })()}
-              </div>
-
-              <div className="detail-info">
-                <div className="detail-user">
-                  <div className="detail-user-avatar">
-                    {selectedMoment.userName?.charAt(0) || "?"}
-                  </div>
-                  <div className="detail-user-details">
-                    <h3 className="detail-user-name">{selectedMoment.userName}</h3>
-                    <p className="detail-time">
-                      {new Date(selectedMoment.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedMoment.caption && (
-                  <p className="detail-caption">{selectedMoment.caption}</p>
-                )}
-
-                <div className="detail-actions">
-                  <div className="detail-action-btn">
-                    <Heart
-                      className={cn(
-                        "action-icon",
-                        getMomentStats(selectedMoment).isLiked && "liked"
-                      )}
-                      fill={getMomentStats(selectedMoment).isLiked ? "white" : "none"}
-                    />
-                    <span>{getMomentStats(selectedMoment).reactions}</span>
-                  </div>
-
-                  <button
-                    className="detail-action-btn"
-                    aria-label="Comment"
-                  >
-                    <MessageCircle className="action-icon" />
-                  </button>
-
-                  <button
-                    className="detail-action-btn"
-                    aria-label="Share"
-                  >
-                    <Share2 className="action-icon" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        </div>
+      )}
+      {!hasMore && moments.length > 0 && (
+        <div className="v2-reels-end">Đã hiển thị tất cả</div>
       )}
 
       <style jsx global>{`
-        .v2-moments-container {
-          width: 100%;
+        .v2-reels-container {
           height: 100%;
-          background: #000;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          overflow-y: auto;
+          width: 100%;
+          overflow-y: scroll;
+          scroll-snap-type: y mandatory;
           -webkit-overflow-scrolling: touch;
-          padding-top: calc(56px + env(safe-area-inset-top, 0px));
+          scrollbar-width: none;
+          background: #000;
         }
 
-        .v2-moments-container::-webkit-scrollbar {
+        .v2-reels-container::-webkit-scrollbar {
           display: none;
         }
 
-        .moments-header {
-          padding: 16px 20px 8px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .moments-title {
-          font-size: 22px;
-          font-weight: 700;
-          color: white;
-          margin: 0;
-        }
-
-        .moments-count {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.5);
-          font-weight: 500;
-        }
-
-        .moments-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 4px;
-          padding: 4px;
-        }
-
-        .moment-card {
-          aspect-ratio: 9/16;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 12px;
-          overflow: hidden;
-          position: relative;
-          cursor: pointer;
-          transition: transform 0.2s ease;
-        }
-
-        .moment-card:active {
-          transform: scale(0.98);
-        }
-
-        .moment-media {
-          width: 100%;
+        .v2-reel-item {
           height: 100%;
-          position: relative;
-        }
-
-        .moment-image,
-        .moment-video {
           width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .moment-user-overlay {
-          position: absolute;
-          top: 8px;
-          left: 8px;
-          z-index: 10;
-        }
-
-        .moment-user-initial {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(10px);
-          color: white;
-          font-weight: 600;
-          font-size: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .moment-stats {
-          position: absolute;
-          bottom: 8px;
-          right: 8px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          z-index: 10;
-        }
-
-        .moment-stat-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(10px);
-          padding: 3px 7px;
-          border-radius: 10px;
-          font-size: 11px;
-          color: white;
-          font-weight: 500;
-        }
-
-        .moment-stat-item.liked {
-          background: rgba(239, 68, 68, 0.75);
-        }
-
-        .moment-stat-icon {
-          width: 11px;
-          height: 11px;
-        }
-
-        .moments-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 300px;
-          color: white;
-        }
-
-        .moments-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          flex: 1;
-          text-align: center;
-          padding: 40px 20px;
-        }
-
-        .moments-empty .empty-icon {
-          width: 56px;
-          height: 56px;
-          color: rgba(255, 255, 255, 0.25);
-          margin-bottom: 16px;
-        }
-
-        .moments-empty .empty-title {
-          font-size: 17px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.85);
-          margin: 0 0 6px 0;
-        }
-
-        .moments-empty .empty-description {
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.45);
-          margin: 0;
-        }
-
-        /* Create FAB */
-        .create-moment-btn {
-          position: fixed;
-          bottom: 100px;
-          right: 20px;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #ff6b6b, #ff8e53);
-          border: none;
-          box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
-          cursor: pointer;
-          z-index: 500;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .create-moment-btn:hover {
-          transform: scale(1.05);
-          box-shadow: 0 6px 25px rgba(255, 107, 107, 0.5);
-        }
-
-        .create-moment-btn:active {
-          transform: scale(0.95);
-        }
-
-        .create-btn-content {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .create-icon {
-          width: 24px;
-          height: 24px;
-          color: white;
-        }
-
-        /* Native bottom-sheet style dialogs */
-        .create-moment-dialog,
-        .moment-detail-dialog {
-          background: rgba(15, 15, 15, 0.97) !important;
-          backdrop-filter: blur(30px);
-          -webkit-backdrop-filter: blur(30px);
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 24px 24px 0 0 !important;
-          border-bottom: none !important;
-          padding: 0 !important;
-          max-width: 100% !important;
-          width: 100% !important;
-          max-height: 92dvh;
-          margin: 0 !important;
-          position: fixed !important;
-          bottom: 0 !important;
-          top: auto !important;
-          left: 50% !important;
-          transform: translateX(-50%) !important;
-          overflow: hidden;
-          animation: v2-sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-        }
-
-        .create-moment-dialog::before,
-        .moment-detail-dialog::before {
-          content: '';
-          position: absolute;
-          top: 8px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 40px;
-          height: 4px;
-          border-radius: 2px;
-          background: rgba(255, 255, 255, 0.25);
-          z-index: 10;
-        }
-
-        .create-dialog-content {
-          padding: 28px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-        }
-
-        .create-dialog-body {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .media-preview {
-          width: 100%;
-          aspect-ratio: 1;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .preview-image,
-        .preview-video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .preview-placeholder {
-          text-align: center;
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        .placeholder-icon {
-          width: 44px;
-          height: 44px;
-          margin: 0 auto 10px;
-        }
-
-        .placeholder-text {
-          font-size: 14px;
-          margin: 0;
-        }
-
-        .caption-section {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .caption-input {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          color: white;
-          resize: none;
-          border-radius: 12px;
-        }
-
-        .caption-counter {
-          font-size: 11px;
-          color: rgba(255, 255, 255, 0.4);
-          text-align: right;
-          margin-top: 6px;
-        }
-
-        .create-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .create-actions button {
-          flex: 1;
-        }
-
-        .hidden-file-input {
-          display: none;
-        }
-
-        /* Moment detail */
-        .moment-detail-content {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          padding: 28px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-        }
-
-        .detail-media {
-          width: 100%;
-          aspect-ratio: 9/16;
-          background: black;
-          border-radius: 16px;
-          overflow: hidden;
-        }
-
-        .detail-image,
-        .detail-video {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-        }
-
-        .detail-info {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .detail-user {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .detail-user-avatar {
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: 700;
           flex-shrink: 0;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
+          position: relative;
         }
 
-        .detail-user-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: white;
-          margin: 0;
-        }
-
-        .detail-time {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.45);
-          margin: 2px 0 0 0;
-        }
-
-        .detail-caption {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.8);
-          line-height: 1.5;
-          margin: 0;
-        }
-
-        .detail-actions {
+        .v2-reels-loading,
+        .v2-reels-empty {
+          height: 100%;
           display: flex;
-          gap: 20px;
-          padding-top: 12px;
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          color: rgba(255, 255, 255, 0.7);
         }
 
-        .detail-action-btn {
+        .v2-reels-empty p {
+          font-size: 16px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.8);
+          margin: 0;
+        }
+
+        .v2-reels-empty span {
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .v2-reels-end {
+          height: 48px;
           display: flex;
           align-items: center;
-          gap: 8px;
-          background: none;
-          border: none;
-          color: white;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 10px;
-          transition: background 0.2s ease;
-          font-size: 14px;
-        }
-
-        .detail-action-btn:hover {
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        .action-icon {
-          width: 20px;
-          height: 20px;
-        }
-
-        .action-icon.liked {
-          color: #ff6b6b;
-        }
-
-        @keyframes v2-sheet-up {
-          from {
-            transform: translateX(-50%) translateY(100%);
-          }
-          to {
-            transform: translateX(-50%) translateY(0);
-          }
+          justify-content: center;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.4);
+          scroll-snap-align: start;
         }
       `}</style>
     </div>
