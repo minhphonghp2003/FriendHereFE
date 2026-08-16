@@ -168,10 +168,7 @@ export default function V2NewGroupChatPage() {
           width: 100%;
           display: flex;
           flex-direction: column;
-          background:
-            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
-            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
-            var(--vm-bg, #f4f4f5);
+          background: var(--vm-bg, #f4f4f5);
           color: var(--vm-text, #18181b);
         }
 

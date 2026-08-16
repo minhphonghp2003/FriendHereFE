@@ -11,6 +11,10 @@ export function V2ToggleNav() {
 
   const isMoments = pathname?.startsWith("/v2/moments");
   const isHome = pathname?.startsWith("/v2/location");
+  // Chrome-less pages (chat, timeline detail) never show the nav button —
+  // derived from pathname so it also holds after a hard reload
+  const isChromeless =
+    !!pathname && pathname.startsWith("/v2/chat") || !!pathname && pathname.startsWith("/v2/timelines");
   const targetRoute = isHome ? "/v2/moments" : "/v2/location";
   const Icon = isHome ? Camera : Home;
   const label = isHome ? "Moments" : "Home";
@@ -77,7 +81,7 @@ export function V2ToggleNav() {
     <>
       <button
         onClick={handleClick}
-        className={`v2-toggle-btn ${!isHome && !isScrollTop ? 'toggle-moments-active' : ''} ${hidden ? 'sheet-open' : ''} ${isScrollTop ? 'scroll-top-mode' : ''}`}
+        className={`v2-toggle-btn ${!isHome && !isScrollTop ? 'toggle-moments-active' : ''} ${hidden || isChromeless ? 'sheet-open' : ''} ${isScrollTop ? 'scroll-top-mode' : ''}`}
         aria-label={ariaLabel}
       >
         <div className="toggle-icon-wrapper">

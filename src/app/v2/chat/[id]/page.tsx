@@ -1531,7 +1531,8 @@ export default function V2ChatDetailPage() {
         }
 
         .vcd2-loading {
-          flex: 1;
+          position: absolute;
+          inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;

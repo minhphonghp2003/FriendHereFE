@@ -22,12 +22,15 @@ export function V2Header() {
   const settingsModal = useV2Modal("header-settings");
   const profileModal = useV2Modal("header-profile");
 
-  // Hidden while browsing moments reels, composing, or on the timeline detail
-  // page (compose-open is also used as a generic "hide header" signal)
+  // Hidden while browsing moments reels, composing, or on chrome-less pages
+  // (compose-open is also used as a generic "hide header" signal).
+  // isChatPage/isTimelinePage are derived from pathname so hiding also holds
+  // after a hard reload (mount events can fire before listeners attach).
   const [momentsBrowsing, setMomentsBrowsing] = useState(false);
   const [composing, setComposing] = useState(false);
   const isMomentsPage = pathname?.startsWith("/v2/moments") ?? false;
   const isTimelinePage = pathname?.startsWith("/v2/timelines") ?? false;
+  const isChatPage = pathname?.startsWith("/v2/chat") ?? false;
 
   useEffect(() => {
     const onIndex = (e: Event) => {
@@ -96,7 +99,7 @@ export function V2Header() {
   return (
     <>
       <header
-        className={`v2-header ${momentsBrowsing || composing ? "v2-header-hidden" : ""}`}
+        className={`v2-header ${momentsBrowsing || composing || isChatPage ? "v2-header-hidden" : ""}`}
       >
         <div className="header-left">
           <button

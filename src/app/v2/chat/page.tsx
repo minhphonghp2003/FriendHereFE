@@ -30,6 +30,7 @@ import {
   Lock,
   Loader2,
   Users,
+  ArrowLeft,
 } from "lucide-react";
 import {
   useDiscoverableGroups,
@@ -279,7 +280,10 @@ export default function V2ChatPage() {
           <p className="vc2-preview">{conv.isBlocked ? "Đã chặn" : preview}</p>
         </div>
         <button
-          onClick={(e) => (menuOpen ? closeMenu() : openMenu(e, conv))}
+          onClick={(e) => {
+            e.stopPropagation();
+            menuOpen ? closeMenu() : openMenu(e, conv);
+          }}
           className="vc2-menu-btn"
           aria-label="Tùy chọn cuộc trò chuyện"
         >
@@ -322,9 +326,20 @@ export default function V2ChatPage() {
 
   const visible = conversations.filter((c) => (tab === "archived" ? c.isArchived : !c.isArchived));
 
+  const isLoadingView =
+    (tab !== "discover" && loading) ||
+    (tab === "discover" && loadingDiscoverable && discoverableGroups.length === 0);
+
   return (
     <div className="vc2-page">
       <div className="vc2-header">
+        <button
+          onClick={() => router.push("/v2/location")}
+          className="vc2-back-btn"
+          aria-label="Quay lại"
+        >
+          <ArrowLeft className="vc2-back-icon" />
+        </button>
         <h1 className="vc2-title">Tin nhắn</h1>
         <button
           onClick={() => router.push("/v2/chat/new-group")}
@@ -351,13 +366,13 @@ export default function V2ChatPage() {
       </div>
 
       <div ref={listRef} onScroll={handleScroll} className="vc2-list">
-        {tab === "discover" ? (
+        {isLoadingView ? (
+          <div className="vc2-loading-overlay">
+            <LoadingVideo size="md" />
+          </div>
+        ) : tab === "discover" ? (
           <>
-            {loadingDiscoverable && discoverableGroups.length === 0 ? (
-              <div className="vc2-center-block">
-                <LoadingVideo size="sm" />
-              </div>
-            ) : discoverableError ? (
+            {discoverableError ? (
               <div className="vc2-center-block">
                 <p className="vc2-empty-text">{discoverableError.message}</p>
                 <button onClick={() => refetchDiscoverable()} className="vc2-retry-btn">
@@ -399,11 +414,7 @@ export default function V2ChatPage() {
                           disabled={cancelling}
                           className="vc2-ghost-btn"
                         >
-                          {cancelling ? (
-                            <Loader2 className="vc2-spin" />
-                          ) : (
-                            "Hủy"
-                          )}
+                          {cancelling ? <Loader2 className="vc2-spin" /> : "Hủy"}
                         </button>
                       ) : (
                         <button
@@ -428,11 +439,7 @@ export default function V2ChatPage() {
           </>
         ) : (
           <>
-            {loading ? (
-              <div className="vc2-center-block">
-                <LoadingVideo size="md" />
-              </div>
-            ) : visible.length === 0 ? (
+            {visible.length === 0 ? (
               <div className="vc2-center-block">
                 <MessageCircle className="vc2-empty-icon" />
                 <p className="vc2-empty-text">
@@ -455,15 +462,13 @@ export default function V2ChatPage() {
 
       <style jsx global>{`
         .vc2-page {
+          position: relative;
           height: 100%;
           width: 100%;
           display: flex;
           flex-direction: column;
-          /* Neon backdrop like the moments page */
-          background:
-            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
-            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
-            var(--vm-bg, #f4f4f5);
+          /* Plain theme background (light/dark) — neon stays in the chat box */
+          background: var(--vm-bg, #f4f4f5);
           color: var(--vm-text, #18181b);
         }
 
@@ -471,7 +476,8 @@ export default function V2ChatPage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 20px 4px;
+          gap: 8px;
+          padding: 12px 16px 4px;
           padding-top: calc(12px + env(safe-area-inset-top, 0px));
         }
 
@@ -479,11 +485,15 @@ export default function V2ChatPage() {
           font-size: 24px;
           font-weight: 800;
           margin: 0;
+          flex: 1;
+          text-align: center;
         }
 
+        .vc2-back-btn,
         .vc2-new-group-btn {
           width: 38px;
           height: 38px;
+          flex-shrink: 0;
           border: none;
           border-radius: 50%;
           background: var(--vm-surface, #fff);
@@ -496,10 +506,12 @@ export default function V2ChatPage() {
           transition: transform 0.2s;
         }
 
+        .vc2-back-btn:active,
         .vc2-new-group-btn:active {
           transform: scale(0.92);
         }
 
+        .vc2-back-icon,
         .vc2-new-group-icon {
           width: 18px;
           height: 18px;
@@ -754,13 +766,21 @@ export default function V2ChatPage() {
         }
 
         .vc2-center-block {
-          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 10px;
           padding: 32px 20px;
+        }
+
+        /* Perfectly centered loading overlay (independent of list scroll) */
+        .vc2-loading-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .vc2-center-block.slim {
