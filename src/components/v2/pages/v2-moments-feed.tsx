@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, UserX } from "lucide-react";
+import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause } from "lucide-react";
 import { MomentCard } from "@/components/moments/moment-card";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
@@ -22,7 +22,6 @@ const VISIBILITY_TO_FRIEND_TYPE: Partial<Record<MomentVisibility, number>> = {
   BestFriend: 1,
   Lover: 2,
 };
-
 /** Capture mode of the create card */
 type CaptureMode = "camera" | "preview";
 
@@ -44,6 +43,7 @@ function CreateMomentCard({
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   const [mode, setMode] = useState<CaptureMode>("camera");
   const [facing, setFacing] = useState<"user" | "environment">("environment");
@@ -55,22 +55,38 @@ function CreateMomentCard({
   const [allowComment, setAllowComment] = useState(true);
   const [isShowLocation, setIsShowLocation] = useState(true);
   const [excludedIds, setExcludedIds] = useState<number[]>([]);
-  const [friends, setFriends] = useState<FriendshipDto[]>([]);
-  const [showExcluded, setShowExcluded] = useState(false);
+  const [allFriends, setAllFriends] = useState<FriendshipDto[]>([]);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
 
-  // v1: friends eligible for exclusion depend on the chosen visibility
+  // Fetch ALL accepted friends once (no type filter — filtering per visibility
+  // is client-side so switching is instant).
   useEffect(() => {
+    getMyFriendships()
+      .then((res) => setAllFriends(res.data.filter(isAccepted)))
+      .catch(() => setAllFriends([]));
+  }, []);
+
+  // Filter on FE per visibility. Public can exclude ALL friends too.
+  const friends = (() => {
     const type = VISIBILITY_TO_FRIEND_TYPE[visibility];
     if (type === undefined) {
-      setFriends([]);
-      setExcludedIds([]);
-      return;
+      // Public (and OnlyMe): Public shows all friends; OnlyMe hides the strip
+      return visibility === "Public" ? allFriends : [];
     }
-    getMyFriendships({ type })
-      .then((res) => setFriends(res.data.filter(isAccepted)))
-      .catch(() => setFriends([]));
+    return allFriends.filter((f) => {
+      const myType =
+        user?.id === f.user1Id
+          ? (Number(f.type1) || 0)
+          : (Number(f.type2) || 0);
+      return myType >= type;
+    });
+  })();
+
+  // New visibility group → fresh selection (none excluded)
+  useEffect(() => {
+    setExcludedIds([]);
   }, [visibility]);
 
   const toggleExcluded = (friendUserId: number) => {
@@ -80,6 +96,15 @@ function CreateMomentCard({
         : [...prev, friendUserId],
     );
   };
+
+  // Hide the nav button while composing a post (same signal the sheet uses)
+  useEffect(() => {
+    if (mode === "preview") {
+      window.dispatchEvent(new Event("v2:sheet-open"));
+    } else {
+      window.dispatchEvent(new Event("v2:sheet-close"));
+    }
+  }, [mode]);
 
   // Start/stop the camera when the card enters capture mode
   useEffect(() => {
@@ -149,16 +174,34 @@ function CreateMomentCard({
   };
 
   const reset = () => {
+    // Fully tear down the preview video first — otherwise it keeps playing
+    // (and holds the blob URL) after the creation box closes.
+    const pv = previewVideoRef.current;
+    if (pv) {
+      pv.pause();
+      pv.removeAttribute("src");
+      pv.load();
+    }
     setMediaFile(null);
     if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
     setMediaPreviewUrl(null);
+    setIsPreviewPlaying(true);
     setCaption("");
     setAllowComment(true);
     setIsShowLocation(true);
     setExcludedIds([]);
-    setShowExcluded(false);
     setShowDetails(false);
     setMode("camera");
+  };
+
+  const togglePreviewPlay = () => {
+    const pv = previewVideoRef.current;
+    if (!pv) return;
+    if (pv.paused) {
+      pv.play().catch(() => {});
+    } else {
+      pv.pause();
+    }
   };
 
   const handleUpload = async () => {
@@ -237,8 +280,34 @@ function CreateMomentCard({
         </>
       ) : (
         <>
+          {/* Media stays full-screen on top; the options panel is a compact
+              bottom sheet so the captured image/video is always visible above. */}
           {isVideo ? (
-            <video src={mediaPreviewUrl ?? undefined} className="cm-video" controls autoPlay loop muted playsInline />
+            <div className="cm-preview-wrap">
+              <video
+                ref={previewVideoRef}
+                src={mediaPreviewUrl ?? undefined}
+                className="cm-video"
+                autoPlay
+                loop
+                muted
+                playsInline
+                onPlay={() => setIsPreviewPlaying(true)}
+                onPause={() => setIsPreviewPlaying(false)}
+              />
+              {/* Center play/pause toggle */}
+              <button
+                onClick={togglePreviewPlay}
+                className="cm-preview-toggle"
+                aria-label={isPreviewPlaying ? "Pause" : "Play"}
+              >
+                {isPreviewPlaying ? (
+                  <Pause className="cm-preview-toggle-icon" />
+                ) : (
+                  <Play className="cm-preview-toggle-icon" />
+                )}
+              </button>
+            </div>
           ) : (
             <img src={mediaPreviewUrl ?? undefined} alt="New moment" className="cm-video" />
           )}
@@ -246,14 +315,54 @@ function CreateMomentCard({
           {/* Post details overlay */}
           {showDetails && (
             <div className="cm-details">
-              <div className="cm-details-top">
-                <button onClick={reset} className="cm-details-close" aria-label="Discard">
-                  <X className="cm-details-close-icon" />
-                </button>
-                <span className="cm-details-title">New moment</span>
-              </div>
-
               <div className="cm-details-bottom">
+                {/* Exclude friends — visible for every visibility except OnlyMe.
+                    Everyone starts INCLUDED (green); tap to exclude (red X). */}
+                {visibility !== "OnlyMe" && friends.length > 0 && (
+                  <div className="cm-exclude-block">
+                    <span className="cm-exclude-label">
+                      {excludedIds.length > 0
+                        ? `Hidden from ${excludedIds.length} of ${friends.length}`
+                        : `Visible to all ${friends.length}`}
+                    </span>
+                    <div className="cm-excluded-row">
+                      {friends.map((f) => {
+                        const friendUserId = user?.id === f.user1Id ? f.user2Id : f.user1Id;
+                        const isExcluded = excludedIds.includes(friendUserId);
+                        return (
+                          <button
+                            key={f.id}
+                            onClick={() => toggleExcluded(friendUserId)}
+                            className={`cm-friend-chip ${isExcluded ? "excluded" : "included"}`}
+                            aria-label={isExcluded ? `Include ${f.otherUserName}` : `Exclude ${f.otherUserName}`}
+                          >
+                            {f.otherUserImage?.thumbUrl ? (
+                              <img
+                                src={f.otherUserImage.thumbUrl}
+                                alt={f.otherUserName}
+                                className="cm-friend-avatar"
+                              />
+                            ) : (
+                              <span className="cm-friend-avatar cm-friend-initial">
+                                {f.otherUserName?.charAt(0).toUpperCase() || "?"}
+                              </span>
+                            )}
+                            {isExcluded ? (
+                              <span className="cm-friend-mark">
+                                <X className="cm-friend-mark-x" />
+                              </span>
+                            ) : (
+                              <span className="cm-friend-mark cm-friend-mark-check">
+                                <Check className="cm-friend-mark-check-icon" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <input
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
@@ -265,10 +374,7 @@ function CreateMomentCard({
                   {(Object.keys(MOMENT_VISIBILITY_VALUES) as MomentVisibility[]).map((v) => (
                     <button
                       key={v}
-                      onClick={() => {
-                        setVisibility(v);
-                        setExcludedIds([]);
-                      }}
+                      onClick={() => setVisibility(v)}
                       className={`cm-visibility-chip ${visibility === v ? "active" : ""}`}
                     >
                       {v}
@@ -292,66 +398,32 @@ function CreateMomentCard({
                     <MapPin className="cm-toggle-icon" />
                     Location
                   </button>
-                  {friends.length > 0 && (
-                    <button
-                      onClick={() => setShowExcluded((v) => !v)}
-                      className={`cm-toggle-chip ${excludedIds.length > 0 ? "alert" : ""}`}
-                    >
-                      <UserX className="cm-toggle-icon" />
-                      {excludedIds.length > 0 ? `Exclude ${excludedIds.length}` : "Exclude"}
-                    </button>
-                  )}
                 </div>
 
-                {/* Excluded friends picker (v1 logic: friends of the visibility group) */}
-                {showExcluded && friends.length > 0 && (
-                  <div className="cm-excluded-row">
-                    {friends.map((f) => {
-                      const friendUserId = user?.id === f.user1Id ? f.user2Id : f.user1Id;
-                      const isSelected = excludedIds.includes(friendUserId);
-                      return (
-                        <button
-                          key={f.id}
-                          onClick={() => toggleExcluded(friendUserId)}
-                          className={`cm-friend-chip ${isSelected ? "excluded" : ""}`}
-                        >
-                          {f.otherUserImage?.thumbUrl ? (
-                            <img
-                              src={f.otherUserImage.thumbUrl}
-                              alt={f.otherUserName}
-                              className="cm-friend-avatar"
-                            />
-                          ) : (
-                            <span className="cm-friend-avatar cm-friend-initial">
-                              {f.otherUserName?.charAt(0).toUpperCase() || "?"}
-                            </span>
-                          )}
-                          <span className="cm-friend-name">
-                            {f.otherUserName.split(" ").slice(-1)[0]}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleUpload}
-                  disabled={isUploading || !mediaFile}
-                  className="cm-share-btn"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="cm-share-icon spinning" />
-                      Sharing...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="cm-share-icon" />
-                      Share
-                    </>
-                  )}
-                </button>
+                {/* Cancel + Share row */}
+                <div className="cm-actions-row">
+                  <button onClick={reset} className="cm-cancel-btn" aria-label="Cancel">
+                    <X className="cm-cancel-icon" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpload}
+                    disabled={isUploading || !mediaFile}
+                    className="cm-share-btn"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="cm-share-icon spinning" />
+                        Sharing...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="cm-share-icon" />
+                        Share
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -468,47 +540,91 @@ function CreateMomentCard({
           inset: 0;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent 30%, transparent 55%, rgba(0,0,0,0.75));
+          justify-content: flex-end;
+          pointer-events: none;
         }
 
-        .cm-details-top {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: calc(60px + env(safe-area-inset-top, 0px)) 16px 0;
+        /* Interactive elements re-enable pointer events — the media preview
+           behind stays visible/untouchable-safe */
+        .cm-details-bottom {
+          pointer-events: auto;
         }
 
-        .cm-details-close {
-          width: 36px;
-          height: 36px;
+        .cm-preview-wrap {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+
+        .cm-preview-toggle {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 68px;
+          height: 68px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(0, 0, 0, 0.55);
-          border: none;
+          background: rgba(0, 0, 0, 0.5);
+          border: 2px solid rgba(255, 255, 255, 0.8);
           border-radius: 50%;
           color: white;
           cursor: pointer;
           padding: 0;
+          backdrop-filter: blur(6px);
+          transition: transform 0.15s;
         }
 
-        .cm-details-close-icon {
-          width: 18px;
-          height: 18px;
+        .cm-preview-toggle:active {
+          transform: translate(-50%, -50%) scale(0.92);
         }
 
-        .cm-details-title {
-          font-size: 16px;
+        .cm-preview-toggle-icon {
+          width: 28px;
+          height: 28px;
+          fill: currentColor;
+        }
+
+        .cm-actions-row {
+          display: flex;
+          gap: 10px;
+        }
+
+        .cm-cancel-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 20px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 15px;
           font-weight: 700;
-          color: white;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .cm-cancel-btn:hover {
+          background: rgba(255, 255, 255, 0.18);
+        }
+
+        .cm-cancel-icon {
+          width: 16px;
+          height: 16px;
         }
 
         .cm-details-bottom {
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          padding: 0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+          gap: 8px;
+          padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+          border-radius: 20px 20px 0 0;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
         }
 
         .cm-caption-input {
@@ -596,42 +712,58 @@ function CreateMomentCard({
           height: 14px;
         }
 
+        .cm-exclude-block {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .cm-exclude-label {
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
         .cm-excluded-row {
           display: flex;
           gap: 8px;
           overflow-x: auto;
-          padding: 4px 0;
+          padding: 2px 0 4px;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
         }
 
         .cm-excluded-row::-webkit-scrollbar {
           display: none;
         }
 
+        /* Compact avatar-only chip: green = included, red X = excluded */
         .cm-friend-chip {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          padding: 8px;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          position: relative;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          padding: 0;
+          border: 2px solid #22c55e;
+          background: none;
           cursor: pointer;
           flex-shrink: 0;
           transition: all 0.2s;
         }
 
         .cm-friend-chip.excluded {
-          background: rgba(239, 68, 68, 0.15);
-          border-color: rgba(239, 68, 68, 0.55);
+          border-color: #ef4444;
+          opacity: 0.6;
         }
 
         .cm-friend-avatar {
-          width: 40px;
-          height: 40px;
+          width: 100%;
+          height: 100%;
           border-radius: 50%;
           object-fit: cover;
+          display: block;
           overflow: hidden;
         }
 
@@ -642,16 +774,35 @@ function CreateMomentCard({
           background: linear-gradient(135deg, #2BB0AF 0%, #1a8a89 100%);
           color: white;
           font-weight: 700;
-          font-size: 16px;
+          font-size: 13px;
         }
 
-        .cm-friend-name {
-          max-width: 56px;
-          font-size: 10px;
-          color: rgba(255, 255, 255, 0.7);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+        .cm-friend-mark {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.35);
+          border-radius: 50%;
+        }
+
+        .cm-friend-mark-check {
+          background: rgba(0, 0, 0, 0.2);
+        }
+
+        .cm-friend-mark-x {
+          width: 14px;
+          height: 14px;
+          color: #ef4444;
+          stroke-width: 3;
+        }
+
+        .cm-friend-mark-check-icon {
+          width: 12px;
+          height: 12px;
+          color: #22c55e;
+          stroke-width: 3;
         }
 
         .cm-share-btn {
