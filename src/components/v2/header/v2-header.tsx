@@ -23,21 +23,31 @@ export function V2Header() {
   const settingsModal = useV2Modal("header-settings");
   const profileModal = useV2Modal("header-profile");
 
-  // On the moments feed: hide while browsing reels (index > 0); visible on the
-  // create card (index 0)
+  // On the moments feed: hide while browsing reels (index > 0) OR while
+  // composing a new moment (preview mode)
   const [momentsBrowsing, setMomentsBrowsing] = useState(false);
+  const [composing, setComposing] = useState(false);
   const isMomentsPage = pathname?.startsWith("/v2/moments") ?? false;
 
   useEffect(() => {
     if (!isMomentsPage) {
       setMomentsBrowsing(false);
+      setComposing(false);
       return;
     }
     const onIndex = (e: Event) => {
       setMomentsBrowsing(((e as CustomEvent<number>).detail ?? 0) > 0);
     };
+    const onComposeOpen = () => setComposing(true);
+    const onComposeClose = () => setComposing(false);
     window.addEventListener("v2:moments-index", onIndex);
-    return () => window.removeEventListener("v2:moments-index", onIndex);
+    window.addEventListener("v2:compose-open", onComposeOpen);
+    window.addEventListener("v2:compose-close", onComposeClose);
+    return () => {
+      window.removeEventListener("v2:moments-index", onIndex);
+      window.removeEventListener("v2:compose-open", onComposeOpen);
+      window.removeEventListener("v2:compose-close", onComposeClose);
+    };
   }, [isMomentsPage]);
 
   const activeDialog: ActiveDialog = chatModal.isOpen
@@ -86,7 +96,9 @@ export function V2Header() {
 
   return (
     <>
-      <header className={`v2-header ${momentsBrowsing ? "v2-header-hidden" : ""}`}>
+      <header
+        className={`v2-header ${momentsBrowsing || composing ? "v2-header-hidden" : ""}`}
+      >
         <div className="header-left">
           <button
             className={`user-avatar-section ${activeDialog === "profile" ? "header-btn-active" : ""}`}

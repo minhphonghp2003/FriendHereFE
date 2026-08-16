@@ -30,6 +30,14 @@ const extractFileKey = (data: unknown): string | undefined => {
   );
 };
 
+/** v1 chat page logic: compare keys by their folder prefix (strip the last
+ *  path segment) so `Moment/uid/abc.jpg` matches `Moment/uid/abc_thumb.jpg` */
+const normalizeKeyToken = (key: string | undefined): string => {
+  if (!key) return "";
+  const idx = key.lastIndexOf("/");
+  return idx > 0 ? key.slice(0, idx) : key;
+};
+
 /** v1 VISIBILITY_TO_FRIEND_TYPE: which friend groups each visibility can exclude */
 const VISIBILITY_TO_FRIEND_TYPE: Partial<Record<MomentVisibility, number>> = {
   Friends: 0,
@@ -113,13 +121,20 @@ function CreateMomentCard({
     );
   };
 
-  // Hide the nav button while composing a post (same signal the sheet uses)
+  // Hide the nav button + header while composing a post (preview mode)
   useEffect(() => {
     if (mode === "preview") {
       window.dispatchEvent(new Event("v2:sheet-open"));
+      window.dispatchEvent(new Event("v2:compose-open"));
     } else {
       window.dispatchEvent(new Event("v2:sheet-close"));
+      window.dispatchEvent(new Event("v2:compose-close"));
     }
+    return () => {
+      // Ensure both are restored if the card unmounts mid-compose
+      window.dispatchEvent(new Event("v2:sheet-close"));
+      window.dispatchEvent(new Event("v2:compose-close"));
+    };
   }, [mode]);
 
   // Start/stop the camera when the card enters capture mode
@@ -207,24 +222,6 @@ function CreateMomentCard({
     addMediaFiles(files);
     // Allow re-picking the same file later
     e.target.value = "";
-  };
-
-  const removeMediaAt = (index: number) => {
-    setMediaFiles((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      if (next.length === 0) {
-        // Nothing left → back to camera
-        setMode("camera");
-        setShowDetails(false);
-      } else {
-        setPreviewIndex((i) => Math.min(i, next.length - 1));
-      }
-      return next;
-    });
-    setPreviewUrls((urls) => {
-      URL.revokeObjectURL(urls[index]);
-      return urls.filter((_, i) => i !== index);
-    });
   };
 
   const reset = () => {
@@ -407,16 +404,10 @@ function CreateMomentCard({
             </div>
           )}
 
-          {/* Remove current image / add more (images only) */}
+          {/* Add more images (images only) — the only per-image action; closing
+              the whole compose is the X at the top-right */}
           {!isVideo && (
             <div className="cm-media-actions">
-              <button
-                onClick={() => removeMediaAt(previewIndex)}
-                className="cm-media-action-btn"
-                aria-label="Remove this image"
-              >
-                <X className="cm-media-action-icon" />
-              </button>
               <button
                 onClick={() => galleryInputRef.current?.click()}
                 className="cm-media-action-btn"
@@ -1114,23 +1105,39 @@ export function V2MomentsFeed() {
   const [pendingMoment, setPendingMoment] = useState<{ id: number; keys: string[] } | null>(null);
 
   useEffect(() => {
+    let pendingJustResolved = false;
     const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
-      const fileKey = extractFileKey(data);
+      const fileKey = normalizeKeyToken(extractFileKey(data));
       if (!fileKey) return;
       markedFileKeysRef.current.add(fileKey);
       setPendingMoment((pending) => {
         if (!pending) return pending;
-        const remaining = pending.keys.filter((k) => !markedFileKeysRef.current.has(k));
-        return remaining.length === 0 ? null : { ...pending, keys: remaining };
+        const remaining = pending.keys.filter(
+          (k) => !markedFileKeysRef.current.has(k),
+        );
+        if (remaining.length === 0) {
+          pendingJustResolved = true;
+          return null;
+        }
+        return { ...pending, keys: remaining };
       });
+      // All files processed → refetch so the moment's status flips to Success
+      if (pendingJustResolved) {
+        pendingJustResolved = false;
+        refetch();
+      }
     });
     return unsub;
-  }, []);
+  }, [refetch]);
 
   /** Called by the create card after a successful upload */
   const handleMomentCreated = useCallback(
     (momentId: number, fileKeys: string[]) => {
-      const remaining = fileKeys.filter((k) => !markedFileKeysRef.current.has(k));
+      // Normalize both sides the same way so prefixes line up
+      const marked = markedFileKeysRef.current;
+      const remaining = fileKeys
+        .map(normalizeKeyToken)
+        .filter((k) => k && !marked.has(k));
       setPendingMoment(remaining.length > 0 ? { id: momentId, keys: remaining } : null);
       refetch();
     },
