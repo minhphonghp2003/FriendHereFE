@@ -153,7 +153,7 @@ export function V2MomentViewer({
 
   return (
     <div className="vm-viewer">
-      <button onClick={onClose} className="vm-viewer-close" aria-label="Close">
+      <button onClick={onClose} className="vm-viewer-close" aria-label="Đóng">
         <X className="vm-viewer-close-icon" />
       </button>
       {downloadUrl && <DownloadButton url={downloadUrl} className="vm-viewer-download" />}

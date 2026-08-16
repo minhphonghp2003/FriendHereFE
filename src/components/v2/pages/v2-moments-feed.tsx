@@ -172,7 +172,7 @@ function CreateMomentCard({
         setCameraError(null);
       } catch (err) {
         console.error("Camera access failed:", err);
-        setCameraError("Camera unavailable — pick from gallery instead.");
+        setCameraError("Không truy cập được camera - hãy chọn từ thư viện.");
       }
     })();
 
@@ -283,7 +283,7 @@ function CreateMomentCard({
         images: isVideo ? undefined : mediaFiles,
         video: isVideo ? mediaFiles[0] : undefined,
       });
-      toast.success("Moment shared!");
+      toast.success("Đã chia sẻ khoảnh khắc!");
       const createdId = moment.id;
       reset();
       // Report the created moment + its file keys so the feed can watch for
@@ -291,7 +291,7 @@ function CreateMomentCard({
       onCreated(createdId, fileKeys);
     } catch (err) {
       console.error("Failed to create moment:", err);
-      toast.error("Failed to share moment");
+      toast.error("Không thể chia sẻ khoảnh khắc");
     }
   };
 
@@ -314,7 +314,7 @@ function CreateMomentCard({
             <button
               onClick={() => galleryInputRef.current?.click()}
               className="cm-gallery-btn"
-              aria-label="Pick from gallery"
+              aria-label="Chọn từ thư viện"
             >
               <ImageIcon className="cm-gallery-icon" />
             </button>
@@ -323,7 +323,7 @@ function CreateMomentCard({
               onClick={capturePhoto}
               disabled={!!cameraError}
               className="cm-shutter-btn"
-              aria-label="Capture photo"
+              aria-label="Chụp ảnh"
             >
               <div className="cm-shutter-inner" />
             </button>
@@ -331,7 +331,7 @@ function CreateMomentCard({
             <button
               onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
               className="cm-gallery-btn"
-              aria-label="Switch camera"
+              aria-label="Đổi camera"
             >
               <SwitchCamera className="cm-gallery-icon" />
             </button>
@@ -346,7 +346,7 @@ function CreateMomentCard({
             className="cm-hidden-input"
           />
 
-          <div className="cm-hint">Swipe up to browse moments</div>
+          <div className="cm-hint">Vuốt lên để xem khoảnh khắc</div>
         </>
       ) : (
         <>
@@ -384,7 +384,7 @@ function CreateMomentCard({
               <div className="cm-preview-wrap">
                 <img
                   src={previewUrls[previewIndex] ?? undefined}
-                  alt="New moment"
+                  alt="Khoảnh khắc mới"
                   className="cm-video"
                 />
                 {/* Multi-image controls: prev/next + counter (no dots) */}
@@ -394,7 +394,7 @@ function CreateMomentCard({
                       onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
                       disabled={previewIndex === 0}
                       className="cm-nav-btn cm-nav-left"
-                      aria-label="Previous image"
+                      aria-label="Ảnh trước"
                     >
                       ‹
                     </button>
@@ -404,7 +404,7 @@ function CreateMomentCard({
                       }
                       disabled={previewIndex === previewUrls.length - 1}
                       className="cm-nav-btn cm-nav-right"
-                      aria-label="Next image"
+                      aria-label="Ảnh tiếp theo"
                     >
                       ›
                     </button>
@@ -424,7 +424,7 @@ function CreateMomentCard({
               <button
                 onClick={() => galleryInputRef.current?.click()}
                 className="cm-media-action-btn"
-                aria-label="Add more images"
+                aria-label="Thêm ảnh"
               >
                 <Plus className="cm-media-action-icon" />
               </button>
@@ -446,7 +446,7 @@ function CreateMomentCard({
             <div className="cm-details">
               {/* Close — pinned top-right of the screen, above the options
                   panel; never overlaps its content */}
-              <button onClick={reset} className="cm-close-x" aria-label="Close">
+              <button onClick={reset} className="cm-close-x" aria-label="Đóng">
                 <X className="cm-close-x-icon" />
               </button>
 
@@ -454,7 +454,7 @@ function CreateMomentCard({
                 <input
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Add a caption..."
+                  placeholder="Thêm chú thích..."
                   maxLength={500}
                   className="cm-caption-input"
                 />
@@ -1236,8 +1236,8 @@ export function V2MomentsFeed() {
       {!isLoading && moments.length === 0 && (
         <div className="v2-reel-item">
           <div className="v2-reels-empty">
-            <p>No moments yet</p>
-            <span>Capture one with the camera above</span>
+            <p>Chưa có khoảnh khắc nào</p>
+            <span>Chụp một khoảnh khắc bằng camera phía trên</span>
           </div>
         </div>
       )}

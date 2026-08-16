@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -360,14 +360,14 @@ export function V2MomentReel({
                 className="vm-media"
               />
               {/* Tap video = play/pause (no fullscreen on tap) */}
-              <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Play/Pause">
+              <button onClick={toggleFeedVideo} className="vm-video-tap" aria-label="Phát/Dừng">
                 {feedPaused && <Play className="vm-video-tap-icon" />}
               </button>
               {/* Fullscreen at the VIDEO's top-right */}
               <button
                 onClick={openViewer}
                 className="vm-expand-btn vm-expand-on-media"
-                aria-label="Fullscreen"
+                aria-label="Toàn màn hình"
               >
                 <Maximize2 className="vm-expand-icon" />
               </button>

@@ -59,7 +59,7 @@ export function V2ToggleNav() {
 
   const isScrollTop = isMoments && browsingMoments;
   const CurrentIcon = isScrollTop ? ChevronsUp : Icon;
-  const ariaLabel = isScrollTop ? "Back to camera" : `Go to ${label}`;
+  const ariaLabel = isScrollTop ? "Về camera" : `Đi đến ${label}`;
 
   return (
     <>

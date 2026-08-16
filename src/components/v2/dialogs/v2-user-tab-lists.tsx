@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MapPin, Play, Loader2, Route, ChevronRight, Plus, Check, CalendarDays, X } from "lucide-react";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { getUserMoments, getMomentThumbnail, getAvailableMoments } from "@/services/moment";
-import { getUserTimelines, createTimeline as createTimelineService } from "@/services/timeline";
+import { getUserTimelines, getMyTimelines, createTimeline as createTimelineService } from "@/services/timeline";
 import { getMyFriendships } from "@/services/friendship";
 import { isAccepted, type FriendshipDto } from "@/types/friendship";
 import { useAppSelector } from "@/store/hooks";
@@ -423,17 +423,23 @@ export function V2UserMomentList({
  */
 export function V2UserTimelineList({ userId }: { userId: number }) {
   const router = useRouter();
+  const { user: currentUser } = useAuthSafe();
+  const isMe = currentUser?.id === userId;
   const [timelines, setTimelines] = useState<TimelineDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
   const fetchTimelines = useCallback(() => {
     setIsLoading(true);
-    getUserTimelines(userId, null, PAGE_TAKE)
+    // Own profile → dedicated my-timelines API; other users → user-timelines API
+    const fetcher = isMe
+      ? getMyTimelines(null, PAGE_TAKE)
+      : getUserTimelines(userId, null, PAGE_TAKE);
+    fetcher
       .then((res) => setTimelines(res.data))
       .catch((err) => console.error("Failed to load user timelines:", err))
       .finally(() => setIsLoading(false));
-  }, [userId]);
+  }, [userId, isMe]);
 
   useEffect(() => {
     fetchTimelines();

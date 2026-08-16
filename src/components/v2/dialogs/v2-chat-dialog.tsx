@@ -15,7 +15,7 @@ export function V2ChatDialog({ open, onOpenChange }: V2ChatDialogProps) {
           <iframe
             src="/v2/chat"
             className="dialog-iframe"
-            title="Chat messages"
+            title="Tin nhắn trò chuyện"
           />
         </div>
 

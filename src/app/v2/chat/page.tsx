@@ -185,7 +185,7 @@ export default function V2ChatPage() {
       if (!id) return;
       if (
         !window.confirm(
-          "Delete conversation? If you are the group owner, the conversation will be permanently deleted for all members. This action cannot be undone.",
+          "Xóa cuộc trò chuyện? Nếu bạn là chủ nhóm, cuộc trò chuyện sẽ bị xóa vĩnh viễn với tất cả thành viên. Hành động này không thể hoàn tác.",
         )
       ) {
         setMenuState(null);
@@ -247,7 +247,7 @@ export default function V2ChatPage() {
       ? toChatMessageRenderType(conv.lastMessage.type) === "System"
       : false;
     const preview = !lastPreview
-      ? "No messages yet"
+      ? "Chưa có tin nhắn"
       : !isSystem && !conv.isDirect && conv.lastMessage && conv.lastMessage.senderId !== user?.id
         ? `${conv.lastMessage.senderName}: ${lastPreview}`
         : lastPreview;
@@ -287,13 +287,13 @@ export default function V2ChatPage() {
             </div>
           </div>
           <p className="text-muted-foreground mt-0.5 truncate text-xs">
-            {conv.isBlocked ? "Blocked" : preview}
+            {conv.isBlocked ? "Đã chặn" : preview}
           </p>
         </div>
         <button
           onClick={(e) => (menuOpen ? closeMenu() : openMenu(e, conv))}
           className="hover:bg-muted text-muted-foreground shrink-0 rounded-full p-1.5"
-          aria-label="Conversation options"
+          aria-label="Tùy chọn cuộc trò chuyện"
         >
           <MoreVertical className="h-4 w-4" />
         </button>
@@ -320,7 +320,7 @@ export default function V2ChatPage() {
                 ) : (
                   <BellOff className="h-4 w-4 shrink-0" />
                 )}
-                {conv.isMuted ? "Unmute" : "Mute"}
+                {conv.isMuted ? "Bật thông báo" : "Tắt thông báo"}
               </button>
               <button
                 onClick={() => toggleArchive(conv)}
@@ -331,7 +331,7 @@ export default function V2ChatPage() {
                 ) : (
                   <Archive className="h-4 w-4 shrink-0" />
                 )}
-                {conv.isArchived ? "Unarchive" : "Archive"}
+                {conv.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
               </button>
               <div className="border-border my-1 border-t" />
               <button
@@ -339,7 +339,7 @@ export default function V2ChatPage() {
                 className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-600"
               >
                 <Trash2 className="h-4 w-4 shrink-0" />
-                Delete conversation
+                Xóa cuộc trò chuyện
               </button>
             </div>
           </>
@@ -351,7 +351,7 @@ export default function V2ChatPage() {
   if (loading) {
     return (
       <div className="flex h-full flex-col">
-        <h1 className="p-4 pb-0 text-2xl font-bold">Messages</h1>
+        <h1 className="p-4 pb-0 text-2xl font-bold">Tin nhắn</h1>
         <div className="flex flex-1 items-center justify-center">
           <LoadingVideo size="md" />
         </div>
@@ -362,10 +362,10 @@ export default function V2ChatPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between p-4 pb-2">
-        <h1 className="text-2xl font-bold">Messages</h1>
+        <h1 className="text-2xl font-bold">Tin nhắn</h1>
         <button
           onClick={() => router.push("/chat/new-group")}
-          aria-label="Create group chat"
+          aria-label="Tạo nhóm chat"
           className="hover:bg-muted rounded-full p-2"
         >
           <UserPlus className="h-5 w-5" />
@@ -379,7 +379,7 @@ export default function V2ChatPage() {
           }}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "all" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
-          All
+          Tất cả
         </button>
         <button
           onClick={() => {
@@ -388,7 +388,7 @@ export default function V2ChatPage() {
           }}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "archived" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
-          Archived
+          Đã lưu trữ
         </button>
         <button
           onClick={() => {
@@ -397,7 +397,7 @@ export default function V2ChatPage() {
           }}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${tab === "discover" ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
-          Discover
+          Khám phá
         </button>
       </div>
       <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
@@ -414,13 +414,13 @@ export default function V2ChatPage() {
                   onClick={refetchDiscoverable}
                   className="bg-success hover:bg-success/90 text-success-foreground rounded-full px-4 py-1.5 text-sm font-medium"
                 >
-                  Retry
+                  Thử lại
                 </button>
               </div>
             ) : discoverableGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
                 <Users className="mb-3 h-12 w-12" />
-                <p className="text-sm">No groups to join</p>
+                <p className="text-sm">Không có nhóm để tham gia</p>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -454,7 +454,7 @@ export default function V2ChatPage() {
                           )}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {group.memberCount} members
+                          {group.memberCount} thành viên
                         </p>
                       </div>
                       {isPending ? (
@@ -466,7 +466,7 @@ export default function V2ChatPage() {
                           {cancelling ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            "Cancel"
+                            "Hủy"
                           )}
                         </button>
                       ) : (
@@ -479,12 +479,12 @@ export default function V2ChatPage() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : group.isRestricted ? (
                             status === JoinRequestStatus.Rejected ? (
-                              "Request again"
+                              "Yêu cầu lại"
                             ) : (
-                              "Request"
+                              "Yêu cầu"
                             )
                           ) : (
-                            "Join"
+                            "Tham gia"
                           )}
                         </button>
                       )}
@@ -501,8 +501,8 @@ export default function V2ChatPage() {
                 <MessageCircle className="mb-3 h-12 w-12" />
                 <p className="text-sm">
                   {tab === "all"
-                    ? "No messages yet"
-                    : "No archived conversations yet"}
+                    ? "Chưa có tin nhắn"
+                    : "Chưa có cuộc trò chuyện nào được lưu trữ"}
                 </p>
               </div>
             )}

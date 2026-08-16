@@ -159,7 +159,7 @@ export function V2LocationPage() {
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="flex items-center justify-center h-full bg-black text-white flex-col">
-        <p className="text-red-400 text-lg">Google Maps API Key is missing</p>
+        <p className="text-red-400 text-lg">Thiếu Google Maps API Key</p>
         <p className="text-sm text-gray-400">No NEXT_PUBLIC_GOOGLE_MAPS_API_KEY env var</p>
       </div>
     );
@@ -242,7 +242,7 @@ export function V2LocationPage() {
                     : [
                         {
                           key: "edit-status",
-                          label: "Edit status",
+                          label: "Sửa trạng thái",
                           icon: <Pencil className="h-[10px] w-[10px]" />,
                           onClick: openStatusEditor,
                         },
@@ -250,7 +250,7 @@ export function V2LocationPage() {
                           ? [
                               {
                                 key: "delete-status",
-                                label: "Delete status",
+                                label: "Xóa trạng thái",
                                 destructive: true,
                                 icon: <XIcon className="h-[10px] w-[10px]" />,
                                 onClick: () => handleClearStatus(),
@@ -290,7 +290,7 @@ export function V2LocationPage() {
                 onClick={handleSaveStatus}
                 disabled={savingStatus}
                 className="status-editor-btn status-editor-save"
-                aria-label="Save status"
+                aria-label="Lưu trạng thái"
               >
                 <Check className="status-editor-icon" />
               </button>

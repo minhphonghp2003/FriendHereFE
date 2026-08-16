@@ -65,7 +65,7 @@ export default function V2Layout({ children }: V2LayoutProps) {
         <Dialog open={kicked} onOpenChange={() => {}}>
           <DialogContent showCloseButton={false} className="v2-kicked-dialog">
             <DialogHeader>
-              <DialogTitle>Disconnected</DialogTitle>
+              <DialogTitle>Mất kết nối</DialogTitle>
               <DialogDescription>
                 You were disconnected because you opened the app on another device.
               </DialogDescription>

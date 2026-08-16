@@ -214,9 +214,9 @@ export function V2UserDetailDialog({
       );
       setUserDetail(updated);
       setIsEditing(false);
-      toast.success("Profile updated successfully");
+      toast.success("Đã cập nhật hồ sơ");
     } catch {
-      toast.error("Failed to update profile");
+      toast.error("Không thể cập nhật hồ sơ");
     } finally {
       setSavingProfile(false);
     }
@@ -236,9 +236,9 @@ export function V2UserDetailDialog({
         setCredentials({ user: { id: updated.id, name: updated.name, email: updated.email } }),
       );
       setUserDetail(updated);
-      toast.success("Avatar updated successfully");
+      toast.success("Đã cập nhật ảnh đại diện");
     } catch {
-      toast.error("Failed to update avatar");
+      toast.error("Không thể cập nhật ảnh đại diện");
     } finally {
       setUploadingAvatar(false);
     }
@@ -332,7 +332,7 @@ export function V2UserDetailDialog({
       await action();
       await fetchFriendships();
     } catch {
-      toast.error("Action failed");
+      toast.error("Thao tác thất bại");
     } finally {
       setProcessingId(null);
     }
@@ -344,9 +344,9 @@ export function V2UserDetailDialog({
       await changeFriendshipType(f.id, type);
       await fetchFriendships();
       setTypePickerId(null);
-      toast.success("Friend type updated");
+      toast.success("Đã đổi loại bạn bè");
     } catch {
-      toast.error("Failed to change friend type");
+      toast.error("Không thể đổi loại bạn bè");
     } finally {
       setProcessingId(null);
     }
@@ -512,7 +512,7 @@ export function V2UserDetailDialog({
                 <button
                   onClick={() => setViewingUserId(null)}
                   className="vud-back-btn"
-                  aria-label="Back to my profile"
+                  aria-label="Về hồ sơ của tôi"
                 >
                   <ChevronLeft className="vud-back-icon" />
                   My Profile
@@ -556,7 +556,7 @@ export function V2UserDetailDialog({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="profile-name-input"
-                        placeholder="Your name"
+                        placeholder="Tên của bạn"
                         maxLength={50}
                       />
                       <div className="profile-edit-row">
@@ -565,7 +565,7 @@ export function V2UserDetailDialog({
                           value={age}
                           onChange={(e) => setAge(e.target.value)}
                           className="profile-name-input"
-                          placeholder="Age"
+                          placeholder="Tuổi"
                           min={1}
                           max={150}
                         />
@@ -573,7 +573,7 @@ export function V2UserDetailDialog({
                           value={genderId}
                           onChange={(e) => setGenderId(e.target.value)}
                           className="profile-gender-select"
-                          aria-label="Gender"
+                          aria-label="Giới tính"
                         >
                           <option value="1">Nam</option>
                           <option value="2">Nữ</option>
@@ -649,7 +649,7 @@ export function V2UserDetailDialog({
                   )}
                   {!isMe && (
                     <p className="profile-meta">
-                      <span className="profile-meta-online">Online</span>
+                      <span className="profile-meta-online">Đang hoạt động</span>
                       {distance != null && (
                         <span>
                           {" "}
@@ -691,7 +691,7 @@ export function V2UserDetailDialog({
                       </div>
                     ) : (
                       <div className="pf-list">
-                        {friends.length === 0 && <p className="pf-empty">No friends yet</p>}
+                        {friends.length === 0 && <p className="pf-empty">Chưa có bạn bè</p>}
                         {friends.map((f) => {
                           const currentType = getMyFriendshipType(f, reduxUser?.id);
                           const typePickerOpen = typePickerId === f.id;
@@ -714,7 +714,7 @@ export function V2UserDetailDialog({
                                 <button
                                   onClick={() => setTypePickerId(typePickerOpen ? null : f.id)}
                                   className="pf-btn pf-btn-type"
-                                  aria-label="Change friend type"
+                                  aria-label="Đổi loại bạn bè"
                                 >
                                   <Tag className="pf-btn-icon" />
                                 </button>
@@ -724,7 +724,7 @@ export function V2UserDetailDialog({
                                   }
                                   disabled={processingId === f.id}
                                   className="pf-btn pf-btn-block"
-                                  aria-label="Block"
+                                  aria-label="Chặn"
                                 >
                                   <Ban className="pf-btn-icon" />
                                 </button>
@@ -734,7 +734,7 @@ export function V2UserDetailDialog({
                                   }
                                   disabled={processingId === f.id}
                                   className="pf-btn pf-btn-delete"
-                                  aria-label="Delete friend"
+                                  aria-label="Xóa bạn"
                                 >
                                   <Trash2 className="pf-btn-icon" />
                                 </button>
@@ -789,7 +789,7 @@ export function V2UserDetailDialog({
                               {renderFriendRow(f)}
                               <div className="pf-row-info">
                                 <span className="pf-row-name">{f.otherUserName}</span>
-                                <span className="pf-row-sub">wants to be your friend</span>
+                                <span className="pf-row-sub">muốn kết bạn với bạn</span>
                               </div>
                             </button>
                             <div className="pf-row-actions">
@@ -799,7 +799,7 @@ export function V2UserDetailDialog({
                                 }
                                 disabled={processingId === f.id}
                                 className="pf-btn pf-btn-accept"
-                                aria-label="Accept"
+                                aria-label="Chấp nhận"
                               >
                                 <UserCheck className="pf-btn-icon" />
                               </button>
@@ -809,7 +809,7 @@ export function V2UserDetailDialog({
                                 }
                                 disabled={processingId === f.id}
                                 className="pf-btn pf-btn-delete"
-                                aria-label="Reject"
+                                aria-label="Từ chối"
                               >
                                 <UserX className="pf-btn-icon" />
                               </button>
@@ -837,7 +837,7 @@ export function V2UserDetailDialog({
                               {renderFriendRow(f)}
                               <div className="pf-row-info">
                                 <span className="pf-row-name">{f.otherUserName}</span>
-                                <span className="pf-row-sub">waiting for response</span>
+                                <span className="pf-row-sub">đang chờ phản hồi</span>
                               </div>
                             </button>
                             <div className="pf-row-actions">
@@ -847,7 +847,7 @@ export function V2UserDetailDialog({
                                 }
                                 disabled={processingId === f.id}
                                 className="pf-btn pf-btn-delete"
-                                aria-label="Cancel request"
+                                aria-label="Hủy lời mời"
                               >
                                 <UserX className="pf-btn-icon" />
                               </button>

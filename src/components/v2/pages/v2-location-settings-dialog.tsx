@@ -102,7 +102,7 @@ export function V2LocationSettingsDialog({ open, onOpenChange }: V2LocationSetti
           {/* Friends Count */}
           <div className="settings-section">
             <div className="settings-item">
-              <span className="settings-label">Friends Nearby</span>
+              <span className="settings-label">Bạn bè ở gần</span>
               <span className="settings-value">{nearbyFriends.length}</span>
             </div>
           </div>
@@ -110,7 +110,7 @@ export function V2LocationSettingsDialog({ open, onOpenChange }: V2LocationSetti
           {/* Refresh */}
           <div className="settings-section">
             <div className="settings-item">
-              <span className="settings-label">Refresh</span>
+              <span className="settings-label">Làm mới</span>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing || loadingActiveUsers}
@@ -129,7 +129,7 @@ export function V2LocationSettingsDialog({ open, onOpenChange }: V2LocationSetti
             >
               <div className="settings-item-left">
                 <Eye className="settings-item-icon" />
-                <span className="settings-label">Visibility</span>
+                <span className="settings-label">Quyền riêng tư</span>
               </div>
               <div className="settings-item-right">
                 <span className="settings-value">{visibilityLabel}</span>
@@ -171,10 +171,10 @@ export function V2LocationSettingsDialog({ open, onOpenChange }: V2LocationSetti
             >
               <div className="settings-item-left">
                 <MessageSquare className="settings-item-icon" />
-                <span className="settings-label">Status</span>
+                <span className="settings-label">Trạng thái</span>
               </div>
               <div className="settings-item-right">
-                <span className="settings-value">{status || "Set status"}</span>
+                <span className="settings-value">{status || "Đặt trạng thái"}</span>
                 {statusExpanded ? (
                   <ChevronUp className="settings-chevron" />
                 ) : (
@@ -227,7 +227,7 @@ export function V2LocationSettingsDialog({ open, onOpenChange }: V2LocationSetti
           {battery != null && (
             <div className="settings-section">
               <div className="settings-item">
-                <span className="settings-label">Battery</span>
+                <span className="settings-label">Pin</span>
                 <span className="settings-value">{battery}%</span>
               </div>
             </div>

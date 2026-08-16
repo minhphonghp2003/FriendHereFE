@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useAppDispatch } from "@/store/hooks";
-import { logout as reduxLogout } from "@/store/slices/auth-slice";
 import { setMyVisibility } from "@/store/slices/location-slice";
 import { locationHub } from "@/lib/signalr";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/lib/signalr/types";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { requestNotificationPermission } from "@/lib/fcm";
+import { useAuth } from "@/providers/auth-provider";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "FriendHere";
 
@@ -31,6 +31,8 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
   const user = useSelector((state: RootState) => state.auth.user);
   const visibility = useSelector((state: RootState) => state.location.visibility);
   const dispatch = useAppDispatch();
+  const { logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
   const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
 
   // v1 PWA install logic
@@ -76,9 +78,12 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
     setShowVisibilityPicker(false);
   };
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      dispatch(reduxLogout());
+  // v1 logic (auth-provider): revoke the refresh token server-side, then clear state
+  const handleLogout = async () => {
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+      setLoggingOut(true);
+      await logout();
+      setLoggingOut(false);
       onOpenChange(false);
     }
   };
@@ -117,8 +122,8 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                       <Eye className="setting-icon" />
                     </div>
                     <div className="setting-details">
-                      <h3 className="setting-title">Visibility</h3>
-                      <p className="setting-description">Who can see my location</p>
+                      <h3 className="setting-title">Quyền riêng tư</h3>
+                      <p className="setting-description">Ai có thể xem vị trí của tôi</p>
                     </div>
                   </div>
                   <div className="setting-item-right">
@@ -138,26 +143,26 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                       )}
                     </div>
                     <div className="setting-details">
-                      <h3 className="setting-title">Notifications</h3>
+                      <h3 className="setting-title">Thông báo</h3>
                       <p className="setting-description">
                         {notificationPermission === "granted"
-                          ? "Push notifications enabled"
+                          ? "Đã bật thông báo đẩy"
                           : notificationPermission === "denied"
-                            ? "Blocked in browser settings"
-                            : "Receive push notifications"}
+                            ? "Đã chặn trong cài đặt trình duyệt"
+                            : "Nhận thông báo đẩy"}
                       </p>
                     </div>
                   </div>
                   {notificationPermission === "granted" ? (
-                    <span className="setting-perm-badge granted">On</span>
+                    <span className="setting-perm-badge granted">Bật</span>
                   ) : notificationPermission === "denied" ? (
-                    <span className="setting-perm-badge denied">Off</span>
+                    <span className="setting-perm-badge denied">Tắt</span>
                   ) : (
                     <button
                       onClick={handleRequestNotificationPermission}
                       className="setting-enable-btn"
                     >
-                      Enable
+                      Bật
                     </button>
                   )}
                 </div>
@@ -173,11 +178,11 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
                         <Download className="setting-icon" />
                       </div>
                       <div className="setting-details">
-                        <h3 className="setting-title">Download app</h3>
+                        <h3 className="setting-title">Tải ứng dụng</h3>
                         <p className="setting-description">
                           {canInstall || isIOS
-                            ? "Install for a full-screen app experience"
-                            : "Browser doesn't support quick install yet"}
+                            ? "Cài đặt để trải nghiệm ứng dụng toàn màn hình"
+                            : "Trình duyệt chưa hỗ trợ cài đặt nhanh"}
                         </p>
                       </div>
                     </div>
@@ -192,12 +197,12 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
 
               <div className="settings-account">
                 <div className="account-info">
-                  <p className="account-label">Account</p>
+                  <p className="account-label">Tài khoản</p>
                   <p className="account-email">{user?.email || ""}</p>
                 </div>
-                <Button onClick={handleLogout} variant="outline" className="logout-btn">
+                <Button onClick={handleLogout} variant="outline" className="logout-btn" disabled={loggingOut}>
                   <LogOut className="logout-icon" />
-                  Log Out
+                  {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
                 </Button>
               </div>
             </>

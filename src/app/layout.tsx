@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -10,6 +11,14 @@ import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { VersionUpdateAlert } from "@/components/version-update-alert";
 import "./globals.css";
+
+// Inter: best-in-class Vietnamese diacritics rendering for a social UI
+// (tall, legible marks like ề, ậ, ữ), variable weight, self-hosted via next/font.
+const inter = Inter({
+  subsets: ["vietnamese", "latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
@@ -48,7 +57,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning className={inter.variable}>
       <head>
         <link rel="preconnect" href="http://phongpc.local:9000" />
         <meta name="mobile-web-app-capable" content="yes" />

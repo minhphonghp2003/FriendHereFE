@@ -259,8 +259,8 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
                   toggleSort();
                 }}
                 className={cn("sheet-sort-btn", sortBy && "sheet-sort-btn-active")}
-                aria-label={sortBy ? "Sorted by distance" : "Default sorting"}
-                title={sortBy ? "Sorted by distance" : "Default sorting"}
+                aria-label={sortBy ? "Sắp xếp theo khoảng cách" : "Sắp xếp mặc định"}
+                title={sortBy ? "Sắp xếp theo khoảng cách" : "Sắp xếp mặc định"}
               >
                 <Navigation className="sheet-sort-icon" />
               </button>
@@ -367,8 +367,8 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
             {!isLoading && nearbyFriends.length === 0 && (
               <div className="empty-state">
                 <Users className="empty-icon" />
-                <p className="empty-text">No friends nearby</p>
-                <p className="empty-subtext">Share your location to see friends</p>
+                <p className="empty-text">Không có bạn bè ở gần</p>
+                <p className="empty-subtext">Chia sẻ vị trí để xem bạn bè</p>
               </div>
             )}
           </div>
