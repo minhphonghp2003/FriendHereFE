@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { LoadingVideo } from "@/components/common/loading-video";
 import {
@@ -106,6 +105,38 @@ export function V2UserDetailDialog({
   useEffect(() => {
     setActiveTab("moments");
   }, [effectiveUserId]);
+
+  // ===== Swipe-down-to-close (grabber zone) =====
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const dragStartYRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Reset drag whenever the sheet opens/closes
+    setSheetDragY(0);
+    dragStartYRef.current = null;
+  }, [userId]);
+
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    dragStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (dragStartYRef.current === null) return;
+    const delta = e.touches[0].clientY - dragStartYRef.current;
+    // Only drag downward (positive); ignore upward
+    setSheetDragY(Math.max(0, delta));
+  };
+
+  const handleSheetTouchEnd = () => {
+    if (dragStartYRef.current === null) return;
+    dragStartYRef.current = null;
+    // Past 120px of drag → close; else snap back
+    if (sheetDragY > 120) {
+      onClose();
+    } else {
+      setSheetDragY(0);
+    }
+  };
 
   // ---- User detail (v1 useUser pattern, inline) ----
   const [userDetail, setUserDetail] = useState<User | null>(null);
@@ -441,9 +472,35 @@ export function V2UserDetailDialog({
   );
 
   return (
-    <Dialog open={userId !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="v2-dialog" showCloseButton={false}>
-        <div className="dialog-content">
+    <div className={`vud-sheet-root ${userId !== null ? "open" : ""}`}>
+      {/* Backdrop: tap to close */}
+      {userId !== null && (
+        <div className="vud-backdrop" onClick={onClose} aria-hidden />
+      )}
+
+      {/* Bottom sheet — fullscreen height, above the nav button.
+          Swipe down on the grabber area to close. */}
+      <div
+        className="vud-sheet"
+        role="dialog"
+        aria-modal={userId !== null}
+        style={{ transform: userId !== null ? `translateY(${sheetDragY}px)` : undefined }}
+      >
+        {userId !== null && (
+          <>
+            <div
+              className="vud-grabber-zone"
+              onTouchStart={handleSheetTouchStart}
+              onTouchMove={handleSheetTouchMove}
+              onTouchEnd={handleSheetTouchEnd}
+              onClick={() => {
+                if (sheetDragY > 0) setSheetDragY(0);
+              }}
+            >
+              <div className="vud-grabber" />
+            </div>
+
+            <div className="dialog-content">
           {loadingUser ? (
             <div className="vud-loading">
               <LoadingVideo size="sm" />
@@ -831,6 +888,91 @@ export function V2UserDetailDialog({
         </div>
 
         <style jsx global>{`
+          /* ===== Bottom sheet shell ===== */
+          .vud-sheet-root {
+            position: fixed;
+            inset: 0;
+            z-index: 3000; /* above the nav button (2000) */
+            pointer-events: none;
+          }
+
+          .vud-sheet-root.open {
+            pointer-events: auto;
+          }
+
+          .vud-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            animation: vud-fade-in 0.25s ease-out;
+          }
+
+          @keyframes vud-fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          .vud-sheet {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: env(safe-area-inset-top, 0px); /* fullscreen */
+            background: rgba(15, 15, 15, 0.97);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px 24px 0 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            overflow: hidden;
+            touch-action: none; /* allow custom drag handling */
+          }
+
+          .vud-sheet-root.open .vud-sheet {
+            transform: translateY(0);
+          }
+
+          /* When dragging, the inline style takes over — keep it smooth */
+          .vud-sheet[style*="translateY"] {
+            transition: transform 0.15s ease-out;
+          }
+
+          .vud-grabber-zone {
+            flex-shrink: 0;
+            padding: 8px 0 6px;
+            display: flex;
+            justify-content: center;
+            touch-action: none;
+            cursor: grab;
+          }
+
+          .vud-grabber {
+            width: 42px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.25);
+          }
+
+          /* Content column with comfortable section spacing */
+          .dialog-content {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+          }
+
+          .dialog-content::-webkit-scrollbar {
+            display: none;
+          }
+
           /* ===== Moments / Timelines tabs ===== */
           .vud-tabs {
             display: flex;
@@ -1423,8 +1565,10 @@ export function V2UserDetailDialog({
             height: 13px;
           }
         `}</style>
-      </DialogContent>
-    </Dialog>
+            </>
+          )}
+      </div>
+    </div>
   );
 }
 

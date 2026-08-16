@@ -141,14 +141,11 @@ export default function V2TimelineDetailPage() {
           </div>
         ) : (
           <>
-            {/* Journey book: alternating entries connected by a dashed path */}
+            {/* Journey book: alternating entries connected by a dashed path.
+                Title lives in the header (no duplicated cover badge). */}
             <div className="vt-book">
-              {/* Cover: take-off badge */}
-              <div className="vt-cover">
-                <div className="vt-cover-badge">
-                  <Route className="vt-cover-icon" />
-                  <span>{timeline?.caption ?? "Hành trình"}</span>
-                </div>
+              <div className="vt-start-marker">
+                <Route className="vt-start-icon" />
               </div>
 
               {sortedMoments.map((moment, index) => {
@@ -437,28 +434,16 @@ export default function V2TimelineDetailPage() {
           padding: 8px 16px 24px;
         }
 
-        .vt-cover {
+        .vt-start-marker {
           display: flex;
           justify-content: center;
-          padding: 12px 0 16px;
+          padding: 6px 0 10px;
         }
 
-        .vt-cover-badge {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 20px;
-          border-radius: 999px;
-          background: #2BB0AF;
-          color: white;
-          font-size: 13px;
-          font-weight: 700;
-          box-shadow: 0 6px 20px rgba(43, 176, 175, 0.35);
-        }
-
-        .vt-cover-icon {
-          width: 15px;
-          height: 15px;
+        .vt-start-icon {
+          width: 18px;
+          height: 18px;
+          color: #2BB0AF;
         }
 
         .vt-entry {
