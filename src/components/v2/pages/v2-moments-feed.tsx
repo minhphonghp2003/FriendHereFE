@@ -9,12 +9,26 @@ import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { useAuth } from "@/providers/auth-provider";
 import { getMyFriendships } from "@/services/friendship";
 import { isAccepted, type FriendshipDto } from "@/types/friendship";
+import { appHub } from "@/lib/signalr/app-hub";
 import type { MomentDto, MomentVisibility } from "@/types/moment";
 import { MOMENT_VISIBILITY_VALUES } from "@/types/moment";
 import { toast } from "sonner";
 
 const PAGE_TAKE = 10;
 const LOAD_MORE_THRESHOLD = 3;
+
+/** v1 chat page logic: extract the identifying file key from the event payload */
+const extractFileKey = (data: unknown): string | undefined => {
+  if (typeof data === "string") return data;
+  if (!data || typeof data !== "object") return undefined;
+  const obj = data as Record<string, unknown>;
+  return (
+    (typeof obj.originalKey === "string" ? obj.originalKey : undefined) ??
+    (typeof obj.key === "string" ? obj.key : undefined) ??
+    (typeof obj.fileId === "string" ? obj.fileId : undefined) ??
+    undefined
+  );
+};
 
 /** v1 VISIBILITY_TO_FRIEND_TYPE: which friend groups each visibility can exclude */
 const VISIBILITY_TO_FRIEND_TYPE: Partial<Record<MomentVisibility, number>> = {
@@ -34,7 +48,7 @@ type CaptureMode = "camera" | "preview";
 function CreateMomentCard({
   onCreated,
 }: {
-  onCreated: () => void;
+  onCreated: (momentId: number, fileKeys: string[]) => void;
 }) {
   const { user } = useAuth();
   const { mutate: createMoment, isLoading: isUploading } = useCreateMoment();
@@ -207,7 +221,7 @@ function CreateMomentCard({
   const handleUpload = async () => {
     if (!mediaFile) return;
     try {
-      await createMoment({
+      const { moment, fileKeys } = await createMoment({
         caption: caption.trim() || undefined,
         visibility,
         allowComment,
@@ -218,8 +232,11 @@ function CreateMomentCard({
         video: isVideo ? mediaFile : undefined,
       });
       toast.success("Moment shared!");
+      const createdId = moment.id;
       reset();
-      onCreated();
+      // Report the created moment + its file keys so the feed can watch for
+      // ReceiveFileMarkedSuccess (BE finished processing the media)
+      onCreated(createdId, fileKeys);
     } catch (err) {
       console.error("Failed to create moment:", err);
       toast.error("Failed to share moment");
@@ -316,6 +333,11 @@ function CreateMomentCard({
           {showDetails && (
             <div className="cm-details">
               <div className="cm-details-bottom">
+                {/* Close (top right, same line as the exclude label) */}
+                <button onClick={reset} className="cm-close-x" aria-label="Close">
+                  <X className="cm-close-x-icon" />
+                </button>
+
                 {/* Exclude friends — visible for every visibility except OnlyMe.
                     Everyone starts INCLUDED (green); tap to exclude (red X). */}
                 {visibility !== "OnlyMe" && friends.length > 0 && (
@@ -400,30 +422,24 @@ function CreateMomentCard({
                   </button>
                 </div>
 
-                {/* Cancel + Share row */}
-                <div className="cm-actions-row">
-                  <button onClick={reset} className="cm-cancel-btn" aria-label="Cancel">
-                    <X className="cm-cancel-icon" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUpload}
-                    disabled={isUploading || !mediaFile}
-                    className="cm-share-btn"
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="cm-share-icon spinning" />
-                        Sharing...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="cm-share-icon" />
-                        Share
-                      </>
-                    )}
-                  </button>
-                </div>
+                {/* Share */}
+                <button
+                  onClick={handleUpload}
+                  disabled={isUploading || !mediaFile}
+                  className="cm-share-btn"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="cm-share-icon spinning" />
+                      Sharing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="cm-share-icon" />
+                      Share
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -586,37 +602,41 @@ function CreateMomentCard({
           fill: currentColor;
         }
 
-        .cm-actions-row {
-          display: flex;
-          gap: 10px;
-        }
-
-        .cm-cancel-btn {
+        /* Close button — floats at the top-right of the bottom panel,
+           on the same line as the exclude label */
+        .cm-close-x {
+          position: absolute;
+          top: 10px;
+          right: 12px;
+          width: 30px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 14px 20px;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: rgba(255, 255, 255, 0.85);
-          font-size: 15px;
-          font-weight: 700;
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 50%;
+          color: white;
           cursor: pointer;
+          padding: 0;
           transition: all 0.2s;
         }
 
-        .cm-cancel-btn:hover {
-          background: rgba(255, 255, 255, 0.18);
+        .cm-close-x:hover {
+          background: rgba(255, 255, 255, 0.2);
         }
 
-        .cm-cancel-icon {
-          width: 16px;
-          height: 16px;
+        .cm-close-x:active {
+          transform: scale(0.9);
+        }
+
+        .cm-close-x-icon {
+          width: 15px;
+          height: 15px;
         }
 
         .cm-details-bottom {
+          position: relative;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -867,6 +887,35 @@ export function V2MomentsFeed() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showInfo, setShowInfo] = useState(true);
 
+  // v1 chat pattern: track uploaded file keys and resolve them when the BE
+  // broadcasts ReceiveFileMarkedSuccess (file finished processing).
+  const markedFileKeysRef = useRef<Set<string>>(new Set());
+  const [pendingMoment, setPendingMoment] = useState<{ id: number; keys: string[] } | null>(null);
+
+  useEffect(() => {
+    const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
+      const fileKey = extractFileKey(data);
+      if (!fileKey) return;
+      markedFileKeysRef.current.add(fileKey);
+      setPendingMoment((pending) => {
+        if (!pending) return pending;
+        const remaining = pending.keys.filter((k) => !markedFileKeysRef.current.has(k));
+        return remaining.length === 0 ? null : { ...pending, keys: remaining };
+      });
+    });
+    return unsub;
+  }, []);
+
+  /** Called by the create card after a successful upload */
+  const handleMomentCreated = useCallback(
+    (momentId: number, fileKeys: string[]) => {
+      const remaining = fileKeys.filter((k) => !markedFileKeysRef.current.has(k));
+      setPendingMoment(remaining.length > 0 ? { id: momentId, keys: remaining } : null);
+      refetch();
+    },
+    [refetch],
+  );
+
   useEffect(() => {
     loadMoreRef.current = loadMore;
   }, [loadMore]);
@@ -877,12 +926,30 @@ export function V2MomentsFeed() {
     const index = Math.round(el.scrollTop / el.clientHeight);
     setCurrentIndex(index);
 
+    // Tell the nav button which reel we're on: index 0 = create card (show
+    // the page toggle), index > 0 = browsing moments (nav becomes scroll-to-top)
+    window.dispatchEvent(new CustomEvent("v2:moments-index", { detail: index }));
+
     // moments start at feed index 1 (index 0 = create card)
     const momentsSeen = Math.max(0, index); // index 1 => 1st moment visible
     if (hasMore && moments.length - momentsSeen <= LOAD_MORE_THRESHOLD) {
       loadMoreRef.current();
     }
   }, [hasMore, moments.length]);
+
+  // Also announce the index on mount (e.g. after nav away and back)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("v2:moments-index", { detail: currentIndex }));
+  }, [currentIndex]);
+
+  // Nav button requested scroll back to the create card (index 0)
+  useEffect(() => {
+    const scrollTop = () => {
+      containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("v2:moments-scroll-top", scrollTop);
+    return () => window.removeEventListener("v2:moments-scroll-top", scrollTop);
+  }, []);
 
   const handleToggleInfo = useCallback(() => setShowInfo((v) => !v), []);
 
@@ -897,7 +964,7 @@ export function V2MomentsFeed() {
     <div className="v2-reels-container" ref={containerRef} onScroll={handleScroll}>
       {/* Item 1: create moment camera */}
       <div className="v2-reel-item">
-        <CreateMomentCard onCreated={() => refetch()} />
+        <CreateMomentCard onCreated={handleMomentCreated} />
       </div>
 
       {/* Items 2..n: moments */}
@@ -912,6 +979,14 @@ export function V2MomentsFeed() {
             showInfo={showInfo}
             onToggleInfo={handleToggleInfo}
           />
+          {/* Processing badge while the BE hasn't marked this moment's file as
+              ready (ReceiveFileMarkedSuccess) */}
+          {pendingMoment?.id === moment.id && (
+            <div className="v2-moment-processing">
+              <Loader2 className="v2-moment-processing-icon" />
+              <span>Processing...</span>
+            </div>
+          )}
         </div>
       ))}
 
@@ -957,6 +1032,38 @@ export function V2MomentsFeed() {
           scroll-snap-align: start;
           scroll-snap-stop: always;
           position: relative;
+        }
+
+        /* Processing overlay for freshly created moments awaiting
+           ReceiveFileMarkedSuccess from the BE */
+        .v2-moment-processing {
+          position: absolute;
+          top: calc(70px + env(safe-area-inset-top, 0px));
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border-radius: 20px;
+          background: rgba(0, 0, 0, 0.65);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 12px;
+          font-weight: 600;
+          z-index: 30;
+        }
+
+        .v2-moment-processing-icon {
+          width: 14px;
+          height: 14px;
+          animation: v2-mp-spin 1s linear infinite;
+        }
+
+        @keyframes v2-mp-spin {
+          to { transform: rotate(360deg); }
         }
 
         .v2-reels-loading,

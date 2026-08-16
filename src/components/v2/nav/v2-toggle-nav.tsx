@@ -2,23 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Camera } from "lucide-react";
+import { Home, Camera, ChevronsUp } from "lucide-react";
 
 export function V2ToggleNav() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isMoments = pathname?.startsWith("/v2/moments");
   const isHome = pathname?.startsWith("/v2/location");
   const targetRoute = isHome ? "/v2/moments" : "/v2/location";
   const Icon = isHome ? Camera : Home;
   const label = isHome ? "Moments" : "Home";
 
-  // Move down (out of the way) while the nearby sheet is open
-  const [sheetOpen, setSheetOpen] = useState(false);
+  // Move down (out of the way) while the nearby sheet is open or composing a post
+  const [hidden, setHidden] = useState(false);
+
+  // On the moments feed: browsing reels (index > 0) morphs the button into
+  // scroll-to-top; the create card (index 0) shows the normal page toggle.
+  const [browsingMoments, setBrowsingMoments] = useState(false);
 
   useEffect(() => {
-    const open = () => setSheetOpen(true);
-    const close = () => setSheetOpen(false);
+    const open = () => setHidden(true);
+    const close = () => setHidden(false);
     window.addEventListener("v2:sheet-open", open);
     window.addEventListener("v2:sheet-close", close);
     return () => {
@@ -27,20 +32,45 @@ export function V2ToggleNav() {
     };
   }, []);
 
-  const handleToggle = () => {
-    router.push(targetRoute);
+  useEffect(() => {
+    // Reset browsing state when leaving the moments page
+    if (!isMoments) {
+      setBrowsingMoments(false);
+      return;
+    }
+    const onIndex = (e: Event) => {
+      const index = (e as CustomEvent<number>).detail ?? 0;
+      setBrowsingMoments(index > 0);
+    };
+    window.addEventListener("v2:moments-index", onIndex);
+    return () => {
+      window.removeEventListener("v2:moments-index", onIndex);
+    };
+  }, [isMoments]);
+
+  const handleClick = () => {
+    if (isMoments && browsingMoments) {
+      // Scroll the feed back to the create card
+      window.dispatchEvent(new Event("v2:moments-scroll-top"));
+    } else {
+      router.push(targetRoute);
+    }
   };
+
+  const isScrollTop = isMoments && browsingMoments;
+  const CurrentIcon = isScrollTop ? ChevronsUp : Icon;
+  const ariaLabel = isScrollTop ? "Back to camera" : `Go to ${label}`;
 
   return (
     <>
-      <button 
-        onClick={handleToggle}
-        className={`v2-toggle-btn ${isHome ? '' : 'toggle-moments-active'} ${sheetOpen ? 'sheet-open' : ''}`}
-        aria-label={`Go to ${label}`}
+      <button
+        onClick={handleClick}
+        className={`v2-toggle-btn ${!isHome && !isScrollTop ? 'toggle-moments-active' : ''} ${hidden ? 'sheet-open' : ''} ${isScrollTop ? 'scroll-top-mode' : ''}`}
+        aria-label={ariaLabel}
       >
         <div className="toggle-icon-wrapper">
           <div className="toggle-content">
-            <Icon className="toggle-icon" />
+            <CurrentIcon className="toggle-icon" />
           </div>
           <div className="toggle-glow" />
         </div>
@@ -62,7 +92,7 @@ export function V2ToggleNav() {
           transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
         }
 
-        /* Slide down + fade when the nearby sheet is open */
+        /* Slide down + fade when the nearby sheet is open / composing a post */
         .v2-toggle-btn.sheet-open {
           bottom: -100px;
           opacity: 0;
@@ -114,16 +144,45 @@ export function V2ToggleNav() {
                       inset 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
+        /* Scroll-to-top mode: small circle like the posting close button
+           (translucent white bg, thin border, dark double-up arrow) */
+        .v2-toggle-btn.scroll-top-mode {
+          width: 38px;
+          height: 38px;
+          right: 26px;
+        }
+
+        .v2-toggle-btn.scroll-top-mode .toggle-content {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .v2-toggle-btn.scroll-top-mode .toggle-icon {
+          color: white;
+          width: 20px;
+          height: 20px;
+        }
+
+        .v2-toggle-btn.scroll-top-mode .toggle-glow {
+          display: none;
+        }
+
+        .v2-toggle-btn.scroll-top-mode:hover .toggle-content {
+          transform: scale(1.08);
+          background: rgba(0, 0, 0, 0.7);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+        }
+
         .v2-toggle-btn:hover .toggle-content {
           transform: scale(1.05);
           box-shadow: 0 12px 40px rgba(43, 176, 175, 0.5),
                       0 0 0 6px rgba(43, 176, 175, 0.15),
-                      inset 0 0 20px rgba(255, 255, 255, 0.15);
-        }
-
-        .v2-toggle-btn:hover .toggle-moments-active .toggle-content {
-          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5),
-                      0 0 0 6px rgba(102, 126, 234, 0.15),
                       inset 0 0 20px rgba(255, 255, 255, 0.15);
         }
 
