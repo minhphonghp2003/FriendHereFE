@@ -133,14 +133,15 @@ export function V2MomentReel({
     };
   }, []);
 
-  // Play/pause the cropped video with feed visibility
+  // Play/pause the cropped video with feed visibility; remember the playback
+  // position so the fullscreen viewer can resume from it (and vice versa)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     if (active && !showViewer) {
       video.muted = muted;
       video.play().catch(() => {
-        // Unmuted autoplay blocked â†’ retry muted, the unlock listener will
+        // Unmuted autoplay blocked → retry muted, the unlock listener will
         // unmute after the first user gesture
         video.muted = true;
         setMuted(true);
@@ -152,6 +153,15 @@ export function V2MomentReel({
       setFeedPaused(true);
     }
   }, [active, showViewer, muted]);
+
+  // Track the feed video's current time continuously
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !moment.video) return;
+    const onTimeUpdate = () => setFeedVideoTime(video.currentTime);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => video.removeEventListener("timeupdate", onTimeUpdate);
+  }, [moment.video]);
 
   // Keep the tap-layer icon in sync with external pauses
   useEffect(() => {
@@ -306,6 +316,8 @@ export function V2MomentReel({
 
   // ===== Feed video tap-to-toggle =====
   const [feedPaused, setFeedPaused] = useState(false);
+  // Playback position shared with the fullscreen viewer (resume, no replay)
+  const [feedVideoTime, setFeedVideoTime] = useState(0);
 
   const toggleFeedVideo = () => {
     const video = videoRef.current;
@@ -595,6 +607,7 @@ export function V2MomentReel({
         <V2MomentViewer
           moment={moment}
           initialIndex={carouselIndex}
+          startTime={feedVideoTime}
           onClose={() => setShowViewer(false)}
         />
       )}

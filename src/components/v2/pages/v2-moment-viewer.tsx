@@ -10,6 +10,8 @@ interface V2MomentViewerProps {
   moment: MomentDto;
   /** Initial image index (for multi-image moments) */
   initialIndex?: number;
+  /** Video playback position to resume from (seconds) */
+  startTime?: number;
   onClose: () => void;
 }
 
@@ -29,6 +31,7 @@ const formatTime = (s: number): string => {
 export function V2MomentViewer({
   moment,
   initialIndex = 0,
+  startTime = 0,
   onClose,
 }: V2MomentViewerProps) {
   const [carouselIndex, setCarouselIndex] = useState(initialIndex);
@@ -39,12 +42,25 @@ export function V2MomentViewer({
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Pause the video when the viewer closes
+  // Continue playback from the reel's position (if provided)
   useEffect(() => {
+    const video = videoRef.current;
+    if (video && startTime > 0) {
+      const apply = () => {
+        video.currentTime = startTime;
+      };
+      if (video.readyState >= 1) {
+        apply();
+      } else {
+        video.addEventListener("loadedmetadata", apply, { once: true });
+      }
+    }
+    // Pause the video when the viewer closes
     return () => {
-      const video = videoRef.current;
-      if (video) video.pause();
+      const v = videoRef.current;
+      if (v) v.pause();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const togglePlay = () => {
@@ -57,18 +73,48 @@ export function V2MomentViewer({
     }
   };
 
-  // Side thirds seek ±5s (video)
+  // ===== Double-tap sides = skip ±10s; single tap = play/pause =====
+  const lastTapRef = useRef<{ time: number; side: "left" | "right" } | null>(null);
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const seekBy = (seconds: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+  };
+
   const handleVideoTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const video = videoRef.current;
-    if (!video) return;
-    if (x < rect.width / 3) {
-      video.currentTime = Math.max(0, video.currentTime - 5);
-    } else if (x > (rect.width * 2) / 3) {
-      video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
+    const side: "left" | "right" = x < rect.width / 2 ? "left" : "right";
+    const now = Date.now();
+
+    const last = lastTapRef.current;
+    if (last && now - last.time < 300 && last.side === side) {
+      // Double tap: cancel the pending single-tap play/pause and skip 10s
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      lastTapRef.current = null;
+      seekBy(side === "right" ? 10 : -10);
+    } else {
+      lastTapRef.current = { time: now, side };
+      // Delay play/pause so a second tap can cancel it
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = setTimeout(() => {
+        singleTapTimerRef.current = null;
+        togglePlay();
+      }, 300);
     }
   };
+
+  // Cleanup pending timers
+  useEffect(() => {
+    return () => {
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    };
+  }, []);
 
   // Side thirds navigate the carousel (image); center does nothing
   const handleImageTap = (e: React.MouseEvent<HTMLDivElement>) => {

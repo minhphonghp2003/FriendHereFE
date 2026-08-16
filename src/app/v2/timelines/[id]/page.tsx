@@ -6,7 +6,8 @@ import { ArrowLeft, Loader2, Trash2, MapPin, Play } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { useTimeline, useTimelineMoments, useDeleteTimeline } from "@/hooks/timelines";
 import { LoadingVideo } from "@/components/common/loading-video";
-import { MomentDetailOverlay } from "@/components/moments/moment-detail-overlay";
+import { V2MomentViewer } from "@/components/v2/pages/v2-moment-viewer";
+import type { MomentDto } from "@/types/moment";
 import { toast } from "sonner";
 
 const PAGE_TAKE = 20;
@@ -39,7 +40,7 @@ export default function V2TimelineDetailPage() {
   const { mutate: deleteTimeline, isLoading: deleting } = useDeleteTimeline();
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [viewMomentId, setViewMomentId] = useState<number | null>(null);
+  const [viewMoment, setViewMoment] = useState<MomentDto | null>(null);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -193,7 +194,7 @@ export default function V2TimelineDetailPage() {
                         </div>
 
                         <button
-                          onClick={() => setViewMomentId(moment.id)}
+                          onClick={() => setViewMoment(moment)}
                           className="vt-card"
                           aria-label="Xem khoảnh khắc"
                         >
@@ -255,12 +256,13 @@ export default function V2TimelineDetailPage() {
         )}
       </div>
 
-      <MomentDetailOverlay
-        momentId={viewMomentId}
-        currentUserId={user?.id}
-        onClose={() => setViewMomentId(null)}
-        hideTimelineChip
-      />
+      {/* Shared v2 fullscreen viewer (same as the moment feed) */}
+      {viewMoment && (
+        <V2MomentViewer
+          moment={viewMoment}
+          onClose={() => setViewMoment(null)}
+        />
+      )}
 
       <style jsx global>{`
         .vt-page {
