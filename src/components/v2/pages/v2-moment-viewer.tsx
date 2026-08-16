@@ -73,14 +73,27 @@ export function V2MomentViewer({
     }
   };
 
-  // ===== Double-tap sides = skip ±10s; single tap = play/pause =====
+  // ===== Single tap = show/hide controller (play + seeker); double tap =
+  // sides = skip ±10s =====
   const lastTapRef = useRef<{ time: number; side: "left" | "right" } | null>(null);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showControls, setShowControls] = useState(true);
 
   const seekBy = (seconds: number) => {
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+  };
+
+  const scheduleHideControls = () => {
+    if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+    controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
+  };
+
+  const showControlsTemporarily = () => {
+    setShowControls(true);
+    scheduleHideControls();
   };
 
   const handleVideoTap = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -91,20 +104,25 @@ export function V2MomentViewer({
 
     const last = lastTapRef.current;
     if (last && now - last.time < 300 && last.side === side) {
-      // Double tap: cancel the pending single-tap play/pause and skip 10s
+      // Double tap: cancel the pending single-tap toggle and skip 10s
       if (singleTapTimerRef.current) {
         clearTimeout(singleTapTimerRef.current);
         singleTapTimerRef.current = null;
       }
       lastTapRef.current = null;
       seekBy(side === "right" ? 10 : -10);
+      showControlsTemporarily();
     } else {
       lastTapRef.current = { time: now, side };
-      // Delay play/pause so a second tap can cancel it
+      // Delay the toggle so a second tap can cancel it
       if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
       singleTapTimerRef.current = setTimeout(() => {
         singleTapTimerRef.current = null;
-        togglePlay();
+        setShowControls((c) => {
+          const next = !c;
+          if (next) scheduleHideControls();
+          return next;
+        });
       }, 300);
     }
   };
@@ -113,6 +131,7 @@ export function V2MomentViewer({
   useEffect(() => {
     return () => {
       if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+      if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     };
   }, []);
 
@@ -156,13 +175,13 @@ export function V2MomentViewer({
             onPause={() => setPlaying(false)}
           />
 
-          {/* Center play/pause */}
+          {/* Center play/pause — part of the controller (single tap toggles) */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               togglePlay();
             }}
-            className="vm-viewer-play"
+            className={`vm-viewer-play${showControls ? "" : " hidden"}`}
             aria-label={playing ? "Dừng" : "Phát"}
           >
             {playing ? (
@@ -172,8 +191,11 @@ export function V2MomentViewer({
             )}
           </button>
 
-          {/* Bottom seeker + time */}
-          <div className="vm-viewer-seek" onClick={(e) => e.stopPropagation()}>
+          {/* Bottom seeker + time — part of the controller (single tap toggles) */}
+          <div
+            className={`vm-viewer-seek${showControls ? "" : " hidden"}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className="vm-viewer-time">{formatTime(time)}</span>
             <div className="vm-viewer-seekbar">
               <div
@@ -314,6 +336,18 @@ export function V2MomentViewer({
 
         .vm-viewer-play:active {
           transform: translate(-50%, -50%) scale(0.92);
+        }
+
+        /* Controller shown/hidden (single tap toggles) */
+        .vm-viewer-play.hidden,
+        .vm-viewer-seek.hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .vm-viewer-play,
+        .vm-viewer-seek {
+          transition: opacity 0.2s ease;
         }
 
         .vm-viewer-play-icon {

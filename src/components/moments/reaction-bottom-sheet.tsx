@@ -78,7 +78,7 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end">
+    <div className="fixed inset-0 z-[3000] flex items-end">
       <div className="fixed inset-0 bg-black/40" onClick={onClose} />
       <div className="bg-background relative w-full rounded-t-2xl px-4 pt-4 pb-8 shadow-lg">
         <div className="bg-muted-foreground/30 mx-auto mb-4 h-1 w-10 rounded-full" />
