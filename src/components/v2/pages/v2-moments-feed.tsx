@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause, Plus } from "lucide-react";
 import { V2MomentReel } from "./v2-moment-reel";
 import { LoadingVideo } from "@/components/common/loading-video";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { useAuth } from "@/providers/auth-provider";
+import { useAppSelector } from "@/store/hooks";
 import { getMyFriendships } from "@/services/friendship";
 import { isAccepted, type FriendshipDto } from "@/types/friendship";
 import { appHub } from "@/lib/signalr/app-hub";
@@ -61,6 +62,16 @@ function CreateMomentCard({
   const { user } = useAuth();
   const { mutate: createMoment, isLoading: isUploading } = useCreateMoment();
 
+  // Default the compose visibility to the location visibility from Settings
+  // (same value set: 0..4 ↔ OnlyMe/Public)
+  const locationVisibility = useAppSelector((s) => s.location.visibility);
+  const defaultVisibility = useMemo<MomentVisibility>(() => {
+    const entry = (
+      Object.entries(MOMENT_VISIBILITY_VALUES) as [MomentVisibility, number][]
+    ).find(([, value]) => value === locationVisibility);
+    return entry?.[0] ?? "Friends";
+  }, [locationVisibility]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,7 +86,7 @@ function CreateMomentCard({
   const [isVideo, setIsVideo] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [caption, setCaption] = useState("");
-  const [visibility, setVisibility] = useState<MomentVisibility>("Friends");
+  const [visibility, setVisibility] = useState<MomentVisibility>(defaultVisibility);
   const [allowComment, setAllowComment] = useState(true);
   const [isShowLocation, setIsShowLocation] = useState(true);
   const [excludedIds, setExcludedIds] = useState<number[]>([]);
@@ -240,6 +251,8 @@ function CreateMomentCard({
     setIsVideo(false);
     setIsPreviewPlaying(true);
     setCaption("");
+    // Restore the location visibility from Settings as the next default
+    setVisibility(defaultVisibility);
     setAllowComment(true);
     setIsShowLocation(true);
     setExcludedIds([]);
