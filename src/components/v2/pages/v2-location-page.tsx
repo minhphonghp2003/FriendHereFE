@@ -17,6 +17,9 @@ import { LOCATION_SORT } from "@/services/location";
 import { locationHub } from "@/lib/signalr";
 import { setMyStatus } from "@/store/slices/location-slice";
 
+// Vietnam geographic boundaries [sw_lng, sw_lat, ne_lng, ne_lat]
+const VIETNAM_BOUNDS: [number, number, number, number] = [102.0, 8.0, 117.0, 24.0];
+
 
 /** Auto-centers the map when a position becomes available (first fix only). */
 function MapAutoCenter({ position, mapRef }: { position: { lat: number; lng: number } | undefined, mapRef: React.RefObject<MapRef | null> }) {
@@ -192,6 +195,9 @@ export function V2LocationPage() {
             latitude: position?.lat || 21.0285,
             zoom: 15
           }}
+          maxBounds={VIETNAM_BOUNDS}
+          minZoom={6}
+          maxZoom={18}
           attributionControl={false}
         >
           <MapAutoCenter position={position} mapRef={mapRef} />
