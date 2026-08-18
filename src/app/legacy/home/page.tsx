@@ -1,6 +1,6 @@
 "use client";
 
-import { APIProvider, Map } from "@vis.gl/react-google-maps";
+import Map from "react-map-gl/maplibre";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTheme } from "next-themes";
@@ -27,7 +27,6 @@ type ViewMode = "map" | "list";
 export default function HomePage() {
   const { user } = useAuth();
   const { resolvedTheme } = useTheme();
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const locations = useAppSelector((s) => s.location.locations);
   const locationDenied = useAppSelector((s) => s.location.locationDenied);
   const movingUserIds = useAppSelector((s) => s.location.movingUserIds);
@@ -44,7 +43,9 @@ export default function HomePage() {
   const [reloading, setReloading] = useState(false);
   const dispatch = useAppDispatch();
 
-  const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
+  const mapStyle = resolvedTheme === "dark" 
+    ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
   const {
     data: userDetail,
     isLoading: loadingUserDetail,
@@ -100,7 +101,7 @@ export default function HomePage() {
 
   const position =
     latitude !== null && longitude !== null
-      ? ({ lat: latitude, lng: longitude } as google.maps.LatLngLiteral)
+      ? { lat: latitude, lng: longitude }
       : undefined;
 
   const visibleLocations = useMemo(
@@ -177,11 +178,11 @@ export default function HomePage() {
     />
   );
 
-  if (!apiKey) {
+  if (!process.env.NEXT_PUBLIC_MAP_STYLE_URL) {
     return (
       <>
         <div className="flex h-[calc(100dvh-4rem)] items-center justify-center p-4">
-          <p className="text-sm text-red-500">Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</p>
+          <p className="text-sm text-red-500">Missing NEXT_PUBLIC_MAP_STYLE_URL</p>
         </div>
       </>
     );
@@ -207,16 +208,16 @@ export default function HomePage() {
             height: "calc(100dvh - 4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
           }}
         >
-          <APIProvider apiKey={apiKey}>
-            <Map
-              key={mapColorScheme}
-              defaultCenter={position}
-              defaultZoom={15}
-              gestureHandling="greedy"
-              disableDefaultUI
-              colorScheme={mapColorScheme}
-              mapId="friendhere-map"
-            >
+          <Map
+            initialViewState={{
+              longitude: position?.lng || 105.8542,
+              latitude: position?.lat || 21.0285,
+              zoom: 15
+            }}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle={mapStyle}
+            attributionControl={false}
+          >
               {position && (
                 <CustomMarker
                   position={position}
@@ -248,9 +249,8 @@ export default function HomePage() {
                   }
                   onClick={() => handleMarkerClick(loc)}
                 />
-              ))}
-            </Map>
-          </APIProvider>
+            ))}
+          </Map>
 
           <div className="absolute top-4 right-2 z-40 flex flex-col items-end gap-2">
             <VisibilityPicker />
