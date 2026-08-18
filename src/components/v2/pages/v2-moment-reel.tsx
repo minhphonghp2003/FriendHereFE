@@ -637,11 +637,12 @@ export function V2MomentReel({
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          /* Neon-primary backdrop spans the WHOLE reel (media + info sheet) */
+          /* Neon-primary backdrop spans the WHOLE reel (media + info sheet)
+             (lighter base + stronger teal glow) */
           background:
-            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
-            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
-            var(--vm-bg, #f4f4f5);
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+            var(--vm-bg, #13181d);
         }
 
         /* ===== Media zone: fills all space above the sheet; media is a 9:16
