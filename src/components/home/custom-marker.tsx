@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
-import { AdvancedMarker } from "@vis.gl/react-google-maps";
+import { Marker } from "react-map-gl/maplibre";
 import { BatteryFull, BatteryMedium, BatteryLow } from "lucide-react";
 import { getMomentThumbnail } from "@/services/moment";
 import type { MomentDto } from "@/types/moment";
@@ -44,7 +44,7 @@ export interface MarkerStatusAction {
 }
 
 interface CustomMarkerProps {
-  position: google.maps.LatLngLiteral;
+  position: { lat: number; lng: number };
   name: string;
   image?: string;
   isCurrentUser?: boolean;
@@ -170,22 +170,35 @@ export const CustomMarker = ({
   const momentHeight = size ? Math.round(size / 2) : MOMENT_HEIGHT;
 
   return (
-    <AdvancedMarker
-      position={position}
-      title={name}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
+    <Marker
+      longitude={position.lng}
+      latitude={position.lat}
+      style={{ zIndex: 100 }}
     >
+      <style jsx global>{`
+        @keyframes markerPulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+        }
+      `}</style>
       <div
         className="relative transition-transform duration-200"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={onClick}
         style={{
-          marginTop: -(markerHeight / 2),
           transform: hovered ? "scale(1.06)" : "scale(1)",
           transformOrigin: "bottom center",
           filter: moving
             ? "drop-shadow(0 2px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 14px " + pinColor + ")"
             : "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+          cursor: "pointer",
+          zIndex: 100,
+          position: "relative"
         }}
       >
         {(status || (statusActions && statusActions.length > 0)) && (
@@ -290,6 +303,6 @@ export const CustomMarker = ({
           </div>
         )}
       </div>
-    </AdvancedMarker>
+    </Marker>
   );
 };

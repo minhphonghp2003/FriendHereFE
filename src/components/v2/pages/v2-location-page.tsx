@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useTheme } from "next-themes";
-import { APIProvider, Map, useMap } from "@vis.gl/react-google-maps";
+import Map, { MapRef } from "react-map-gl/maplibre";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
@@ -17,19 +17,23 @@ import { LOCATION_SORT } from "@/services/location";
 import { locationHub } from "@/lib/signalr";
 import { setMyStatus } from "@/store/slices/location-slice";
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-/** Auto-centers the parent map when a position becomes available (first fix only). */
-function MapAutoCenter({ position }: { position: google.maps.LatLngLiteral | undefined }) {
-  const map = useMap();
+/** Auto-centers the map when a position becomes available (first fix only). */
+function MapAutoCenter({ position, mapRef }: { position: { lat: number; lng: number } | undefined, mapRef: React.RefObject<MapRef | null> }) {
   const centeredRef = useRef(false);
 
   useEffect(() => {
-    if (!map || !position || centeredRef.current) return;
-    map.setCenter(position);
-    map.setZoom(16);
+    if (!mapRef.current || !position || centeredRef.current) return;
+    const map = mapRef.current;
+    if (map.flyTo) {
+      map.flyTo({ 
+        center: [position.lng, position.lat], 
+        zoom: 16,
+        essential: true
+      });
+    }
     centeredRef.current = true;
-  }, [map, position]);
+  }, [mapRef, position]);
 
   return null;
 }
@@ -37,6 +41,7 @@ function MapAutoCenter({ position }: { position: google.maps.LatLngLiteral | und
 export function V2LocationPage() {
   const { resolvedTheme } = useTheme();
   const dispatch = useAppDispatch();
+  const mapRef = useRef<MapRef | null>(null);
 
   // Use v1's Redux location store directly
   const locations = useAppSelector((s) => s.location.locations);
@@ -77,7 +82,7 @@ export function V2LocationPage() {
 
   const position =
     latitude !== null && longitude !== null
-      ? ({ lat: latitude, lng: longitude } as google.maps.LatLngLiteral)
+      ? { lat: latitude, lng: longitude }
       : undefined;
 
   // My marker info: prefer SignalR (BE) response, enrich with FE data
@@ -96,8 +101,10 @@ export function V2LocationPage() {
     currentUserProfile?.images?.[0]?.originalUrl ??
     undefined;
 
-  const mapColorScheme = resolvedTheme === "dark" ? "DARK" : "LIGHT";
-
+  let mapStyle = resolvedTheme === "dark" 
+    ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+  mapStyle = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
   // Get user initials for avatar fallback (FE enrichment)
   const userInitials = myDisplayName
     .split(" ")
@@ -155,15 +162,7 @@ export function V2LocationPage() {
     setStatusEditorOpen(true);
   };
 
-  // Show if API key is missing for debugging
-  if (!GOOGLE_MAPS_API_KEY) {
-    return (
-      <div className="flex items-center justify-center h-full bg-black text-white flex-col">
-        <p className="text-red-400 text-lg">Thiếu Google Maps API Key</p>
-        <p className="text-sm text-gray-400">No NEXT_PUBLIC_GOOGLE_MAPS_API_KEY env var</p>
-      </div>
-    );
-  }
+
 
   // v1 parity: when location permission is denied, fall back to the user list
   if (locationDenied) {
@@ -187,83 +186,84 @@ export function V2LocationPage() {
 
   return (
     <div className="v2-location-container">
-      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-        <div className="map-wrapper">
-            <Map
-              key={mapColorScheme}
-              defaultCenter={{ lat: 21.0285, lng: 105.8542 }}
-              defaultZoom={15}
-              mapId="friendhere-map"
-              disableDefaultUI
-              gestureHandling="greedy"
-              className="v2-map"
-              colorScheme={mapColorScheme}
-            >
-            <MapAutoCenter position={position} />
-            {/* Render friend locations (excluding me) using v1's Redux store.
-                Moment thumbs stay visible but open the user detail (not the moment). */}
-            {locations
-              .filter((location) => location.userId !== user?.id)
-              .map((location) => (
-                <CustomMarker
-                  key={location.userId}
-                  position={{ 
-                    lat: location.latitude, 
-                    lng: location.longitude 
-                  }}
-                  name={location.name || "User"}
-                  image={location.image || undefined}
-                  battery={location.battery}
-                  status={location.status}
-                  moments={location.moments}
-                  moving={movingUserIds.includes(location.userId)}
-                  size={56}
-                  onClick={() => openUserDetail(location.userId)}
+      <div className="map-wrapper">
+        <Map
+          ref={mapRef}
+          mapStyle={mapStyle}
+          style={{ width: '100%', height: '100%' }}
+          initialViewState={{
+            longitude: position?.lng || 105.8542,
+            latitude: position?.lat || 21.0285,
+            zoom: 15
+          }}
+          attributionControl={false}
+        >
+          <MapAutoCenter position={position} mapRef={mapRef} />
+          
+          {/* Render friend locations (excluding me) using v1's Redux store.
+              Moment thumbs stay visible but open the user detail (not the moment). */}
+          {locations
+            .filter((location) => location.userId !== user?.id)
+            .map((location) => (
+              <CustomMarker
+                key={location.userId}
+                position={{ 
+                  lat: location.latitude, 
+                  lng: location.longitude 
+                }}
+                name={location.name || "User"}
+                image={location.image || undefined}
+                battery={location.battery}
+                status={location.status}
+                moments={location.moments}
+                moving={movingUserIds.includes(location.userId)}
+                size={56}
+                onClick={() => openUserDetail(location.userId)}
                   onMomentClick={() => openUserDetail(location.userId)}
                 />
               ))}
 
-            {/* My marker — same style as friends (v1 CustomMarker), with status actions */}
-            {position && (
-              <CustomMarker
-                position={position}
-                name={myDisplayName}
-                image={myAvatarThumb}
-                isCurrentUser
-                battery={myBattery}
-                status={myDisplayStatus}
-                size={56}
-                onClick={() => openUserDetail(user?.id ?? 0)}
-                moments={myLocation?.moments ?? null}
-                onMomentClick={() => openUserDetail(user?.id ?? 0)}
-                statusActions={
-                  statusEditorOpen
-                    ? []
-                    : [
-                        {
-                          key: "edit-status",
-                          label: "Sửa trạng thái",
-                          icon: <Pencil className="h-[10px] w-[10px]" />,
-                          onClick: openStatusEditor,
-                        },
-                        ...(myDisplayStatus
-                          ? [
-                              {
-                                key: "delete-status",
-                                label: "Xóa trạng thái",
-                                destructive: true,
-                                icon: <XIcon className="h-[10px] w-[10px]" />,
-                                onClick: () => handleClearStatus(),
-                              },
-                            ]
-                          : []),
-                      ]
-                }
-              />
-            )}
-          </Map>
-        </div>
-      </APIProvider>
+
+          {/* My marker — same style as friends (v1 CustomMarker), with status actions */}
+          {position && (
+            <CustomMarker
+              position={position}
+              name={myDisplayName}
+              image={myAvatarThumb}
+              isCurrentUser
+              battery={myBattery}
+              status={myDisplayStatus}
+              size={56}
+              onClick={() => openUserDetail(user?.id ?? 0)}
+              moments={myLocation?.moments ?? null}
+              onMomentClick={() => openUserDetail(user?.id ?? 0)}
+              statusActions={
+                statusEditorOpen
+                  ? []
+                  : [
+                      {
+                        key: "edit-status",
+                        label: "Sửa trạng thái",
+                        icon: <Pencil className="h-[10px] w-[10px]" />,
+                        onClick: openStatusEditor,
+                      },
+                      ...(myDisplayStatus
+                        ? [
+                            {
+                              key: "delete-status",
+                              label: "Xóa trạng thái",
+                              destructive: true,
+                              icon: <XIcon className="h-[10px] w-[10px]" />,
+                              onClick: () => handleClearStatus(),
+                            },
+                          ]
+                        : []),
+                    ]
+              }
+            />
+          )}
+        </Map>
+      </div>
 
       {/* Floating status editor (opened from my marker's edit/add) */}
       {statusEditorOpen && position && (
@@ -553,9 +553,22 @@ export function V2LocationPage() {
             z-index: 1;
           }
 
-          .v2-map {
-            width: 100%;
-            height: 100%;
+          /* Fix maplibre canvas z-index to be behind markers */
+          .map-wrapper canvas {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 0 !important;
+          }
+
+          /* Ensure markers are rendered above the map canvas */
+          .map-wrapper > div > div {
+            z-index: 10 !important;
+          }
+
+          /* Ensure no background bleeding */
+          .v2-location-container {
+            background: #000;
           }
       `}</style>
     </div>

@@ -7,8 +7,7 @@
       "esnext"
     ],
     "types": [
-      "node",
-      "google.maps"
+      "node"
     ],
     "allowJs": true,
     "skipLibCheck": true,
