@@ -204,6 +204,62 @@ export function V2UserDetailDialog({
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // ---- Two-step avatar swap (my profile) ----
+  // Step 1: immediately after upload+setAvatar, show the locally-picked image
+  //         (object URL) as a TEMP avatar — the BE is still processing it.
+  // Step 2: when the BE broadcasts ReceiveFileMarkedSuccess for that file,
+  //         swap in the processed thumb/original URLs and clear the temp.
+  const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
+  const pendingAvatarFileKeysRef = useRef<Set<string>>(new Set());
+
+  // Revoke the object URL when the temp avatar is replaced/cleared
+  const prevTempRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevTempRef.current && prevTempRef.current !== tempAvatarUrl) {
+      URL.revokeObjectURL(prevTempRef.current);
+    }
+    prevTempRef.current = tempAvatarUrl;
+  }, [tempAvatarUrl]);
+
+  // And on unmount
+  useEffect(() => {
+    return () => {
+      if (prevTempRef.current) URL.revokeObjectURL(prevTempRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMe) return;
+    const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
+      // Match on fileId or originalKey (BE may send either)
+      const matches =
+        (data.fileId && pendingAvatarFileKeysRef.current.has(data.fileId)) ||
+        (data.originalKey && pendingAvatarFileKeysRef.current.has(data.originalKey)) ||
+        (data.key && pendingAvatarFileKeysRef.current.has(data.key));
+      if (!matches) return;
+
+      pendingAvatarFileKeysRef.current.clear();
+      setTempAvatarUrl(null);
+
+      // Swap in the processed image URLs
+      setUserDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          images: [
+            {
+              thumbUrl: data.thumbUrl,
+              originalUrl: data.originalUrl,
+            },
+          ],
+        };
+      });
+    });
+    return () => {
+      unsub();
+    };
+  }, [isMe]);
+
   useEffect(() => {
     if (isMe && userDetail) {
       setName(userDetail.name);
@@ -236,6 +292,8 @@ export function V2UserDetailDialog({
 
   const handleAvatarUpload = async (file: File) => {
     if (!userDetail) return;
+    // Local object URL for the immediate temp preview (step 1)
+    const localPreviewUrl = URL.createObjectURL(file);
     try {
       setUploadingAvatar(true);
       const presigned = await getPresignedUploadUrls({
@@ -247,9 +305,17 @@ export function V2UserDetailDialog({
       dispatch(
         setCredentials({ user: { id: updated.id, name: updated.name, email: updated.email } }),
       );
-      setUserDetail(updated);
+
+      // Step 1: BE accepted the new avatar but hasn't processed it yet —
+      // show the locally-picked image as a temp avatar
+      pendingAvatarFileKeysRef.current.add(presigned[0].fileId);
+      pendingAvatarFileKeysRef.current.add(presigned[0].key);
+      setTempAvatarUrl(localPreviewUrl);
+      // updated.images may be empty/stale until processing completes
+      setUserDetail({ ...updated, images: updated.images ?? null });
       toast.success("Đã cập nhật ảnh đại diện");
     } catch {
+      URL.revokeObjectURL(localPreviewUrl);
       toast.error("Không thể cập nhật ảnh đại diện");
     } finally {
       setUploadingAvatar(false);
@@ -376,8 +442,12 @@ export function V2UserDetailDialog({
   };
 
   const name_display = userDetail?.name ?? (isMe ? reduxUser?.name : null) ?? "Unknown";
+  // Temp avatar (just-uploaded, BE still processing) wins over server images
   const avatarUrl =
-    userDetail?.images?.[0]?.thumbUrl || userDetail?.images?.[0]?.originalUrl || undefined;
+    tempAvatarUrl ??
+    userDetail?.images?.[0]?.thumbUrl ??
+    userDetail?.images?.[0]?.originalUrl ??
+    undefined;
   const email = userDetail?.email ?? (isMe ? reduxUser?.email : null);
   const initials = name_display?.charAt(0).toUpperCase() || "?";
 
