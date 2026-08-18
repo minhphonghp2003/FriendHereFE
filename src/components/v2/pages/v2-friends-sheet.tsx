@@ -48,7 +48,7 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
   // Gesture bookkeeping: startY + whether the gesture became a sheet drag
   const gestureRef = useRef<{ startY: number; dragging: boolean } | null>(null);
 
-  const maxSheetHeight = typeof window !== 'undefined' ? window.innerHeight - 100 : 400;
+  const maxSheetHeight = typeof window !== 'undefined' ? window.innerHeight - 20 : 400; 
   const minSheetHeight = 80;
 
   const openSheet = useCallback(() => {
@@ -133,6 +133,7 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
         setIsDragging(true);
       } else if (delta < -8) {
         gesture.dragging = false; // release to the list
+        setIsDragging(false); // ensure clean state
         return;
       } else {
         return; // too small to decide
@@ -156,8 +157,9 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
   const contentTouchEnd = () => {
     const wasDragging = isDragging;
     gestureRef.current = null;
+    setIsDragging(false); // ensure clean state
+    
     if (!wasDragging) return;
-    setIsDragging(false);
 
     const midpoint = (maxSheetHeight + minSheetHeight) / 2;
     if (sheetHeight > midpoint) {
@@ -223,6 +225,20 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
 
   return (
     <>
+
+      {/* Backdrop - appears when sheet is open */}
+      {openProgress > 0.3 && (
+        <div
+          className="sheet-backdrop"
+          style={{
+            opacity: openProgress,
+            pointerEvents: openProgress > 0.7 ? 'auto' : 'none',
+            transition: isDragging ? 'none' : 'opacity 0.3s ease'
+          }}
+          onClick={closeSheet}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Bottom Sheet */}
       <div
@@ -428,14 +444,14 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
           transform: scale(0.95);
         }
 
-        /* Bottom Sheet — z-index 40: below shadcn dialogs (z-50) so user detail
-           modals render above the sheet, but above the map */
+        /* Bottom Sheet — z-index 4500: above header (1000) and all other components
+           to make it overlap everything in location screen */
         .location-bottom-sheet {
           position: fixed;
           left: 0;
           right: 0;
           bottom: 0;
-          z-index: 40;
+          z-index: 4500; /* above header (1000) and other components */
           background: rgba(20, 20, 20, 0.92);
           backdrop-filter: blur(30px);
           -webkit-backdrop-filter: blur(30px);
@@ -443,6 +459,16 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
           border-top: 1px solid rgba(255, 255, 255, 0.1);
           overflow: hidden;
           box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Backdrop overlay for fullscreen mode */
+        .sheet-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 4440; /* just below the sheet (4500) */
+          backdrop-filter: blur(2px);
+          -webkit-backdrop-filter: blur(2px);
         }
 
         .sheet-drag-handle {
@@ -559,7 +585,7 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
         .friends-scroll {
           height: 100%;
           overflow-y: auto;
-          padding: 0 16px 24px;
+          padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px));
           -webkit-overflow-scrolling: touch;
         }
 

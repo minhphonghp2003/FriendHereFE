@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { useTheme } from "next-themes";
+
 import Map, { MapRef } from "react-map-gl/maplibre";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { UserLocationList } from "@/components/home/user-location-list";
@@ -39,7 +39,6 @@ function MapAutoCenter({ position, mapRef }: { position: { lat: number; lng: num
 }
 
 export function V2LocationPage() {
-  const { resolvedTheme } = useTheme();
   const dispatch = useAppDispatch();
   const mapRef = useRef<MapRef | null>(null);
 
@@ -101,10 +100,7 @@ export function V2LocationPage() {
     currentUserProfile?.images?.[0]?.originalUrl ??
     undefined;
 
-  let mapStyle = resolvedTheme === "dark" 
-    ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-  mapStyle = "https://tiles.versatiles.org/assets/styles/colorful/style.json"
+  const mapStyle = "https://tiles.versatiles.org/assets/styles/colorful/style.json"
   // Get user initials for avatar fallback (FE enrichment)
   const userInitials = myDisplayName
     .split(" ")

@@ -171,11 +171,11 @@ export function V2Header() {
           align-items: center;
           padding: 8px 16px;
           padding-top: calc(8px + env(safe-area-inset-top, 0px));
-          background: transparent;
+          background: rgba(15, 15, 15, 0.85);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-bottom: none;
-          box-shadow: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
           z-index: 1000;
           animation: header-float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           pointer-events: auto;

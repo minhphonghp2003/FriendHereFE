@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LoadingVideo } from "@/components/common/loading-video";
 import {
@@ -472,12 +473,15 @@ export function V2UserDetailDialog({
     </div>
   );
 
+  if (typeof document === "undefined") return null;
+
   return (
-    <div className={`vud-sheet-root ${userId !== null ? "open" : ""}`}>
-      {/* Backdrop: tap to close */}
-      {userId !== null && (
-        <div className="vud-backdrop" onClick={onClose} aria-hidden />
-      )}
+    createPortal(
+      <div className={`vud-sheet-root ${userId !== null ? "open" : ""}`}>
+        {/* Backdrop: tap to close */}
+        {userId !== null && (
+          <div className="vud-backdrop" onClick={onClose} aria-hidden />
+        )}
 
       {/* Bottom sheet — fullscreen height, above the nav button.
           Swipe down on the grabber area to close. */}
@@ -553,35 +557,49 @@ export function V2UserDetailDialog({
                 <div className="profile-info">
                   {isMe && isEditing ? (
                     <div className="profile-edit-section">
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="profile-name-input"
-                        placeholder="Tên của bạn"
-                        maxLength={50}
-                      />
-                      <div className="profile-edit-row">
+                      <div className="profile-edit-field">
+                        <label className="profile-edit-label">Tên hiển thị</label>
                         <Input
-                          type="number"
-                          value={age}
-                          onChange={(e) => setAge(e.target.value)}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           className="profile-name-input"
-                          placeholder="Tuổi"
-                          min={1}
-                          max={150}
+                          placeholder="Tên của bạn"
+                          maxLength={50}
+                          autoFocus
                         />
-                        <select
-                          value={genderId}
-                          onChange={(e) => setGenderId(e.target.value)}
-                          className="profile-gender-select"
-                          aria-label="Giới tính"
-                        >
-                          <option value="1">Nam</option>
-                          <option value="2">Nữ</option>
-                          <option value="3">Gay</option>
-                          <option value="4">Les</option>
-                        </select>
+                        <span className="profile-edit-hint">{name.length}/50 ký tự</span>
                       </div>
+                      
+                      <div className="profile-edit-row">
+                        <div className="profile-edit-field profile-edit-field-half">
+                          <label className="profile-edit-label">Tuổi</label>
+                          <Input
+                            type="number"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            className="profile-name-input"
+                            placeholder="Tuổi"
+                            min={1}
+                            max={150}
+                          />
+                        </div>
+                        
+                        <div className="profile-edit-field profile-edit-field-half">
+                          <label className="profile-edit-label">Giới tính</label>
+                          <select
+                            value={genderId}
+                            onChange={(e) => setGenderId(e.target.value)}
+                            className="profile-gender-select"
+                            aria-label="Giới tính"
+                          >
+                            <option value="1">Nam</option>
+                            <option value="2">Nữ</option>
+                            <option value="3">Gay</option>
+                            <option value="4">Les</option>
+                          </select>
+                        </div>
+                      </div>
+                      
                       <div className="profile-edit-actions">
                         <Button
                           onClick={() => {
@@ -593,16 +611,18 @@ export function V2UserDetailDialog({
                             );
                           }}
                           variant="outline"
-                          size="sm"
+                          size="default"
+                          className="profile-cancel-btn"
                         >
-                          Cancel
+                          Hủy
                         </Button>
                         <Button
                           onClick={handleSaveProfile}
                           disabled={savingProfile || !name.trim()}
-                          size="sm"
+                          size="default"
+                          className="profile-save-btn"
                         >
-                          {savingProfile ? "Đang lưu..." : "Lưu"}
+                          {savingProfile ? "Đang lưu..." : "Lưu thay đổi"}
                         </Button>
                       </div>
                     </div>
@@ -893,7 +913,7 @@ export function V2UserDetailDialog({
           .vud-sheet-root {
             position: fixed;
             inset: 0;
-            z-index: 3000; /* above the nav button (2000) */
+            z-index: 5000; /* above ALL components including header (1000), friends sheet (4500) */
             pointer-events: none;
           }
 
@@ -918,11 +938,11 @@ export function V2UserDetailDialog({
             left: 0;
             right: 0;
             bottom: 0;
-            top: env(safe-area-inset-top, 0px); /* fullscreen */
+            top: 0; /* true fullscreen covering everything including header */
             background: rgba(15, 15, 15, 0.97);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
-            border-radius: 24px 24px 0 0;
+            border-radius: 0; /* no border radius for fullscreen */
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
@@ -943,7 +963,7 @@ export function V2UserDetailDialog({
 
           .vud-grabber-zone {
             flex-shrink: 0;
-            padding: 8px 0 6px;
+            padding: calc(8px + env(safe-area-inset-top, 0px)) 0 6px;
             display: flex;
             justify-content: center;
             touch-action: none;
@@ -1279,13 +1299,45 @@ export function V2UserDetailDialog({
           .profile-edit-section {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 16px;
             width: 100%;
+            padding: 16px;
+            background: rgba(30, 30, 30, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 12px;
+          }
+
+          .profile-edit-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+          }
+
+          .profile-edit-field-half {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .profile-edit-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .profile-edit-hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: right;
+            margin-top: 2px;
           }
 
           .profile-edit-row {
             display: flex;
-            gap: 8px;
+            gap: 12px;
             width: 100%;
           }
 
@@ -1295,15 +1347,62 @@ export function V2UserDetailDialog({
           }
 
           .profile-gender-select {
-            width: 110px;
-            flex-shrink: 0;
+            width: 100%;
             background: rgba(20, 20, 20, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 10px 12px;
             color: white;
-            font-size: 13px;
+            font-size: 14px;
             outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+          }
+
+          .profile-gender-select:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+          }
+
+          .profile-gender-select:focus {
+            border-color: #7DDED0;
+            background: rgba(20, 20, 20, 0.98);
+          }
+
+          .profile-edit-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+          }
+
+          .profile-cancel-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: rgba(255, 255, 255, 0.9);
+          }
+
+          .profile-cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+          }
+
+          .profile-save-btn {
+            flex: 1;
+            background: #7DDED0;
+            border: 1px solid #7DDED0;
+            color: #0.145 0 0;
+            font-weight: 500;
+          }
+
+          .profile-save-btn:hover:not(:disabled) {
+            background: #6DC8C0;
+            border-color: #6DC8C0;
+          }
+
+          .profile-save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
           }
 
           .profile-meta-dot {
@@ -1569,7 +1668,9 @@ export function V2UserDetailDialog({
             </>
           )}
       </div>
-    </div>
+    </div>,
+    document.body
+  )
   );
 }
 
