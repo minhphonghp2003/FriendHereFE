@@ -448,21 +448,19 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
           transform: scale(0.95);
         }
 
-        /* Bottom Sheet — z-index 4500: above header (1000) and all other components
-           to make it overlap everything in location screen */
+        /* Bottom Sheet — z-index 4500: above header (1000) and all other components.
+           Solid dark surface (NOT liquid glass — sheets stay solid per design decision). */
         .location-bottom-sheet {
           position: fixed;
           left: 0;
           right: 0;
           bottom: 0;
           z-index: 4500; /* above header (1000) and other components */
-          background: rgba(20, 20, 20, 0.92);
-          backdrop-filter: blur(30px);
-          -webkit-backdrop-filter: blur(30px);
+          background: rgb(16 20 24 / 0.96);
           border-radius: 24px 24px 0 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid rgb(255 255 255 / 0.1);
           overflow: hidden;
-          box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
+          box-shadow: 0 -8px 40px rgb(0 0 0 / 0.4);
         }
 
         /* Backdrop overlay for fullscreen mode */

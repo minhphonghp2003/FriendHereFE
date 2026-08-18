@@ -385,15 +385,20 @@ export function V2LocationPage() {
           left: 50%;
           transform: translateX(-50%);
           width: 260px;
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          /* flat translucent dark glass — no gradient */
+          background: rgb(13 17 21 / 0.88);
+          backdrop-filter: blur(32px) brightness(0.5) saturate(1.3);
+          -webkit-backdrop-filter: blur(32px) brightness(0.5) saturate(1.3);
+          border: 1px solid rgb(125 222 208 / 0.2);
           border-radius: 16px;
           padding: 12px;
           display: flex;
           flex-direction: column;
           gap: 8px;
           z-index: 3000;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+          box-shadow:
+            0 12px 40px rgb(0 0 0 / 0.4),
+            inset 0 1px 0 rgb(255 255 255 / 0.06);
           animation: status-pop-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
         }
 
@@ -410,21 +415,21 @@ export function V2LocationPage() {
 
         .status-editor-input {
           width: 100%;
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.12);
+          background: rgb(255 255 255 / 0.08);
+          border: 1px solid rgb(255 255 255 / 0.18);
           border-radius: 10px;
           padding: 10px 12px;
-          color: #18181b;
+          color: rgb(245 250 249 / 0.95);
           font-size: 13px;
           outline: none;
         }
 
         .status-editor-input::placeholder {
-          color: rgba(0, 0, 0, 0.4);
+          color: rgb(255 255 255 / 0.4);
         }
 
         .status-editor-input:focus {
-          border-color: rgba(43, 176, 175, 0.6);
+          border-color: rgb(125 222 208 / 0.6);
         }
 
         .status-editor-footer {
@@ -435,7 +440,7 @@ export function V2LocationPage() {
 
         .status-editor-count {
           font-size: 10px;
-          color: rgba(0, 0, 0, 0.4);
+          color: rgb(255 255 255 / 0.5);
         }
 
         .status-editor-actions {
@@ -457,12 +462,12 @@ export function V2LocationPage() {
         }
 
         .status-editor-save {
-          background: #2BB0AF;
-          color: white;
+          background: #7DDED0;
+          color: rgb(15 20 24);
         }
 
         .status-editor-save:hover:not(:disabled) {
-          background: #1a8a89;
+          background: #6DC8C0;
         }
 
         .status-editor-save:disabled,
@@ -472,9 +477,9 @@ export function V2LocationPage() {
         }
 
         .status-editor-clear {
-          background: rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0, 0, 0, 0.12);
-          color: #52525b;
+          background: rgb(255 255 255 / 0.1);
+          border: 1px solid rgb(255 255 255 / 0.2);
+          color: rgb(245 250 249 / 0.85);
         }
 
         .status-editor-icon {

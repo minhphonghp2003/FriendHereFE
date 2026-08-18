@@ -119,6 +119,99 @@
   .keyboard-aware-bottom {
     padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-height, 0px));
   }
+
+  /* ===== Liquid Glass (custom, no external packages) ===== */
+
+  .lg-root {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    /* flat translucent dark glass — no gradients.
+       Blur + dark tint keeps text readable over light backgrounds (map). */
+    background: rgb(13 17 21 / 0.85);
+    backdrop-filter: blur(40px) brightness(0.5) saturate(1.4);
+    -webkit-backdrop-filter: blur(40px) brightness(0.5) saturate(1.4);
+    border: 1px solid rgb(125 222 208 / 0.2);
+    box-shadow:
+      0 8px 32px rgb(0 0 0 / 0.45),
+      0 1px 3px rgb(0 0 0 / 0.35),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+    color: rgb(245 250 249 / 0.95);
+  }
+
+  /* Intensity variants */
+  .lg-low {
+    background: rgb(13 17 21 / 0.7);
+    backdrop-filter: blur(24px) brightness(0.6) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) brightness(0.6) saturate(1.2);
+    border-color: rgb(125 222 208 / 0.15);
+  }
+
+  .lg-high {
+    background: rgb(13 17 21 / 0.9);
+    backdrop-filter: blur(48px) brightness(0.45) saturate(1.5);
+    -webkit-backdrop-filter: blur(48px) brightness(0.45) saturate(1.5);
+    border-color: rgb(125 222 208 / 0.22);
+    box-shadow:
+      0 12px 44px rgb(0 0 0 / 0.5),
+      0 2px 6px rgb(0 0 0 / 0.4),
+      inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+
+  /* Specular highlight: a soft white streak along the top edge */
+  .lg-specular {
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 40%;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.12) 0%,
+      rgb(255 255 255 / 0.04) 40%,
+      transparent 100%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Shimmer: slow diagonal light sweep across the glass */
+  .lg-shimmer {
+    position: absolute;
+    inset: -50%;
+    background: linear-gradient(
+      115deg,
+      transparent 42%,
+      rgb(125 222 208 / 0.08) 48%,
+      rgb(255 255 255 / 0.06) 50%,
+      rgb(125 222 208 / 0.08) 52%,
+      transparent 58%
+    );
+    animation: lg-shimmer-sweep 6s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes lg-shimmer-sweep {
+    0% { transform: translateX(-40%); }
+    50% { transform: translateX(40%); }
+    100% { transform: translateX(-40%); }
+  }
+
+  /* Content above effect layers */
+  .lg-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+  }
+
+  /* Respect reduced-motion users */
+  @media (prefers-reduced-motion: reduce) {
+    .lg-shimmer {
+      animation: none;
+    }
+  }
 }
 
 @keyframes reaction-burst {

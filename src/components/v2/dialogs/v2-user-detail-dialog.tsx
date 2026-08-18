@@ -495,9 +495,9 @@ export function V2UserDetailDialog({
         )}
 
       {/* Bottom sheet — fullscreen height, above the nav button.
-          Swipe down on the grabber area to close. */}
+           Swipe down on the grabber area to close. */}
       <div
-        className="vud-sheet"
+        className="vud-sheet lg-root lg-high"
         role="dialog"
         aria-modal={userId !== null}
         style={{ transform: userId !== null ? `translateY(${sheetDragY}px)` : undefined }}
@@ -505,6 +505,9 @@ export function V2UserDetailDialog({
         onTouchMove={handleSheetTouchMove}
         onTouchEnd={handleSheetTouchEnd}
       >
+        {/* Liquid glass effect layers (decorative, behind content) */}
+        <span className="lg-specular" aria-hidden />
+        <span className="lg-shimmer" aria-hidden />
         {userId !== null && (
           <>
             <div
@@ -963,17 +966,24 @@ export function V2UserDetailDialog({
             right: 0;
             bottom: 0;
             top: 0; /* true fullscreen covering everything including header */
-            background: rgba(15, 15, 15, 0.97);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-radius: 0; /* no border radius for fullscreen */
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            /* flat translucent dark glass — no gradient */
+            background: rgb(13 17 21 / 0.9);
+            backdrop-filter: blur(48px) brightness(0.45) saturate(1.3);
+            -webkit-backdrop-filter: blur(48px) brightness(0.45) saturate(1.3);
+            border-top: 1px solid rgb(125 222 208 / 0.2);
             display: flex;
             flex-direction: column;
             transform: translateY(100%);
             transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
             overflow: hidden;
             touch-action: none; /* allow custom drag handling */
+          }
+
+          /* Sheet children must layer above the lg-specular/lg-shimmer effects */
+          .vud-sheet > .vud-grabber-zone,
+          .vud-sheet > .dialog-content {
+            position: relative;
+            z-index: 2;
           }
 
           .vud-sheet-root.open .vud-sheet {
