@@ -104,7 +104,7 @@ export function V2LocationPage() {
   let mapStyle = resolvedTheme === "dark" 
     ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
     : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-  mapStyle = "https://tiles.openfreemap.org/styles/positron"
+  mapStyle = "https://tiles.versatiles.org/assets/styles/colorful/style.json"
   // Get user initials for avatar fallback (FE enrichment)
   const userInitials = myDisplayName
     .split(" ")
