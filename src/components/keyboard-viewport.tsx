@@ -11,8 +11,10 @@ export function KeyboardViewport() {
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
 
+    const vv = window.visualViewport;
+    if (!vv) return;
+
     const updateKeyboardHeight = () => {
-      const vv = window.visualViewport;
       const winHeight = window.innerHeight;
       // Visual viewport shrinks when the keyboard appears (iOS, Android Chrome)
       const kbHeight = Math.max(0, winHeight - vv.height);
@@ -23,12 +25,12 @@ export function KeyboardViewport() {
     };
 
     updateKeyboardHeight();
-    window.visualViewport.addEventListener("resize", updateKeyboardHeight);
-    window.visualViewport.addEventListener("scroll", updateKeyboardHeight);
+    vv.addEventListener("resize", updateKeyboardHeight);
+    vv.addEventListener("scroll", updateKeyboardHeight);
 
     return () => {
-      window.visualViewport.removeEventListener("resize", updateKeyboardHeight);
-      window.visualViewport.removeEventListener("scroll", updateKeyboardHeight);
+      vv.removeEventListener("resize", updateKeyboardHeight);
+      vv.removeEventListener("scroll", updateKeyboardHeight);
       document.documentElement.style.removeProperty("--keyboard-height");
     };
   }, []);

@@ -123,8 +123,19 @@ export function V2UserDetailDialog({
 
   const handleSheetTouchMove = (e: React.TouchEvent) => {
     if (dragStartYRef.current === null) return;
-    const delta = e.touches[0].clientY - dragStartYRef.current;
-    // Only drag downward (positive); ignore upward
+    
+    const currentY = e.touches[0].clientY;
+    const delta = currentY - dragStartYRef.current;
+    
+    // Only allow dragging downward (positive delta)
+    // And only when we're near the top of the content (to prevent interfering with scrolling)
+    const dialogContent = (e.target as HTMLElement).closest('.dialog-content');
+    if (dialogContent) {
+      const scrollTop = (dialogContent as HTMLElement).scrollTop;
+      // Only enable drag if we're at the top of the content
+      if (scrollTop > 10) return;
+    }
+    
     setSheetDragY(Math.max(0, delta));
   };
 
@@ -490,22 +501,35 @@ export function V2UserDetailDialog({
         role="dialog"
         aria-modal={userId !== null}
         style={{ transform: userId !== null ? `translateY(${sheetDragY}px)` : undefined }}
+        onTouchStart={handleSheetTouchStart}
+        onTouchMove={handleSheetTouchMove}
+        onTouchEnd={handleSheetTouchEnd}
       >
         {userId !== null && (
           <>
             <div
-              className="vud-grabber-zone"
-              onTouchStart={handleSheetTouchStart}
-              onTouchMove={handleSheetTouchMove}
-              onTouchEnd={handleSheetTouchEnd}
-              onClick={() => {
-                if (sheetDragY > 0) setSheetDragY(0);
-              }}
+               className="vud-grabber-zone"
+               onClick={() => {
+                 if (sheetDragY > 0) setSheetDragY(0);
+               }}
             >
               <div className="vud-grabber" />
             </div>
 
-            <div className="dialog-content">
+            <div className="dialog-content"
+                 onTouchStart={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+                 onTouchMove={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+                 onTouchEnd={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+            >
           {loadingUser ? (
             <div className="vud-loading">
               <LoadingVideo size="sm" />
@@ -982,12 +1006,14 @@ export function V2UserDetailDialog({
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
             display: flex;
             flex-direction: column;
             gap: 18px;
+            touch-action: pan-y; /* allow vertical scrolling, prevent map interaction */
           }
 
           .dialog-content::-webkit-scrollbar {
