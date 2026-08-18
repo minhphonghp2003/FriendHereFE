@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, type TouchEvent } from "react";
+import { createPortal } from "react-dom";
 import { ChevronUp, Users, MessageCircle, Loader2, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -223,32 +224,35 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
     Math.max(0, (sheetHeight - minSheetHeight) / (maxSheetHeight - minSheetHeight)),
   );
 
+  if (typeof document === "undefined") return null;
+
   return (
-    <>
+    createPortal(
+      <>
 
-      {/* Backdrop - appears when sheet is open */}
-      {openProgress > 0.3 && (
+        {/* Backdrop - appears when sheet is open */}
+        {openProgress > 0.3 && (
+          <div
+            className="sheet-backdrop"
+            style={{
+              opacity: openProgress,
+              pointerEvents: openProgress > 0.7 ? 'auto' : 'none',
+              transition: isDragging ? 'none' : 'opacity 0.3s ease'
+            }}
+            onClick={closeSheet}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Bottom Sheet */}
         <div
-          className="sheet-backdrop"
+          ref={sheetRef}
+          className="location-bottom-sheet"
           style={{
-            opacity: openProgress,
-            pointerEvents: openProgress > 0.7 ? 'auto' : 'none',
-            transition: isDragging ? 'none' : 'opacity 0.3s ease'
+            height: `${sheetHeight}px`,
+            transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
-          onClick={closeSheet}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Bottom Sheet */}
-      <div
-        ref={sheetRef}
-        className="location-bottom-sheet"
-        style={{
-          height: `${sheetHeight}px`,
-          transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}
-      >
+        >
         {/* Drag Handle */}
         <div
           className="sheet-drag-handle"
@@ -782,5 +786,6 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
         }
       `}</style>
     </>
+    , document.body)
   );
 }
