@@ -237,6 +237,27 @@ export function V2SettingsDialog({ open, onOpenChange }: V2SettingsDialogProps) 
         )}
 
         <style jsx global>{`
+          /* Main settings dialog: flat translucent dark glass
+             (no gradient — just blur + dark tint, readable over any bg) */
+          .v2-dialog {
+            background: rgb(13 17 21 / 0.88) !important;
+            backdrop-filter: blur(40px) brightness(0.5) saturate(1.4) !important;
+            -webkit-backdrop-filter: blur(40px) brightness(0.5) saturate(1.4) !important;
+            border: 1px solid rgb(125 222 208 / 0.2) !important;
+            border-radius: 24px !important;
+            box-shadow:
+              0 12px 44px rgb(0 0 0 / 0.5),
+              inset 0 1px 0 rgb(255 255 255 / 0.06) !important;
+          }
+
+          /* iOS install dialog: same treatment */
+          .v2-ios-install-dialog {
+            background: rgb(13 17 21 / 0.88) !important;
+            backdrop-filter: blur(40px) brightness(0.5) saturate(1.4) !important;
+            -webkit-backdrop-filter: blur(40px) brightness(0.5) saturate(1.4) !important;
+            border: 1px solid rgb(125 222 208 / 0.2) !important;
+          }
+
           .setting-perm-badge {
             font-size: 12px;
             font-weight: 700;

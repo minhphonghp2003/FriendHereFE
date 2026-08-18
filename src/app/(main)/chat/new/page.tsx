@@ -138,7 +138,11 @@ export default function V2NewChatPage() {
           width: 100%;
           display: flex;
           flex-direction: column;
-          background: var(--vm-bg, #f4f4f5);
+          /* Neon-primary backdrop, same family as chat list/chat box */
+          background:
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+            var(--vm-bg, #13181d);
           color: var(--vm-text, #18181b);
         }
 

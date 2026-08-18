@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { useTheme } from "next-themes";
+
 import Map, { MapRef } from "react-map-gl/maplibre";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { UserLocationList } from "@/components/home/user-location-list";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 import { V2FriendsSheet } from "./v2-friends-sheet";
-import { Check, Pencil, X as XIcon } from "lucide-react";
+import { Check, Crosshair, Pencil, X as XIcon } from "lucide-react";
 import { V2LocationSettingsDialog } from "./v2-location-settings-dialog";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { useCurrentUser } from "@/hooks/users/use-users";
@@ -16,30 +16,84 @@ import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { LOCATION_SORT } from "@/services/location";
 import { locationHub } from "@/lib/signalr";
 import { setMyStatus } from "@/store/slices/location-slice";
+import { V2_LAST_MAP_VIEW_KEY } from "@/constants";
+
+// Vietnam geographic boundaries [sw_lng, sw_lat, ne_lng, ne_lat]
+const VIETNAM_BOUNDS: [number, number, number, number] = [102.0, 8.0, 117.0, 24.0];
+
+// Vietnam rough center — only used when there is no saved view AND no GPS fix yet
+const VIETNAM_CENTER: [number, number] = [105.8542, 21.0285];
+
+interface MapView {
+  lng: number;
+  lat: number;
+  zoom: number;
+}
+
+/** Read the persisted last map view (returns null when absent/invalid). */
+function loadLastMapView(): MapView | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(V2_LAST_MAP_VIEW_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<MapView>;
+    if (
+      typeof parsed.lng !== "number" ||
+      typeof parsed.lat !== "number" ||
+      typeof parsed.zoom !== "number" ||
+      Number.isNaN(parsed.lng) ||
+      Number.isNaN(parsed.lat)
+    ) {
+      return null;
+    }
+    return { lng: parsed.lng, lat: parsed.lat, zoom: parsed.zoom };
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the current map view so reopening the page restores it. */
+function saveLastMapView(view: MapView) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(V2_LAST_MAP_VIEW_KEY, JSON.stringify(view));
+  } catch {
+    // storage full/unavailable — non-critical, ignore
+  }
+}
 
 
-/** Auto-centers the map when a position becomes available (first fix only). */
-function MapAutoCenter({ position, mapRef }: { position: { lat: number; lng: number } | undefined, mapRef: React.RefObject<MapRef | null> }) {
+/** Auto-centers the map when a position becomes available (first fix only).
+ *  Skipped when a saved view exists — the user's last position wins over a GPS refix. */
+function MapAutoCenter({
+  position,
+  mapRef,
+  disabled,
+}: {
+  position: { lat: number; lng: number } | undefined;
+  mapRef: React.RefObject<MapRef | null>;
+  disabled: boolean;
+}) {
   const centeredRef = useRef(false);
 
   useEffect(() => {
-    if (!mapRef.current || !position || centeredRef.current) return;
+    if (disabled || centeredRef.current) return;
+    if (!mapRef.current || !position) return;
     const map = mapRef.current;
     if (map.flyTo) {
-      map.flyTo({ 
-        center: [position.lng, position.lat], 
+      map.flyTo({
+        center: [position.lng, position.lat],
         zoom: 16,
         essential: true
       });
     }
     centeredRef.current = true;
-  }, [mapRef, position]);
+  }, [mapRef, position, disabled]);
 
   return null;
 }
 
 export function V2LocationPage() {
-  const { resolvedTheme } = useTheme();
   const dispatch = useAppDispatch();
   const mapRef = useRef<MapRef | null>(null);
 
@@ -66,6 +120,9 @@ export function V2LocationPage() {
   const [statusValue, setStatusValue] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
 
+  // Restored map view (lazy-init once per mount; null when nothing saved)
+  const [savedView] = useState<MapView | null>(() => loadLastMapView());
+
   // Modals registered in the global single-active manager
   const userDetailModal = useV2Modal("location-user-detail");
   const locSettingsModal = useV2Modal("location-settings");
@@ -85,6 +142,46 @@ export function V2LocationPage() {
       ? { lat: latitude, lng: longitude }
       : undefined;
 
+  // Persist the map view whenever the user moves/zooms (debounced via moveend)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const persist = () => {
+      const c = map.getCenter();
+      saveLastMapView({ lng: c.lng, lat: c.lat, zoom: map.getZoom() });
+    };
+    map.on("moveend", persist);
+    return () => {
+      map.off("moveend", persist);
+    };
+  }, []); // mapRef stable; Map children mount after Map so ref is set by effect time
+
+  // Locate-me button: fly back to the current GPS position
+  const handleLocateMe = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (position) {
+      map.flyTo({ center: [position.lng, position.lat], zoom: 16, essential: true });
+    } else {
+      // No fix yet: fit to Vietnam instead of doing nothing
+      map.fitBounds(VIETNAM_BOUNDS, { padding: 40, duration: 800 });
+    }
+  };
+
+  // Hide the locate-me button while the nearby sheet is open (same pattern
+  // as the nav toggle button — listens to v2:sheet-open/close events)
+  const [locateBtnHidden, setLocateBtnHidden] = useState(false);
+  useEffect(() => {
+    const open = () => setLocateBtnHidden(true);
+    const close = () => setLocateBtnHidden(false);
+    window.addEventListener("v2:sheet-open", open);
+    window.addEventListener("v2:sheet-close", close);
+    return () => {
+      window.removeEventListener("v2:sheet-open", open);
+      window.removeEventListener("v2:sheet-close", close);
+    };
+  }, []);
+
   // My marker info: prefer SignalR (BE) response, enrich with FE data
   // v1 pattern: const myLocation = locations.find((l) => l.userId === user?.id);
   const myLocation = locations.find((l) => l.userId === user?.id);
@@ -101,10 +198,7 @@ export function V2LocationPage() {
     currentUserProfile?.images?.[0]?.originalUrl ??
     undefined;
 
-  let mapStyle = resolvedTheme === "dark" 
-    ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-  mapStyle = "https://tiles.versatiles.org/assets/styles/colorful/style.json"
+  const mapStyle = "https://tiles.versatiles.org/assets/styles/colorful/style.json"
   // Get user initials for avatar fallback (FE enrichment)
   const userInitials = myDisplayName
     .split(" ")
@@ -192,13 +286,18 @@ export function V2LocationPage() {
           mapStyle={mapStyle}
           style={{ width: '100%', height: '100%' }}
           initialViewState={{
-            longitude: position?.lng || 105.8542,
-            latitude: position?.lat || 21.0285,
-            zoom: 15
+            // Priority: saved last view > current GPS fix > Vietnam center
+            longitude: savedView?.lng ?? position?.lng ?? VIETNAM_CENTER[0],
+            latitude: savedView?.lat ?? position?.lat ?? VIETNAM_CENTER[1],
+            zoom: savedView?.zoom ?? 15
           }}
+          maxBounds={VIETNAM_BOUNDS}
+          minZoom={6}
+          maxZoom={18}
           attributionControl={false}
         >
-          <MapAutoCenter position={position} mapRef={mapRef} />
+          {/* Skip GPS auto-center when a saved view exists — restore instead */}
+          <MapAutoCenter position={position} mapRef={mapRef} disabled={savedView !== null} />
           
           {/* Render friend locations (excluding me) using v1's Redux store.
               Moment thumbs stay visible but open the user detail (not the moment). */}
@@ -264,6 +363,16 @@ export function V2LocationPage() {
           )}
         </Map>
       </div>
+
+      {/* Locate-me button — below the nav (toggle) button on the right.
+          Hides while the nearby sheet is open (sheet covers it otherwise). */}
+      <button
+        onClick={handleLocateMe}
+        className={`locate-me-btn ${locateBtnHidden ? "locate-me-hidden" : ""}`}
+        aria-label="Về vị trí của tôi"
+      >
+        <Crosshair className="locate-me-icon" />
+      </button>
 
       {/* Floating status editor (opened from my marker's edit/add) */}
       {statusEditorOpen && position && (
@@ -383,15 +492,20 @@ export function V2LocationPage() {
           left: 50%;
           transform: translateX(-50%);
           width: 260px;
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          /* flat translucent dark glass — no gradient */
+          background: rgb(13 17 21 / 0.88);
+          backdrop-filter: blur(32px) brightness(0.5) saturate(1.3);
+          -webkit-backdrop-filter: blur(32px) brightness(0.5) saturate(1.3);
+          border: 1px solid rgb(125 222 208 / 0.2);
           border-radius: 16px;
           padding: 12px;
           display: flex;
           flex-direction: column;
           gap: 8px;
           z-index: 3000;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+          box-shadow:
+            0 12px 40px rgb(0 0 0 / 0.4),
+            inset 0 1px 0 rgb(255 255 255 / 0.06);
           animation: status-pop-in 0.2s cubic-bezier(0.32, 0.72, 0, 1);
         }
 
@@ -408,21 +522,21 @@ export function V2LocationPage() {
 
         .status-editor-input {
           width: 100%;
-          background: rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(0, 0, 0, 0.12);
+          background: rgb(255 255 255 / 0.08);
+          border: 1px solid rgb(255 255 255 / 0.18);
           border-radius: 10px;
           padding: 10px 12px;
-          color: #18181b;
+          color: rgb(245 250 249 / 0.95);
           font-size: 13px;
           outline: none;
         }
 
         .status-editor-input::placeholder {
-          color: rgba(0, 0, 0, 0.4);
+          color: rgb(255 255 255 / 0.4);
         }
 
         .status-editor-input:focus {
-          border-color: rgba(43, 176, 175, 0.6);
+          border-color: rgb(125 222 208 / 0.6);
         }
 
         .status-editor-footer {
@@ -433,7 +547,7 @@ export function V2LocationPage() {
 
         .status-editor-count {
           font-size: 10px;
-          color: rgba(0, 0, 0, 0.4);
+          color: rgb(255 255 255 / 0.5);
         }
 
         .status-editor-actions {
@@ -455,12 +569,12 @@ export function V2LocationPage() {
         }
 
         .status-editor-save {
-          background: #2BB0AF;
-          color: white;
+          background: #7DDED0;
+          color: rgb(15 20 24);
         }
 
         .status-editor-save:hover:not(:disabled) {
-          background: #1a8a89;
+          background: #6DC8C0;
         }
 
         .status-editor-save:disabled,
@@ -470,9 +584,9 @@ export function V2LocationPage() {
         }
 
         .status-editor-clear {
-          background: rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0, 0, 0, 0.12);
-          color: #52525b;
+          background: rgb(255 255 255 / 0.1);
+          border: 1px solid rgb(255 255 255 / 0.2);
+          color: rgb(245 250 249 / 0.85);
         }
 
         .status-editor-icon {
@@ -559,6 +673,57 @@ export function V2LocationPage() {
             top: 0 !important;
             left: 0 !important;
             z-index: 0 !important;
+          }
+
+          /* Locate-me button — same visual family as the toggle nav button
+             (nav: right 20px / bottom 130px, 56px) — sits right below it */
+          .locate-me-btn {
+            position: fixed;
+            right: 20px;
+            /* Fits between the collapsed nearby sheet and the nav button:
+               - nearby sheet collapsed height = 80px (top edge at 80px)
+               - nav button visual circle spans ~134..182px
+               This 44px button spans 84..128px → 4px above the sheet,
+               6px below the nav circle. */
+            right: 26px;
+            bottom: 84px;
+            z-index: 500; /* same layer as the nav button */
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 1px solid rgb(125 222 208 / 0.3);
+            border-radius: 50%;
+            background: rgb(13 17 21 / 0.85);
+            backdrop-filter: blur(24px) brightness(0.6);
+            -webkit-backdrop-filter: blur(24px) brightness(0.6);
+            color: #7DDED0;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+            transition: transform 0.2s ease, background 0.2s ease, opacity 0.3s ease, bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+          }
+
+          /* Slide down + fade while the nearby sheet is open */
+          .locate-me-btn.locate-me-hidden {
+            bottom: -60px;
+            opacity: 0;
+            pointer-events: none;
+          }
+
+          .locate-me-btn:hover {
+            background: rgb(13 17 21 / 0.95);
+            transform: translateY(-2px);
+          }
+
+          .locate-me-btn:active {
+            transform: scale(0.94);
+          }
+
+          .locate-me-icon {
+            width: 20px;
+            height: 20px;
           }
 
           /* Ensure markers are rendered above the map canvas */

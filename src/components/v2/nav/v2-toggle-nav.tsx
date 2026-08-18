@@ -96,10 +96,10 @@ export function V2ToggleNav() {
         .v2-toggle-btn {
           position: fixed;
           right: 20px;
-          bottom: 100px;
-          z-index: 2000;
-          width: 72px;
-          height: 72px;
+          bottom: 130px; /* moved up to avoid camera controls at bottom */
+          z-index: 500; /* below header (1000) and all other components */
+          width: 56px; /* made smaller */
+          height: 56px; /* made smaller */
           padding: 0;
           border: none;
           background: none;
@@ -137,13 +137,13 @@ export function V2ToggleNav() {
 
         .toggle-content {
           position: relative;
-          width: 64px;
-          height: 64px;
+          width: 48px; /* made smaller to match button size */
+          height: 48px; /* made smaller to match button size */
           display: flex;
           align-items: center;
           justify-content: center;
           background: linear-gradient(135deg, #2BB0AF 0%, #1a8a89 100%);
-          border-radius: 32px;
+          border-radius: 24px; /* adjusted for smaller size */
           border: 2px solid rgba(43, 176, 175, 0.6);
           box-shadow: 0 8px 32px rgba(43, 176, 175, 0.4),
                       0 0 0 4px rgba(43, 176, 175, 0.1),
@@ -168,6 +168,7 @@ export function V2ToggleNav() {
           height: 38px;
           right: 20px;
           bottom: calc(var(--vm-sheet-h, 150px) + 12px + env(safe-area-inset-bottom, 0px));
+          z-index: 100; /* below fullscreen media (9998) but above base UI */
         }
 
         .v2-toggle-btn.scroll-top-mode .toggle-content {
@@ -209,8 +210,8 @@ export function V2ToggleNav() {
         }
 
         .toggle-icon {
-          width: 32px;
-          height: 32px;
+          width: 24px; /* made smaller for smaller button */
+          height: 24px; /* made smaller for smaller button */
           color: white;
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }

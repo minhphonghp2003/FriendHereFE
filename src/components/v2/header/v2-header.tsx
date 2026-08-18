@@ -99,8 +99,10 @@ export function V2Header() {
   return (
     <>
       <header
-        className={`v2-header ${momentsBrowsing || composing || isChatPage ? "v2-header-hidden" : ""}`}
+        className={`v2-header lg-root lg-high ${momentsBrowsing || composing || isChatPage ? "v2-header-hidden" : ""}`}
       >
+        <span className="lg-specular" aria-hidden />
+        <span className="lg-shimmer" aria-hidden />
         <div className="header-left">
           <button
             className={`user-avatar-section ${activeDialog === "profile" ? "header-btn-active" : ""}`}
@@ -171,15 +173,19 @@ export function V2Header() {
           align-items: center;
           padding: 8px 16px;
           padding-top: calc(8px + env(safe-area-inset-top, 0px));
-          background: transparent;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-bottom: none;
-          box-shadow: none;
+          /* liquid glass look comes from lg-root/lg-high classes */
+          border-radius: 0 0 20px 20px;
           z-index: 1000;
           animation: header-float-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           pointer-events: auto;
           transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
+        }
+
+        /* Header children must layer above the lg-specular/lg-shimmer effects */
+        .v2-header > .header-left,
+        .v2-header > .header-right {
+          position: relative;
+          z-index: 2;
         }
 
         /* Hidden while browsing moments (reels) — slides up out of the way */

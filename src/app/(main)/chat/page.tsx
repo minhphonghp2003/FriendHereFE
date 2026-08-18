@@ -467,8 +467,12 @@ export default function V2ChatPage() {
           width: 100%;
           display: flex;
           flex-direction: column;
-          /* Plain theme background (light/dark) — neon stays in the chat box */
-          background: var(--vm-bg, #f4f4f5);
+          /* Gradient-primary theme matching chat box and moments pages
+             (lighter base + stronger teal glow) */
+          background:
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+            #13181d;
           color: var(--vm-text, #18181b);
         }
 

@@ -969,10 +969,25 @@ export default function V2ChatDetailPage() {
 
   if (loading) {
     return (
-      <div className="vcd2-page">
-        <div className="vcd2-loading">
-          <LoadingVideo size="md" />
-        </div>
+      // NOTE: the styled-jsx <style> block lives in the main return below,
+      // which never renders during loading — so this MUST use inline styles.
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: `
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+            #13181d
+          `,
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          boxSizing: "border-box",
+        }}
+      >
+        <LoadingVideo size="md" />
       </div>
     );
   }
@@ -1522,20 +1537,22 @@ export default function V2ChatDetailPage() {
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          /* Neon backdrop like the moments page */
+          /* Neon backdrop like the moments page (lighter base + stronger glow) */
           background:
-            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.35), transparent 50%),
-            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.28), transparent 50%),
-            var(--vm-bg, #f4f4f5);
+            radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+            radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+            #13181d;
           color: var(--vm-text, #18181b);
         }
 
         .vcd2-loading {
-          position: absolute;
+          position: fixed;
           inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+          box-sizing: border-box;
         }
 
         .vcd2-header {

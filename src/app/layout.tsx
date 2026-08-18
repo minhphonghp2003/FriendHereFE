@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { KeyboardViewport } from "@/components/keyboard-viewport";
 import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { PushProvider } from "@/providers/push-provider";
@@ -48,11 +49,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  interactiveWidget: "resizes-content",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2BB0AF" },
-    { media: "(prefers-color-scheme: dark)", color: "#7DDED0" },
-  ],
+  interactiveWidget: "resizes-visual",
+  themeColor: "#7DDED0",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -64,13 +62,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          themes={["light", "dark"]}
-        >
+        <KeyboardViewport />
+        <ThemeProvider>
           <ReduxProvider>
             <AuthProvider>
               <PushProvider>

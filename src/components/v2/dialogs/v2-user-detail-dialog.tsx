@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LoadingVideo } from "@/components/common/loading-video";
 import {
@@ -122,8 +123,19 @@ export function V2UserDetailDialog({
 
   const handleSheetTouchMove = (e: React.TouchEvent) => {
     if (dragStartYRef.current === null) return;
-    const delta = e.touches[0].clientY - dragStartYRef.current;
-    // Only drag downward (positive); ignore upward
+    
+    const currentY = e.touches[0].clientY;
+    const delta = currentY - dragStartYRef.current;
+    
+    // Only allow dragging downward (positive delta)
+    // And only when we're near the top of the content (to prevent interfering with scrolling)
+    const dialogContent = (e.target as HTMLElement).closest('.dialog-content');
+    if (dialogContent) {
+      const scrollTop = (dialogContent as HTMLElement).scrollTop;
+      // Only enable drag if we're at the top of the content
+      if (scrollTop > 10) return;
+    }
+    
     setSheetDragY(Math.max(0, delta));
   };
 
@@ -192,6 +204,62 @@ export function V2UserDetailDialog({
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // ---- Two-step avatar swap (my profile) ----
+  // Step 1: immediately after upload+setAvatar, show the locally-picked image
+  //         (object URL) as a TEMP avatar — the BE is still processing it.
+  // Step 2: when the BE broadcasts ReceiveFileMarkedSuccess for that file,
+  //         swap in the processed thumb/original URLs and clear the temp.
+  const [tempAvatarUrl, setTempAvatarUrl] = useState<string | null>(null);
+  const pendingAvatarFileKeysRef = useRef<Set<string>>(new Set());
+
+  // Revoke the object URL when the temp avatar is replaced/cleared
+  const prevTempRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevTempRef.current && prevTempRef.current !== tempAvatarUrl) {
+      URL.revokeObjectURL(prevTempRef.current);
+    }
+    prevTempRef.current = tempAvatarUrl;
+  }, [tempAvatarUrl]);
+
+  // And on unmount
+  useEffect(() => {
+    return () => {
+      if (prevTempRef.current) URL.revokeObjectURL(prevTempRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMe) return;
+    const unsub = appHub.onReceiveFileMarkedSuccess((data) => {
+      // Match on fileId or originalKey (BE may send either)
+      const matches =
+        (data.fileId && pendingAvatarFileKeysRef.current.has(data.fileId)) ||
+        (data.originalKey && pendingAvatarFileKeysRef.current.has(data.originalKey)) ||
+        (data.key && pendingAvatarFileKeysRef.current.has(data.key));
+      if (!matches) return;
+
+      pendingAvatarFileKeysRef.current.clear();
+      setTempAvatarUrl(null);
+
+      // Swap in the processed image URLs
+      setUserDetail((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          images: [
+            {
+              thumbUrl: data.thumbUrl,
+              originalUrl: data.originalUrl,
+            },
+          ],
+        };
+      });
+    });
+    return () => {
+      unsub();
+    };
+  }, [isMe]);
+
   useEffect(() => {
     if (isMe && userDetail) {
       setName(userDetail.name);
@@ -224,6 +292,8 @@ export function V2UserDetailDialog({
 
   const handleAvatarUpload = async (file: File) => {
     if (!userDetail) return;
+    // Local object URL for the immediate temp preview (step 1)
+    const localPreviewUrl = URL.createObjectURL(file);
     try {
       setUploadingAvatar(true);
       const presigned = await getPresignedUploadUrls({
@@ -235,9 +305,17 @@ export function V2UserDetailDialog({
       dispatch(
         setCredentials({ user: { id: updated.id, name: updated.name, email: updated.email } }),
       );
-      setUserDetail(updated);
+
+      // Step 1: BE accepted the new avatar but hasn't processed it yet —
+      // show the locally-picked image as a temp avatar
+      pendingAvatarFileKeysRef.current.add(presigned[0].fileId);
+      pendingAvatarFileKeysRef.current.add(presigned[0].key);
+      setTempAvatarUrl(localPreviewUrl);
+      // updated.images may be empty/stale until processing completes
+      setUserDetail({ ...updated, images: updated.images ?? null });
       toast.success("Đã cập nhật ảnh đại diện");
     } catch {
+      URL.revokeObjectURL(localPreviewUrl);
       toast.error("Không thể cập nhật ảnh đại diện");
     } finally {
       setUploadingAvatar(false);
@@ -364,8 +442,12 @@ export function V2UserDetailDialog({
   };
 
   const name_display = userDetail?.name ?? (isMe ? reduxUser?.name : null) ?? "Unknown";
+  // Temp avatar (just-uploaded, BE still processing) wins over server images
   const avatarUrl =
-    userDetail?.images?.[0]?.thumbUrl || userDetail?.images?.[0]?.originalUrl || undefined;
+    tempAvatarUrl ??
+    userDetail?.images?.[0]?.thumbUrl ??
+    userDetail?.images?.[0]?.originalUrl ??
+    undefined;
   const email = userDetail?.email ?? (isMe ? reduxUser?.email : null);
   const initials = name_display?.charAt(0).toUpperCase() || "?";
 
@@ -472,36 +554,55 @@ export function V2UserDetailDialog({
     </div>
   );
 
+  if (typeof document === "undefined") return null;
+
   return (
-    <div className={`vud-sheet-root ${userId !== null ? "open" : ""}`}>
-      {/* Backdrop: tap to close */}
-      {userId !== null && (
-        <div className="vud-backdrop" onClick={onClose} aria-hidden />
-      )}
+    createPortal(
+      <div className={`vud-sheet-root ${userId !== null ? "open" : ""}`}>
+        {/* Backdrop: tap to close */}
+        {userId !== null && (
+          <div className="vud-backdrop" onClick={onClose} aria-hidden />
+        )}
 
       {/* Bottom sheet — fullscreen height, above the nav button.
-          Swipe down on the grabber area to close. */}
+           Swipe down on the grabber area to close. */}
       <div
-        className="vud-sheet"
+        className="vud-sheet lg-root lg-high"
         role="dialog"
         aria-modal={userId !== null}
         style={{ transform: userId !== null ? `translateY(${sheetDragY}px)` : undefined }}
+        onTouchStart={handleSheetTouchStart}
+        onTouchMove={handleSheetTouchMove}
+        onTouchEnd={handleSheetTouchEnd}
       >
+        {/* Liquid glass effect layers (decorative, behind content) */}
+        <span className="lg-specular" aria-hidden />
+        <span className="lg-shimmer" aria-hidden />
         {userId !== null && (
           <>
             <div
-              className="vud-grabber-zone"
-              onTouchStart={handleSheetTouchStart}
-              onTouchMove={handleSheetTouchMove}
-              onTouchEnd={handleSheetTouchEnd}
-              onClick={() => {
-                if (sheetDragY > 0) setSheetDragY(0);
-              }}
+               className="vud-grabber-zone"
+               onClick={() => {
+                 if (sheetDragY > 0) setSheetDragY(0);
+               }}
             >
               <div className="vud-grabber" />
             </div>
 
-            <div className="dialog-content">
+            <div className="dialog-content"
+                 onTouchStart={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+                 onTouchMove={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+                 onTouchEnd={(e) => {
+                   // Prevent events from reaching the map
+                   e.stopPropagation();
+                 }}
+            >
           {loadingUser ? (
             <div className="vud-loading">
               <LoadingVideo size="sm" />
@@ -553,35 +654,49 @@ export function V2UserDetailDialog({
                 <div className="profile-info">
                   {isMe && isEditing ? (
                     <div className="profile-edit-section">
-                      <Input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="profile-name-input"
-                        placeholder="Tên của bạn"
-                        maxLength={50}
-                      />
-                      <div className="profile-edit-row">
+                      <div className="profile-edit-field">
+                        <label className="profile-edit-label">Tên hiển thị</label>
                         <Input
-                          type="number"
-                          value={age}
-                          onChange={(e) => setAge(e.target.value)}
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           className="profile-name-input"
-                          placeholder="Tuổi"
-                          min={1}
-                          max={150}
+                          placeholder="Tên của bạn"
+                          maxLength={50}
+                          autoFocus
                         />
-                        <select
-                          value={genderId}
-                          onChange={(e) => setGenderId(e.target.value)}
-                          className="profile-gender-select"
-                          aria-label="Giới tính"
-                        >
-                          <option value="1">Nam</option>
-                          <option value="2">Nữ</option>
-                          <option value="3">Gay</option>
-                          <option value="4">Les</option>
-                        </select>
+                        <span className="profile-edit-hint">{name.length}/50 ký tự</span>
                       </div>
+                      
+                      <div className="profile-edit-row">
+                        <div className="profile-edit-field profile-edit-field-half">
+                          <label className="profile-edit-label">Tuổi</label>
+                          <Input
+                            type="number"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            className="profile-name-input"
+                            placeholder="Tuổi"
+                            min={1}
+                            max={150}
+                          />
+                        </div>
+                        
+                        <div className="profile-edit-field profile-edit-field-half">
+                          <label className="profile-edit-label">Giới tính</label>
+                          <select
+                            value={genderId}
+                            onChange={(e) => setGenderId(e.target.value)}
+                            className="profile-gender-select"
+                            aria-label="Giới tính"
+                          >
+                            <option value="1">Nam</option>
+                            <option value="2">Nữ</option>
+                            <option value="3">Gay</option>
+                            <option value="4">Les</option>
+                          </select>
+                        </div>
+                      </div>
+                      
                       <div className="profile-edit-actions">
                         <Button
                           onClick={() => {
@@ -593,16 +708,18 @@ export function V2UserDetailDialog({
                             );
                           }}
                           variant="outline"
-                          size="sm"
+                          size="default"
+                          className="profile-cancel-btn"
                         >
-                          Cancel
+                          Hủy
                         </Button>
                         <Button
                           onClick={handleSaveProfile}
                           disabled={savingProfile || !name.trim()}
-                          size="sm"
+                          size="default"
+                          className="profile-save-btn"
                         >
-                          {savingProfile ? "Đang lưu..." : "Lưu"}
+                          {savingProfile ? "Đang lưu..." : "Lưu thay đổi"}
                         </Button>
                       </div>
                     </div>
@@ -893,7 +1010,7 @@ export function V2UserDetailDialog({
           .vud-sheet-root {
             position: fixed;
             inset: 0;
-            z-index: 3000; /* above the nav button (2000) */
+            z-index: 5000; /* above ALL components including header (1000), friends sheet (4500) */
             pointer-events: none;
           }
 
@@ -918,18 +1035,25 @@ export function V2UserDetailDialog({
             left: 0;
             right: 0;
             bottom: 0;
-            top: env(safe-area-inset-top, 0px); /* fullscreen */
-            background: rgba(15, 15, 15, 0.97);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-radius: 24px 24px 0 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            top: 0; /* true fullscreen covering everything including header */
+            /* flat translucent dark glass — no gradient */
+            background: rgb(13 17 21 / 0.9);
+            backdrop-filter: blur(48px) brightness(0.45) saturate(1.3);
+            -webkit-backdrop-filter: blur(48px) brightness(0.45) saturate(1.3);
+            border-top: 1px solid rgb(125 222 208 / 0.2);
             display: flex;
             flex-direction: column;
             transform: translateY(100%);
             transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
             overflow: hidden;
             touch-action: none; /* allow custom drag handling */
+          }
+
+          /* Sheet children must layer above the lg-specular/lg-shimmer effects */
+          .vud-sheet > .vud-grabber-zone,
+          .vud-sheet > .dialog-content {
+            position: relative;
+            z-index: 2;
           }
 
           .vud-sheet-root.open .vud-sheet {
@@ -943,7 +1067,7 @@ export function V2UserDetailDialog({
 
           .vud-grabber-zone {
             flex-shrink: 0;
-            padding: 8px 0 6px;
+            padding: calc(8px + env(safe-area-inset-top, 0px)) 0 6px;
             display: flex;
             justify-content: center;
             touch-action: none;
@@ -962,12 +1086,14 @@ export function V2UserDetailDialog({
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
             display: flex;
             flex-direction: column;
             gap: 18px;
+            touch-action: pan-y; /* allow vertical scrolling, prevent map interaction */
           }
 
           .dialog-content::-webkit-scrollbar {
@@ -1279,13 +1405,45 @@ export function V2UserDetailDialog({
           .profile-edit-section {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 16px;
             width: 100%;
+            padding: 16px;
+            background: rgba(30, 30, 30, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 12px;
+          }
+
+          .profile-edit-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+          }
+
+          .profile-edit-field-half {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .profile-edit-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .profile-edit-hint {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            text-align: right;
+            margin-top: 2px;
           }
 
           .profile-edit-row {
             display: flex;
-            gap: 8px;
+            gap: 12px;
             width: 100%;
           }
 
@@ -1295,15 +1453,62 @@ export function V2UserDetailDialog({
           }
 
           .profile-gender-select {
-            width: 110px;
-            flex-shrink: 0;
+            width: 100%;
             background: rgba(20, 20, 20, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 10px 12px;
             color: white;
-            font-size: 13px;
+            font-size: 14px;
             outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+          }
+
+          .profile-gender-select:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+          }
+
+          .profile-gender-select:focus {
+            border-color: #7DDED0;
+            background: rgba(20, 20, 20, 0.98);
+          }
+
+          .profile-edit-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+          }
+
+          .profile-cancel-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: rgba(255, 255, 255, 0.9);
+          }
+
+          .profile-cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+          }
+
+          .profile-save-btn {
+            flex: 1;
+            background: #7DDED0;
+            border: 1px solid #7DDED0;
+            color: #0.145 0 0;
+            font-weight: 500;
+          }
+
+          .profile-save-btn:hover:not(:disabled) {
+            background: #6DC8C0;
+            border-color: #6DC8C0;
+          }
+
+          .profile-save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
           }
 
           .profile-meta-dot {
@@ -1569,7 +1774,9 @@ export function V2UserDetailDialog({
             </>
           )}
       </div>
-    </div>
+    </div>,
+    document.body
+  )
   );
 }
 

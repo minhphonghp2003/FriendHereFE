@@ -3,7 +3,7 @@
 import Map from "react-map-gl/maplibre";
 import { useAuth } from "@/providers/auth-provider";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useTheme } from "next-themes";
+
 import { Map as MapIcon, List, RefreshCw, Loader2 } from "lucide-react";
 import { CustomMarker } from "@/components/home/custom-marker";
 import { MarkerDetail } from "@/components/home/marker-detail";
@@ -22,11 +22,13 @@ import { appHub } from "@/lib/signalr/app-hub";
 import { locationHub } from "@/lib/signalr";
 import { syncFcmTokenAfterAuth } from "@/lib/fcm";
 
+// Vietnam geographic boundaries [sw_lng, sw_lat, ne_lng, ne_lat]
+const VIETNAM_BOUNDS: [number, number, number, number] = [102.0, 8.0, 117.0, 24.0];
+
 type ViewMode = "map" | "list";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { resolvedTheme } = useTheme();
   const locations = useAppSelector((s) => s.location.locations);
   const locationDenied = useAppSelector((s) => s.location.locationDenied);
   const movingUserIds = useAppSelector((s) => s.location.movingUserIds);
@@ -43,9 +45,7 @@ export default function HomePage() {
   const [reloading, setReloading] = useState(false);
   const dispatch = useAppDispatch();
 
-  const mapStyle = resolvedTheme === "dark" 
-    ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-    : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+  const mapStyle = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
   const {
     data: userDetail,
     isLoading: loadingUserDetail,
@@ -214,6 +214,9 @@ export default function HomePage() {
               latitude: position?.lat || 21.0285,
               zoom: 15
             }}
+            maxBounds={VIETNAM_BOUNDS}
+            minZoom={6}
+            maxZoom={18}
             style={{ width: '100%', height: '100%' }}
             mapStyle={mapStyle}
             attributionControl={false}
