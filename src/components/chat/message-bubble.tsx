@@ -157,9 +157,9 @@ const MessageTicks = ({ status, isMe }: { status?: number; isMe: boolean }) => {
   const read = status === 1;
   return (
     <span className="ml-1 inline-flex items-center align-middle">
-      {read && <Check className="h-3 w-3 text-blue-300" strokeWidth={2.5} />}
+      {read && <Check className="h-3 w-3 text-green-400" strokeWidth={2.5} />}
       <Check
-        className={`h-3 w-3 ${read ? "-ml-1 text-blue-300" : "text-white/70"}`}
+        className={`h-3 w-3 ${read ? "-ml-1 text-green-400" : "text-white/40"}`}
         strokeWidth={2.5}
       />
     </span>
