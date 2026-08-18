@@ -168,6 +168,20 @@ export function V2LocationPage() {
     }
   };
 
+  // Hide the locate-me button while the nearby sheet is open (same pattern
+  // as the nav toggle button — listens to v2:sheet-open/close events)
+  const [locateBtnHidden, setLocateBtnHidden] = useState(false);
+  useEffect(() => {
+    const open = () => setLocateBtnHidden(true);
+    const close = () => setLocateBtnHidden(false);
+    window.addEventListener("v2:sheet-open", open);
+    window.addEventListener("v2:sheet-close", close);
+    return () => {
+      window.removeEventListener("v2:sheet-open", open);
+      window.removeEventListener("v2:sheet-close", close);
+    };
+  }, []);
+
   // My marker info: prefer SignalR (BE) response, enrich with FE data
   // v1 pattern: const myLocation = locations.find((l) => l.userId === user?.id);
   const myLocation = locations.find((l) => l.userId === user?.id);
@@ -350,10 +364,11 @@ export function V2LocationPage() {
         </Map>
       </div>
 
-      {/* Locate-me button — below the nav (toggle) button on the right */}
+      {/* Locate-me button — below the nav (toggle) button on the right.
+          Hides while the nearby sheet is open (sheet covers it otherwise). */}
       <button
         onClick={handleLocateMe}
-        className="locate-me-btn"
+        className={`locate-me-btn ${locateBtnHidden ? "locate-me-hidden" : ""}`}
         aria-label="Về vị trí của tôi"
       >
         <Crosshair className="locate-me-icon" />
@@ -665,7 +680,13 @@ export function V2LocationPage() {
           .locate-me-btn {
             position: fixed;
             right: 20px;
-            bottom: 66px;
+            /* Fits between the collapsed nearby sheet and the nav button:
+               - nearby sheet collapsed height = 80px (top edge at 80px)
+               - nav button visual circle spans ~134..182px
+               This 44px button spans 84..128px → 4px above the sheet,
+               6px below the nav circle. */
+            right: 26px;
+            bottom: 84px;
             z-index: 500; /* same layer as the nav button */
             width: 44px;
             height: 44px;
@@ -681,7 +702,14 @@ export function V2LocationPage() {
             color: #7DDED0;
             cursor: pointer;
             box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
-            transition: transform 0.2s ease, background 0.2s ease;
+            transition: transform 0.2s ease, background 0.2s ease, opacity 0.3s ease, bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+          }
+
+          /* Slide down + fade while the nearby sheet is open */
+          .locate-me-btn.locate-me-hidden {
+            bottom: -60px;
+            opacity: 0;
+            pointer-events: none;
           }
 
           .locate-me-btn:hover {

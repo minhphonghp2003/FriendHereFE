@@ -56,8 +56,13 @@ type CaptureMode = "camera" | "preview";
  */
 function CreateMomentCard({
   onCreated,
+  isActive,
 }: {
   onCreated: (momentId: number, fileKeys: string[]) => void;
+  /** Only the feed's first item (index 0) is active — camera runs ONLY while
+   *  this card is on screen. Scrolling to browse moments stops the camera
+   *  (battery/heat). */
+  isActive: boolean;
 }) {
   const { user } = useAuth();
   const { mutate: createMoment, isLoading: isUploading } = useCreateMoment();
@@ -148,9 +153,10 @@ function CreateMomentCard({
     };
   }, [mode]);
 
-  // Start/stop the camera when the card enters capture mode
+  // Start/stop the camera when the card enters capture mode AND is on screen.
+  // isActive === false (browsing other moments) => camera fully stopped.
   useEffect(() => {
-    if (mode !== "camera") return;
+    if (mode !== "camera" || !isActive) return;
     let cancelled = false;
     let stream: MediaStream | null = null;
 
@@ -181,7 +187,7 @@ function CreateMomentCard({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [mode, facing]);
+  }, [mode, facing, isActive]);
 
   const addMediaFiles = (files: File[]) => {
     if (files.length === 0) return;
@@ -350,86 +356,94 @@ function CreateMomentCard({
         </>
       ) : (
         <>
-          {/* Media stays full-screen on top; the options panel is a compact
-              bottom sheet so the captured image/video is always visible above. */}
-          {isVideo ? (
-            <div className="cm-preview-wrap">
-              <video
-                ref={previewVideoRef}
-                src={previewUrls[previewIndex] ?? undefined}
-                className="cm-video"
-                autoPlay
-                loop
-                muted
-                playsInline
-                onPlay={() => setIsPreviewPlaying(true)}
-                onPause={() => setIsPreviewPlaying(false)}
-              />
-              {/* Center play/pause toggle */}
-              <button
-                onClick={togglePreviewPlay}
-                className="cm-preview-toggle"
-                aria-label={isPreviewPlaying ? "Pause" : "Play"}
-              >
-                {isPreviewPlaying ? (
-                  <Pause className="cm-preview-toggle-icon" />
-                ) : (
-                  <Play className="cm-preview-toggle-icon" />
-                )}
-              </button>
-            </div>
-          ) : (
-            /* Image preview: same card ratio as feed moments (9:16), rounded */
-            <div className="cm-card-zone">
-              <div className="cm-preview-wrap">
-                <img
-                  src={previewUrls[previewIndex] ?? undefined}
-                  alt="Khoảnh khắc mới"
-                  className="cm-video"
-                />
-                {/* Multi-image controls: prev/next + counter (no dots) */}
-                {previewUrls.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
-                      disabled={previewIndex === 0}
-                      className="cm-nav-btn cm-nav-left"
-                      aria-label="Ảnh trước"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={() =>
-                        setPreviewIndex((i) => Math.min(previewUrls.length - 1, i + 1))
-                      }
-                      disabled={previewIndex === previewUrls.length - 1}
-                      className="cm-nav-btn cm-nav-right"
-                      aria-label="Ảnh tiếp theo"
-                    >
-                      ›
-                    </button>
-                    <span className="cm-preview-count">
-                      {previewIndex + 1}/{previewUrls.length}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Close — card-level element with the HIGHEST z-index so the media
+              preview can never paint over it */}
+          <button onClick={reset} className="cm-close-x" aria-label="Đóng">
+            <X className="cm-close-x-icon" />
+          </button>
 
-          {/* Add more images (images only) — the only per-image action; closing
-              the whole compose is the X at the top-right */}
-          {!isVideo && (
-            <div className="cm-media-actions">
-              <button
-                onClick={() => galleryInputRef.current?.click()}
-                className="cm-media-action-btn"
-                aria-label="Thêm ảnh"
-              >
-                <Plus className="cm-media-action-icon" />
-              </button>
-            </div>
-          )}
+          {/* Media area — flex child ABOVE the options panel so the preview
+              is never overlapped by the info box */}
+          <div className="cm-media-area">
+            {isVideo ? (
+              <div className="cm-preview-wrap">
+                <video
+                  ref={previewVideoRef}
+                  src={previewUrls[previewIndex] ?? undefined}
+                  className="cm-video"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  onPlay={() => setIsPreviewPlaying(true)}
+                  onPause={() => setIsPreviewPlaying(false)}
+                />
+                {/* Center play/pause toggle */}
+                <button
+                  onClick={togglePreviewPlay}
+                  className="cm-preview-toggle"
+                  aria-label={isPreviewPlaying ? "Pause" : "Play"}
+                >
+                  {isPreviewPlaying ? (
+                    <Pause className="cm-preview-toggle-icon" />
+                  ) : (
+                    <Play className="cm-preview-toggle-icon" />
+                  )}
+                </button>
+              </div>
+            ) : (
+              /* Image preview: same card ratio as feed moments (9:16), rounded */
+              <div className="cm-card-zone">
+                <div className="cm-preview-wrap">
+                  <img
+                    src={previewUrls[previewIndex] ?? undefined}
+                    alt="Khoảnh khắc mới"
+                    className="cm-video"
+                  />
+                  {/* Multi-image controls: prev/next + counter (no dots) */}
+                  {previewUrls.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                        disabled={previewIndex === 0}
+                        className="cm-nav-btn cm-nav-left"
+                        aria-label="Ảnh trước"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={() =>
+                          setPreviewIndex((i) => Math.min(previewUrls.length - 1, i + 1))
+                        }
+                        disabled={previewIndex === previewUrls.length - 1}
+                        className="cm-nav-btn cm-nav-right"
+                        aria-label="Ảnh tiếp theo"
+                      >
+                        ›
+                      </button>
+                      <span className="cm-preview-count">
+                        {previewIndex + 1}/{previewUrls.length}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Add more images (images only) — the only per-image action; closing
+                the whole compose is the X at the top-right */}
+            {!isVideo && (
+              <div className="cm-media-actions">
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="cm-media-action-btn"
+                  aria-label="Thêm ảnh"
+                >
+                  <Plus className="cm-media-action-icon" />
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Gallery input stays mounted in preview mode so the + button works */}
           <input
@@ -441,15 +455,9 @@ function CreateMomentCard({
             className="cm-hidden-input"
           />
 
-          {/* Post details overlay */}
+          {/* Post details panel — flex sibling BELOW the media area. */}
           {showDetails && (
             <div className="cm-details">
-              {/* Close — pinned top-right of the screen, above the options
-                  panel; never overlaps its content */}
-              <button onClick={reset} className="cm-close-x" aria-label="Đóng">
-                <X className="cm-close-x-icon" />
-              </button>
-
               <div className="cm-details-bottom">
                 <input
                   value={caption}
@@ -571,8 +579,23 @@ function CreateMomentCard({
           background: #000;
           overflow: hidden;
           display: flex;
-          align-items: center;
-          justify-content: center;
+          flex-direction: column; /* media area stacks above details panel */
+        }
+
+        /* Preview (post-capture) mode: media fills space above the details panel */
+        .cm-media-area {
+          position: relative;
+          flex: 1 1 auto;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+          padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        }
+
+        /* Camera mode keeps the old centered layout: video + controls fill all */
+        .cm-card > video.cm-video {
+          position: absolute;
+          inset: 0;
         }
 
         .cm-video {
@@ -674,12 +697,11 @@ function CreateMomentCard({
         }
 
         .cm-details {
-          position: absolute;
-          inset: 0;
+          position: relative;
+          flex-shrink: 0; /* sits below the media area, never overlaps it */
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
-          pointer-events: none;
         }
 
         /* Interactive elements re-enable pointer events — the media preview
@@ -695,19 +717,16 @@ function CreateMomentCard({
           height: 100%;
         }
 
-        /* Image mode: the preview sits in a 9:16 rounded card (same ratio as
-           feed moment items) with margins above the options panel */
+        /* Image mode: the preview sits in a square rounded card (same ratio
+           as feed moment items) that fills the media area above the panel */
         .cm-card-zone {
-          position: absolute;
-          top: calc(env(safe-area-inset-top, 0px) + 8px);
-          left: 0;
-          right: 0;
-          bottom: 0;
+          position: relative;
+          flex: 1 1 auto;
+          min-height: 0;
           display: flex;
-          align-items: stretch;
+          align-items: center;
           justify-content: center;
           padding: 0 12px 14px;
-          pointer-events: none;
         }
 
         .cm-card-zone .cm-preview-wrap {
@@ -849,7 +868,7 @@ function CreateMomentCard({
           cursor: pointer;
           padding: 0;
           transition: all 0.2s;
-          z-index: 8;
+          z-index: 30; /* above media area (9) and details panel */
         }
 
         .cm-close-x:hover {
@@ -1200,9 +1219,9 @@ export function V2MomentsFeed() {
 
   return (
     <div className="v2-reels-container" ref={containerRef} onScroll={handleScroll}>
-      {/* Item 1: create moment camera */}
+      {/* Item 1: create moment camera (camera only runs while visible) */}
       <div className="v2-reel-item">
-        <CreateMomentCard onCreated={handleMomentCreated} />
+        <CreateMomentCard onCreated={handleMomentCreated} isActive={currentIndex === 0} />
       </div>
 
       {/* Items 2..n: moments */}
