@@ -18,7 +18,7 @@ const PRECACHE_ROUTES = [
 ];
 
 // Static assets to pre-cache (branding + loading video).
-const PRECACHE_ASSETS = ["/loading.mp4", "/loading.webm"];
+const PRECACHE_ASSETS = ["/loading.webm"];
 
 self.addEventListener("install", (event) => {
   const precache = caches

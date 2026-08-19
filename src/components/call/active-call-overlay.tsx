@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Wifi, WifiOff } from "lucide-react";
 import type { CallPeer } from "@/types/call";
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   remoteStream: MediaStream | null;
   micMuted: boolean;
   cameraOff: boolean;
+  callDuration: number;
+  connectionQuality: "excellent" | "good" | "poor" | "unknown";
   onToggleMic: () => void;
   onToggleCamera: () => void;
   onEnd: () => void;
@@ -24,19 +26,32 @@ const formatDuration = (total: number): string => {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
+const getConnectionQualityIcon = (quality: "excellent" | "good" | "poor" | "unknown") => {
+  switch (quality) {
+    case "excellent":
+    case "good":
+      return <Wifi className="h-4 w-4 text-green-500" />;
+    case "poor":
+      return <WifiOff className="h-4 w-4 text-yellow-500" />;
+    default:
+      return <WifiOff className="h-4 w-4 text-gray-500" />;
+  }
+};
+
 export const ActiveCallOverlay = ({
   peer,
   localStream,
   remoteStream,
   micMuted,
   cameraOff,
+  callDuration,
+  connectionQuality,
   onToggleMic,
   onToggleCamera,
   onEnd,
 }: Props) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
     if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
@@ -46,11 +61,6 @@ export const ActiveCallOverlay = ({
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
   }, [remoteStream]);
 
-  useEffect(() => {
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   return (
     <div className="fixed inset-0 z-[75] flex flex-col bg-black">
       <video
@@ -59,12 +69,15 @@ export const ActiveCallOverlay = ({
         playsInline
         className="h-full w-full flex-1 object-cover"
       />
-      <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4">
-        <div className="flex items-center gap-2">
-          <p className="text-lg font-semibold text-white">{peer.name}</p>
-          <span className="text-xs text-white/70">{formatDuration(seconds)}</span>
-        </div>
-      </div>
+       <div className="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4">
+         <div className="flex items-center gap-2">
+           <p className="text-lg font-semibold text-white">{peer.name}</p>
+           <span className="text-xs text-white/70">{formatDuration(callDuration)}</span>
+         </div>
+         <div className="flex items-center gap-1" title={`Connection quality: ${connectionQuality}`}>
+           {getConnectionQualityIcon(connectionQuality)}
+         </div>
+       </div>
       <div className="absolute top-16 right-4 z-10 h-40 w-28 overflow-hidden rounded-xl border border-white/30 shadow-lg">
         <video
           ref={localVideoRef}

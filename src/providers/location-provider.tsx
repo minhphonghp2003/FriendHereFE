@@ -38,7 +38,7 @@ import type { MomentDto } from "@/types/moment";
 import { toMomentVisibility, toMomentStatus } from "@/types/moment";
 
 const UPDATE_BATCH_INTERVAL_MS = 10000;
-const MOVE_THRESHOLD_M = 10;
+const MOVE_THRESHOLD_M = 50;
 
 const normalizeMoments = (moments: MomentDto[] | null): MomentDto[] | null =>
   moments?.map((m) => ({
