@@ -410,5 +410,43 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id, dispatch]);
 
+  // Handle token refresh - rejoin location hub with new token
+  useEffect(() => {
+    const handleTokenRefresh = () => {
+      console.log("[LocationProvider] Token refreshed, rejoining location hub...");
+      canJoinRef.current = false; // Reset to allow rejoin
+      
+      const conn = locationHub.getConnection();
+      if (conn && conn.state === "Connected" && pendingPosition.current) {
+        const pos = pendingPosition.current;
+        console.log("[LocationProvider] Rejoining with position:", pos);
+        
+        locationHub
+          .join({
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            accuracy: pos.accuracy,
+            speed: pos.speed,
+          })
+          .then(() => {
+            console.log("[LocationProvider] Successfully rejoined after token refresh");
+            canJoinRef.current = true;
+            
+            // Send pending battery update if any
+            if (batteryLevelRef.current !== null) {
+              pendingBatteryRef.current = batteryLevelRef.current;
+            }
+          })
+          .catch((err) => {
+            console.error("[LocationProvider] Rejoin after token refresh failed:", err);
+            canJoinRef.current = false;
+          });
+      }
+    };
+
+    window.addEventListener("signalr:token-refreshed", handleTokenRefresh);
+    return () => window.removeEventListener("signalr:token-refreshed", handleTokenRefresh);
+  }, [dispatch]);
+
   return children;
 }

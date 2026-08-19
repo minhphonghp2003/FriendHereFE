@@ -42,6 +42,8 @@ class LocationHub {
     if (myEpoch !== this.epoch) return;
 
     const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+    console.log("[LocationHub] Token check:", token ? "present" : "missing");
+    
     if (!token) {
       console.warn("[LocationHub] No token available, skipping connection");
       this.connection = null; // Ensure connection is null
@@ -50,7 +52,7 @@ class LocationHub {
 
     // Create new connection
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${env.NEXT_PUBLIC_API_URL}/hubs/location`, {
+      .withUrl(`${env.NEXT_PUBLIC_SIGNALR_URL}`, {
         accessTokenFactory: () => token ?? "",
         withCredentials: false,
       })
@@ -66,11 +68,14 @@ class LocationHub {
       .build();
 
     // Setup event handlers
+    console.log("[LocationHub] Setting up event handlers...");
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {
+      console.log("[LocationHub] ReceiveLocations event fired:", locations.length, "locations");
       this.receiveLocationsCallback?.(locations);
     });
 
     this.connection.on("NewJoin", (user: UserDto, location: LocationDto) => {
+      console.log("[LocationHub] NewJoin event fired:", user.name);
       this.newJoinCallback?.(user, location);
     });
 
@@ -80,6 +85,7 @@ class LocationHub {
     });
 
     this.connection.on("ReceiveOtherMovement", (location: LocationDto) => {
+      console.log("[LocationHub] ReceiveOtherMovement event fired:", location.name);
       this.receiveOtherMovementCallback?.(location);
     });
 
@@ -99,13 +105,15 @@ class LocationHub {
     });
 
     this.connection.onclose(() => {
-      console.log("[LocationHub] Disconnected");
+      console.log("[LocationHub] Connection closed");
     });
 
     try {
+      console.log("[LocationHub] Starting connection...");
       await this.connection.start();
-      console.log("[LocationHub] Connected");
+      console.log("[LocationHub] Connected successfully");
     } catch (err) {
+      console.error("[LocationHub] Connection failed:", err);
       if (myEpoch === this.epoch) {
         this.connection = null;
         throw err;
@@ -146,14 +154,17 @@ class LocationHub {
   }
 
   onReceiveLocations(callback: ReceiveLocationsCallback): void {
+    console.log("[LocationHub] Registering ReceiveLocations callback");
     this.receiveLocationsCallback = callback;
   }
 
   onNewJoin(callback: NewJoinCallback): void {
+    console.log("[LocationHub] Registering NewJoin callback");
     this.newJoinCallback = callback;
   }
 
   onUserDisconnect(callback: UserDisconnectCallback): void {
+    console.log("[LocationHub] Registering UserDisconnect callback");
     this.userDisconnectCallback = callback;
   }
 

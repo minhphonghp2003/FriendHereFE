@@ -147,6 +147,46 @@ async function refreshAccessToken(): Promise<string> {
     }
   }
 
+  // Step 3: Reconnect SignalR hubs with new token
+  if (typeof window !== "undefined") {
+    try {
+      const { appHub } = require("@/lib/signalr/app-hub");
+      const { locationHub } = require("@/lib/signalr");
+      
+      console.log("[RefreshToken] Reconnecting SignalR hubs with new token...");
+      
+      // Reconnect AppHub
+      if (appHub) {
+        appHub.stop().catch(() => {
+          console.log("[RefreshToken] AppHub stopped");
+        }).then(() => {
+          return appHub.start();
+        }).then(() => {
+          console.log("[RefreshToken] AppHub reconnected successfully");
+        }).catch((err: Error) => {
+          console.error("[RefreshToken] AppHub reconnection failed:", err);
+        });
+      }
+      
+      // Reconnect LocationHub
+      if (locationHub) {
+        locationHub.stop().catch(() => {
+          console.log("[RefreshToken] LocationHub stopped");
+        }).then(() => {
+          return locationHub.start();
+        }).then(() => {
+          console.log("[RefreshToken] LocationHub reconnected successfully");
+          // Dispatch event to notify LocationProvider to rejoin
+          window.dispatchEvent(new Event("signalr:token-refreshed"));
+        }).catch((err: Error) => {
+          console.error("[RefreshToken] LocationHub reconnection failed:", err);
+        });
+      }
+    } catch (signalrError) {
+      console.log("[RefreshToken] SignalR reconnection failed (non-critical):", signalrError);
+    }
+  }
+
   // Verify token was stored
   const storedToken = localStorage.getItem(TOKEN_KEY);
   console.log("[RefreshToken] Verification - Token in storage:", storedToken ? "present" : "missing");
