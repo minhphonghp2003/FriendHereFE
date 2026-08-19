@@ -2207,20 +2207,42 @@ These methods are called by the client:
 **Call(CallRequestDto request)** - Start a video/voice call
 ```typescript
 {
-  conversationId: 456,
-  type: "Video"
+  targetUserId: 123,
+  hasVideo: true  // true for video calls, false for voice calls
 }
 ```
 
 **CallSignal(CallSignalDto signal)** - Send WebRTC signaling data
 ```typescript
 {
-  callId: "call-123",
-  signal: {
-    type: "offer",
-    sdp: "...",
-    candidate: null
-  }
+  callId: "call-1234567890-abc123",
+  type: "offer",  // "offer" | "answer" | "ice" | "reject" | "cancel" | "end"
+  payload: "{\"type\":\"offer\",\"sdp\":\"...\"}"  // JSON string of SDP or ICE candidate
+}
+```
+
+**Server → Client Events:**
+
+**ReceiveCall(IncomingCallData)** - Receive incoming call notification
+```typescript
+{
+  callerUserId: 123,
+  callerName: "John Doe",
+  callerImage: { originalUrl: "...", thumbUrl: "..." } | null,
+  callId: "call-1234567890-abc123",
+  hasVideo: true,
+  startedAt: "2024-01-01T13:00:00Z"
+}
+```
+
+**ReceiveCallSignal(CallSignalDto)** - Receive WebRTC signaling data
+```typescript
+{
+  callId: "call-1234567890-abc123",
+  type: "offer",  // "offer" | "answer" | "ice" | "reject" | "cancel" | "end"
+  payload: "{\"type\":\"offer\",\"sdp\":\"...\"}",  // JSON string
+  senderId: 123,     // Optional: sender user ID
+  senderName: "John Doe"  // Optional: sender name
 }
 ```
 

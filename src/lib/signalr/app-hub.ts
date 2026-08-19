@@ -15,7 +15,7 @@ import type {
 } from "@/types/chat";
 import type { FriendshipDto } from "@/types/friendship";
 import type { MomentReactionNotification } from "@/types/moment";
-import type { IncomingCallData, CallSignalDto, CallSignalData } from "@/types/call";
+import type { IncomingCallData, CallSignalDto } from "@/types/call";
 
 export type KickedCallback = () => void;
 export type ReceiveMessageCallback = (message: MessageDto) => void;
@@ -57,7 +57,7 @@ export interface TypingData {
 
 export type ReceiveTypingCallback = (data: TypingData) => void;
 export type ReceiveCallCallback = (data: IncomingCallData) => void;
-export type ReceiveCallSignalCallback = (data: CallSignalData) => void;
+export type ReceiveCallSignalCallback = (data: CallSignalDto) => void;
 
 export interface ChatBlockedData {
   targetUserId: number;
@@ -240,7 +240,7 @@ class AppHub {
       this.receiveCallCallbacks.forEach((cb) => cb(data));
     });
 
-    this.connection.on("ReceiveCallSignal", (data: CallSignalData) => {
+    this.connection.on("ReceiveCallSignal", (data: CallSignalDto) => {
       this.receiveCallSignalCallbacks.forEach((cb) => cb(data));
     });
 
@@ -374,7 +374,7 @@ class AppHub {
     await this.connection.invoke("Call", { targetUserId, hasVideo });
   }
 
-  async sendCallSignal(dto: CallSignalDto): Promise<void> {
+  async sendCallSignal(dto: { callId: string; type: string; payload: string | null }): Promise<void> {
     if (!this.connection) throw new Error("AppHub not connected");
     await this.connection.invoke("CallSignal", dto);
   }
