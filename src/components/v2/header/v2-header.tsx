@@ -12,6 +12,7 @@ import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialo
 
 type ActiveDialog = "settings" | "profile" | null;
 
+
 export function V2Header() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const pathname = usePathname();
@@ -84,10 +85,8 @@ export function V2Header() {
     .slice(0, 2)
     .toUpperCase();
 
-  // Calculate total unread count across all conversations
-  const unreadCount = useSelector((state: RootState) =>
-    state.chat.conversations.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0),
-  );
+  // Use total unread count from Redux (managed by SignalR)
+  const totalUnreadCount = useSelector((state: RootState) => state.chat.totalUnreadCount);
 
   // Full page reload avoids stacking extra SignalR connections
   const handleRefresh = () => {
@@ -140,9 +139,9 @@ export function V2Header() {
             className="header-float-btn"
             aria-label="Trò chuyện"
           >
-            <MessageCircle className="header-float-icon" fill="currentColor" />
-            {unreadCount > 0 && (
-              <span className="chat-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+             <MessageCircle className="header-float-icon" fill="currentColor" />
+            {totalUnreadCount > 0 && (
+              <span className="chat-badge">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>
             )}
           </button>
           <button

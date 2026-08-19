@@ -90,6 +90,7 @@ export interface GroupDeletedNotification {
 }
 
 export type ReceiveGroupDeletedCallback = (data: GroupDeletedNotification) => void;
+export type ReceiveUnreadCountCallback = (unreadCount: number) => void;
 
 export interface FileMarkedSuccessData {
   originalKey: string;
@@ -133,6 +134,7 @@ class AppHub {
   private receiveJoinRequestProcessedCallbacks: Set<ReceiveJoinRequestProcessedCallback> =
     new Set();
   private receiveGroupDeletedCallbacks: Set<ReceiveGroupDeletedCallback> = new Set();
+  private receiveUnreadCountCallbacks: Set<ReceiveUnreadCountCallback> = new Set();
   private joinedConversations: Set<number> = new Set();
 
   async start(): Promise<void> {
@@ -270,6 +272,18 @@ class AppHub {
 
     this.connection.on("ReceiveGroupDeleted", (data: GroupDeletedNotification) => {
       this.receiveGroupDeletedCallbacks.forEach((cb) => cb(data));
+    });
+
+    this.connection.on("ReceiveUnreadCount", (unreadCount: number) => {
+      // Error handling and validation
+      if (typeof unreadCount !== 'number') {
+        console.error('[AppHub] Invalid unread count received:', unreadCount);
+        return;
+      }
+      
+      // Ensure non-negative value
+      const safeCount = Math.max(0, unreadCount);
+      this.receiveUnreadCountCallbacks.forEach((cb) => cb(safeCount));
     });
 
     this.connection.onclose(() => {
@@ -558,6 +572,13 @@ class AppHub {
     this.receiveGroupDeletedCallbacks.add(callback);
     return () => {
       this.receiveGroupDeletedCallbacks.delete(callback);
+    };
+  }
+
+  onReceiveUnreadCount(callback: ReceiveUnreadCountCallback): () => void {
+    this.receiveUnreadCountCallbacks.add(callback);
+    return () => {
+      this.receiveUnreadCountCallbacks.delete(callback);
     };
   }
 

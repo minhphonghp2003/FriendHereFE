@@ -90,6 +90,9 @@ export function PushProvider({ children }: { children: ReactNode }) {
       if (event.origin !== window.location.origin) return;
       const { type, data } = event.data ?? {};
       if (type === "PUSH_DATA") handleForegroundPush(data);
+      if (type === "NAVIGATE_TO_DEEP_LINK" && data?.deepLink) {
+        window.location.href = data.deepLink;
+      }
     };
 
     navigator.serviceWorker?.addEventListener("message", onSwMessage);
@@ -111,8 +114,21 @@ export function PushProvider({ children }: { children: ReactNode }) {
 function handleForegroundPush(data: PushPayloadData | undefined): void {
   if (!data) return;
 
+  // Check if we're currently on a chat page to suppress notifications
+  const isChatPage = window.location.pathname.startsWith('/chat');
+  const currentConversationId = isChatPage 
+    ? parseInt(window.location.pathname.split('/')[2]) 
+    : null;
+
   switch (data.type) {
     case PUSH_TYPE.CHAT_MESSAGE: {
+      const conversationId = parseInt(String(data.conversationId));
+      
+      // Suppress foreground notification if user is viewing the conversation
+      if (isChatPage && currentConversationId === conversationId) {
+        return;
+      }
+      
       const isGroup = String(data.isGroup ?? "false") === "true";
       const title =
         isGroup && data.conversationName

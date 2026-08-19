@@ -44,16 +44,28 @@ class LocationHub {
     const token = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
     if (!token) {
       console.warn("[LocationHub] No token available, skipping connection");
+      this.connection = null; // Ensure connection is null
       return;
     }
 
+    // Create new connection
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(env.NEXT_PUBLIC_SIGNALR_URL, {
-        accessTokenFactory: () => token,
+      .withUrl(`${env.NEXT_PUBLIC_API_URL}/hubs/location`, {
+        accessTokenFactory: () => token ?? "",
+        withCredentials: false,
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect({
+        nextRetryDelayInMilliseconds: (retryContext) => {
+          // Progressive backoff: 2s, 5s, 10s, 15s, 30s, 60s max
+          const retryCount = retryContext.previousRetryCount || 0;
+          const delays = [2000, 5000, 10000, 15000, 30000, 60000];
+          return retryCount < delays.length ? delays[retryCount] : 60000;
+        },
+      })
+      .configureLogging(signalR.LogLevel.Information)
       .build();
 
+    // Setup event handlers
     this.connection.on("ReceiveLocations", (locations: LocationDto[]) => {
       this.receiveLocationsCallback?.(locations);
     });
@@ -116,9 +128,21 @@ class LocationHub {
 
   async join(request: JoinRequest): Promise<void> {
     if (!this.connection) {
-      throw new Error("Connection not started. Call start() first.");
+      console.warn("[LocationHub] Cannot join - no active connection");
+      return; // Return silently instead of throwing error
     }
-    await this.connection.invoke("Join", request);
+    
+    if (this.connection.state !== signalR.HubConnectionState.Connected) {
+      console.warn("[LocationHub] Cannot join - connection not in Connected state");
+      return;
+    }
+    
+    try {
+      await this.connection.invoke("Join", request);
+    } catch (err) {
+      console.error("[LocationHub] Join error:", err);
+      throw err; // Re-throw for caller to handle
+    }
   }
 
   onReceiveLocations(callback: ReceiveLocationsCallback): void {

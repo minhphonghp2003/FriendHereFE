@@ -119,6 +119,7 @@ export function V2LocationPage() {
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statusValue, setStatusValue] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
+  const [friendsSheetOpen, setFriendsSheetOpen] = useState(false);
 
   // Restored map view (lazy-init once per mount; null when nothing saved)
   const [savedView] = useState<MapView | null>(() => loadLastMapView());
@@ -258,22 +259,98 @@ export function V2LocationPage() {
 
 
 
-  // v1 parity: when location permission is denied, fall back to the user list
+  // v1 parity: when location permission is denied, show permission request UI
   if (locationDenied) {
+    console.log("[LocationPage] Showing permission denied UI");
     return (
-      <div className="v2-location-denied">
-        <p className="denied-notice">
-          Location permission is blocked. Showing the people list instead — enable
-          location in your browser settings to see the map.
-        </p>
-        <UserLocationList
-          users={activeUsers}
-          currentUser={user}
-          onUserClick={openUserDetail}
-          hasMore={activeHasMore}
-          isLoadingMore={activeLoadingMore}
-          onLoadMore={activeLoadMore}
-        />
+      <div 
+        className="v2-location-denied-container"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%), radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%), #13181d',
+          padding: '20px',
+          zIndex: 10,
+        }}
+      >
+        <div 
+          className="v2-permission-card"
+          style={{
+            background: '#fff',
+            borderRadius: '24px',
+            padding: '32px 24px',
+            maxWidth: '400px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <div 
+            className="v2-permission-icon"
+            style={{
+              width: '64px',
+              height: '64px',
+              margin: '0 auto 20px',
+              background: 'linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Crosshair className="v2-crosshair-icon" style={{ width: '32px', height: '32px', color: 'white' }} />
+          </div>
+          <h2 
+            className="v2-permission-title" 
+            style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: '800', color: '#18181b' }}
+          >
+            Cần quyền truy cập vị trí
+          </h2>
+          <p 
+            className="v2-permission-description" 
+            style={{ margin: '0 0 24px', fontSize: '14px', color: '#52525b', lineHeight: '1.5' }}
+          >
+            Để hiển thị bản đồ và vị trí của bạn bè, ứng dụng cần quyền truy cập vị trí của bạn.
+          </p>
+          <div 
+            className="v2-permission-actions" 
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}
+          >
+            <button 
+              onClick={() => window.location.reload()} 
+              className="v2-permission-btn v2-permission-btn-primary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '14px 20px',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%)',
+                color: 'white',
+                border: 'none',
+                boxShadow: '0 4px 14px rgba(43, 176, 175, 0.4)',
+                transition: 'all 0.2s',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+              }}
+            >
+              <Crosshair className="v2-btn-icon" style={{ width: '18px', height: '18px' }} />
+              Bật vị trí
+            </button>
+          </div>
+          <p 
+            className="v2-permission-note" 
+            style={{ margin: '0', fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}
+          >
+            Bạn có thể thay đổi quyền truy cập vị trí trong cài đặt trình duyệt của mình.
+          </p>
+        </div>
       </div>
     );
   }
@@ -734,6 +811,125 @@ export function V2LocationPage() {
           /* Ensure no background bleeding */
           .v2-location-container {
             background: #000;
+          }
+
+          /* Location Permission Denied UI */
+          .v2-location-denied-container {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+              radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
+              radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
+              #13181d;
+            padding: 20px;
+            z-index: 10;
+          }
+
+          .v2-permission-card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 32px 24px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          }
+
+          .v2-permission-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .v2-crosshair-icon {
+            width: 32px;
+            height: 32px;
+            color: white;
+          }
+
+          .v2-permission-title {
+            margin: 0 0 12px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #18181b;
+          }
+
+          .v2-permission-description {
+            margin: 0 0 24px;
+            font-size: 14px;
+            color: #52525b;
+            line-height: 1.5;
+          }
+
+          .v2-permission-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+          }
+
+          .v2-permission-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+
+          .v2-permission-btn-primary {
+            background: linear-gradient(135deg, #2bb0af 0%, #1a8a89 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(43, 176, 175, 0.4);
+          }
+
+          .v2-permission-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(43, 176, 175, 0.5);
+          }
+
+          .v2-permission-btn-primary:active {
+            transform: translateY(0) scale(0.98);
+          }
+
+          .v2-permission-btn-secondary {
+            background: #f4f4f5;
+            color: #18181b;
+            border: 1px solid #e4e4e7;
+          }
+
+          .v2-permission-btn-secondary:hover {
+            background: #e4e4e7;
+          }
+
+          .v2-permission-btn-secondary:active {
+            transform: scale(0.98);
+          }
+
+          .v2-btn-icon {
+            width: 18px;
+            height: 18px;
+          }
+
+          .v2-permission-note {
+            margin: 0;
+            font-size: 12px;
+            color: #a1a1aa;
+            line-height: 1.4;
           }
       `}</style>
     </div>

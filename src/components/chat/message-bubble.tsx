@@ -15,6 +15,7 @@ interface MessageBubbleProps {
   onLongPress?: (msg: MessageDto, pos: { x: number; y: number }) => void;
   onOpenReactions?: (msg: MessageDto) => void;
   onReplyClick?: (messageId: number) => void;
+  externalTicks?: boolean; // If true, don't render ticks inside bubble
 }
 
 interface BubbleWrapperProps {
@@ -167,14 +168,16 @@ const MessageTicks = ({ status, isMe }: { status?: number; isMe: boolean }) => {
 };
 
 /** Timestamp + read-tick line under media bubbles (emoji/sticker/gif) */
-const MetaLine = ({
+  const MetaLine = ({
   msg,
   isMe,
   editedLabel,
+  showTicks = true,
 }: {
   msg: MessageDto;
   isMe: boolean;
   editedLabel: string;
+  showTicks?: boolean;
 }) => (
   <p
     className={`mt-0.5 flex items-center gap-1 text-[10px] ${isMe ? "text-white/70 self-end" : "text-muted-foreground"}`}
@@ -182,9 +185,12 @@ const MetaLine = ({
   >
     {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
     {editedLabel}
-    <MessageTicks status={msg.status} isMe={isMe} />
+    {showTicks && <MessageTicks status={msg.status} isMe={isMe} />}
   </p>
 );
+
+// Export MessageTicks for external use
+export { MessageTicks };
 
 export const MessageBubble = ({
   msg,
@@ -195,6 +201,7 @@ export const MessageBubble = ({
   onLongPress,
   onOpenReactions,
   onReplyClick,
+  externalTicks = false,
 }: MessageBubbleProps) => {
   const renderType = toChatMessageRenderType(msg.type);
   const [mediaIndex, setMediaIndex] = useState<number | null>(null);
@@ -279,7 +286,7 @@ export const MessageBubble = ({
         <BubbleWrapper msg={msg} onLongPress={onLongPress} className="text-4xl leading-none">
           {msg.content}
         </BubbleWrapper>
-        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} showTicks={!externalTicks} />
         {reactionRow}
       </div>
     );
@@ -295,7 +302,7 @@ export const MessageBubble = ({
         >
           <img src={msg.content ?? ""} alt="" className="h-28 w-28 rounded-xl object-contain" />
         </BubbleWrapper>
-        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} showTicks={!externalTicks} />
         {reactionRow}
       </div>
     );
@@ -315,7 +322,7 @@ export const MessageBubble = ({
             className="max-h-[220px] max-w-[220px] rounded-xl object-contain"
           />
         </BubbleWrapper>
-        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} />
+        <MetaLine msg={msg} isMe={isMe} editedLabel={editedLabel} showTicks={!externalTicks} />
         {reactionRow}
       </div>
     );
@@ -390,7 +397,7 @@ export const MessageBubble = ({
         <p className="mt-1 text-right text-[10px] opacity-70">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           {editedLabel}
-          <MessageTicks status={msg.status} isMe={isMe} />
+          {!externalTicks && <MessageTicks status={msg.status} isMe={isMe} />}
         </p>
         {reactionRow}
         {mediaIndex !== null && mediaItems[mediaIndex] && (
@@ -427,7 +434,7 @@ export const MessageBubble = ({
       <p className="mt-1 text-right text-[10px] opacity-70">
         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         {editedLabel}
-        <MessageTicks status={msg.status} isMe={isMe} />
+        {!externalTicks && <MessageTicks status={msg.status} isMe={isMe} />}
       </p>
       {reactionRow}
     </BubbleWrapper>

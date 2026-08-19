@@ -8,6 +8,7 @@ interface ChatState {
   messages: Record<number, MessageDto[]>;
   messageHasMore: Record<number, boolean>;
   editedMessageIds: number[];
+  totalUnreadCount: number;
 }
 
 const initialState: ChatState = {
@@ -17,6 +18,7 @@ const initialState: ChatState = {
   messages: {},
   messageHasMore: {},
   editedMessageIds: [],
+  totalUnreadCount: 0,
 };
 
 const chatSlice = createSlice({
@@ -250,6 +252,9 @@ const chatSlice = createSlice({
       delete state.messages[action.payload];
       delete state.messageHasMore[action.payload];
     },
+    setTotalUnreadCount: (state, action: PayloadAction<number>) => {
+      state.totalUnreadCount = Math.max(0, action.payload);
+    },
     resetChat: () => initialState,
   },
 });
@@ -274,6 +279,7 @@ export const {
   markMessagesRead,
   updateConversationState,
   removeConversation,
+  setTotalUnreadCount,
   resetChat,
 } = chatSlice.actions;
 export const chatReducer = chatSlice.reducer;
