@@ -100,23 +100,15 @@
   body {
     @apply bg-background text-foreground;
     height: 100vh;
-    /* Prevent body from shrinking when keyboard opens */
-    min-height: 100vh;
-    /* Prevent overscroll behavior in PWA */
-    overscroll-behavior: none;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    left: 0;
   }
   
   /* App root container for proper scrolling */
-  .app-root {
+  /* .app-root {
     height: 100vh;
     width: 100%;
     position: relative;
     overflow: hidden;
-  }
+  } */
   /* Safe area helpers for iOS PWA */
   .safe-top {
     padding-top: env(safe-area-inset-top);
