@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useCallback, useState, useEffect } from "react";
+import React, { useRef, useCallback, useEffect, useState } from "react";
+import { List } from "react-window";
 
 interface VirtualizedListProps<T> {
   items: T[];
@@ -14,10 +15,10 @@ interface VirtualizedListProps<T> {
 }
 
 /**
- * VirtualizedList - A simple virtualized list for performance
+ * VirtualizedList - A high-performance list component using react-window
  * 
  * Features:
- * - Windowing/virtualization for optimal performance  
+ * - Windowing/virtualization for optimal performance
  * - Infinite scroll support
  * - Memory efficient rendering
  */
@@ -32,7 +33,7 @@ export function VirtualizedList<T>({
   height = "100%",
 }: VirtualizedListProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
+  const listRef = useRef<any>(null);
   const [containerHeight, setContainerHeight] = useState(0);
 
   useEffect(() => {
@@ -51,77 +52,69 @@ export function VirtualizedList<T>({
     return () => resizeObserver.disconnect();
   }, []);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const currentScrollTop = e.currentTarget.scrollTop;
-    setScrollTop(currentScrollTop);
+  // Check if an item is loaded
+  const isItemLoaded = (index: number) => !hasNextPage || index < items.length;
 
-    // Infinite scroll trigger
-    const scrollHeight = e.currentTarget.scrollHeight;
-    const clientHeight = e.currentTarget.clientHeight;
-    const scrollBottom = scrollHeight - (currentScrollTop + clientHeight);
-
-    if (hasNextPage && !isLoading && loadNextPage && scrollBottom < itemHeight * 3) {
+  // Load more items
+  const handleLoadMore = useCallback(() => {
+    if (loadNextPage && !isLoading && hasNextPage) {
       loadNextPage();
     }
-  }, [hasNextPage, isLoading, loadNextPage, itemHeight]);
+  }, [loadNextPage, isLoading, hasNextPage]);
 
-  // Calculate visible items
-  const visibleCount = Math.ceil(containerHeight / itemHeight) + 2;
-  const startIndex = Math.floor(scrollTop / itemHeight);
-  const endIndex = Math.min(startIndex + visibleCount, items.length);
-  
-  const visibleItems = items.slice(Math.max(0, startIndex - 2), endIndex + 2);
-  const offsetIndex = Math.max(0, startIndex - 2);
+  // Handle scroll to detect when to load more
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    
+    // Load more when near bottom
+    if (scrollBottom < itemHeight * 3 && hasNextPage && !isLoading) {
+      handleLoadMore();
+    }
+  }, [itemHeight, hasNextPage, isLoading, handleLoadMore]);
 
-  const totalHeight = items.length * itemHeight;
+  // Render each row
+  const Row = ({ index, style }: any) => {
+    // Show loading spinner at the bottom when loading more
+    if (index === items.length) {
+      return (
+        <div style={style}>
+          <div className="virtual-list-loading">
+            <div className="virtual-list-spinner" />
+          </div>
+        </div>
+      );
+    }
+
+    // Render actual item
+    const item = items[index];
+    if (!item) return null;
+
+    return (
+      <div style={style}>
+        {renderItem(item, index, style)}
+      </div>
+    );
+  };
+
+  const itemCount = hasNextPage ? items.length + 1 : items.length;
+
+  if (containerHeight === 0) {
+    return <div ref={containerRef} className={`virtual-list-wrapper ${className}`} style={{ height }} />;
+  }
 
   return (
-    <div 
-      ref={containerRef}
-      className={`virtual-list-wrapper ${className}`}
-      style={{ height, overflow: "auto", position: "relative" }}
-      onScroll={handleScroll}
-    >
-      {/* Spacer for content before visible items */}
-      <div style={{ height: Math.max(0, offsetIndex * itemHeight) }} />
-      
-      {/* Visible items */}
-      {visibleItems.map((item, i) => {
-        const actualIndex = offsetIndex + i;
-        const style: React.CSSProperties = {
-          position: "absolute",
-          top: `${actualIndex * itemHeight}px`,
-          left: 0,
-          right: 0,
-          height: `${itemHeight}px`,
-        };
-        return (
-          <div key={actualIndex} style={style}>
-            {renderItem(item, actualIndex, style)}
-          </div>
-        );
-      })}
-      
-      {/* Spacer for content after visible items */}
-      <div style={{ height: Math.max(0, (items.length - endIndex) * itemHeight) }} />
-      
-      {/* Loading indicator */}
-      {isLoading && hasNextPage && (
-        <div 
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: `${itemHeight}px`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div className="virtual-list-spinner" />
-        </div>
-      )}
+    <div ref={containerRef} className={`virtual-list-wrapper ${className}`} style={{ height }} onScroll={handleScroll}>
+      <List
+        className="virtual-list"
+        defaultHeight={containerHeight}
+        rowCount={itemCount}
+        rowHeight={itemHeight}
+        rowComponent={Row}
+        listRef={listRef}
+        rowProps={{}}
+        rowKey={(index: number) => index}
+      />
 
       <style jsx>{`
         .virtual-list-wrapper {
@@ -129,6 +122,17 @@ export function VirtualizedList<T>({
           width: 100%;
           overflow: auto;
           -webkit-overflow-scrolling: touch;
+        }
+        
+        .virtual-list {
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        .virtual-list-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
         }
         
         .virtual-list-spinner {
