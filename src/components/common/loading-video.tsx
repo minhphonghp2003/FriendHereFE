@@ -24,7 +24,6 @@ export const LoadingVideo = ({ className, size = "md" }: LoadingVideoProps) => {
       role="status"
       aria-label="Loading"
     >
-      <source src="/loading.mp4" type="video/mp4" />
       <source src="/loading.webm" type="video/webm" />
     </video>
   );
