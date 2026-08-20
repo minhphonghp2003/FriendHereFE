@@ -24,6 +24,10 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
     setLoading(true);
     setHasMore(true);
     prevIdRef.current = null;
+    
+    // Dispatch event to hide scroll-to-top button
+    window.dispatchEvent(new Event("v2:sheet-open"));
+    
     getMomentReactions(momentId)
       .then((res) => {
         if (cancelled) return;
@@ -36,6 +40,8 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
       });
     return () => {
       cancelled = true;
+      // Dispatch event to show scroll-to-top button when closing
+      window.dispatchEvent(new Event("v2:sheet-close"));
     };
   }, [momentId, open]);
 
@@ -65,20 +71,37 @@ export const ReactionBottomSheet = ({ momentId, open, onClose }: ReactionBottomS
     }
   };
 
-  // Add keyboard escape support
+  // Add keyboard escape support and prevent body scroll
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    
+    // Disable body scroll when sheet is open (both desktop and mobile)
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = `-${window.scrollY}px`;
+    
+    const scrollY = window.scrollY;
+    
+    return () => {
+      document.removeEventListener("keydown", handler);
+      // Re-enable body scroll when sheet closes and restore scroll position
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      window.scrollTo(0, scrollY);
+    };
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[700] flex items-end">
+    <div className="fixed inset-0 z-[600] flex items-end">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/40" onClick={onClose} />
       

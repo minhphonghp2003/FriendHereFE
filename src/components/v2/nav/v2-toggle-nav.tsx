@@ -97,7 +97,7 @@ export function V2ToggleNav() {
           position: fixed;
           right: 20px;
           bottom: 130px; /* moved up to avoid camera controls at bottom */
-          z-index: 500; /* below header (1000) and all other components */
+          z-index: 50; /* below header (1000), reaction sheets (600), fullscreen media (9998) */
           width: 56px; /* made smaller */
           height: 56px; /* made smaller */
           padding: 0;
@@ -168,7 +168,7 @@ export function V2ToggleNav() {
           height: 38px;
           right: 20px;
           bottom: calc(var(--vm-sheet-h, 150px) + 12px + env(safe-area-inset-bottom, 0px));
-          z-index: 100; /* below fullscreen media (9998) but above base UI */
+          z-index: 50; /* below fullscreen media (9998), reaction sheet (700), but above base UI */
         }
 
         .v2-toggle-btn.scroll-top-mode .toggle-content {
