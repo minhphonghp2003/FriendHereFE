@@ -17,7 +17,7 @@ import {
 } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
-import { VirtualizedList } from "@/components/common/virtualized-list";
+
 import {
   MessageCircle,
   Ban,
@@ -248,7 +248,13 @@ export default function V2ChatPage() {
 
   const openMenu = (e: React.MouseEvent, conv: ConversationDto) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenuState({ convId: conv.id!, x: Math.min(rect.left - 120, window.innerWidth - 190), y: rect.bottom + 4 });
+    
+    // Position menu to appear right next to the more icon (left side)
+    const menuWidth = 180;
+    const x = rect.right - menuWidth - 8; // Position to the left of the button
+    const y = rect.top; // Align with the top of the button
+    
+    setMenuState({ convId: conv.id!, x, y });
   };
 
   const closeMenu = () => setMenuState(null);
@@ -348,25 +354,25 @@ export default function V2ChatPage() {
 
   return (
     <div className="vc2-page">
-      <div className="vc2-header">
-        <button
-          onClick={() => router.push("/location")}
-          className="vc2-back-btn"
-          aria-label="Quay lại"
-        >
-          <ArrowLeft className="vc2-back-icon" />
-        </button>
-        <h1 className="vc2-title">Tin nhắn</h1>
-        <button
-          onClick={() => router.push("/chat/new-group")}
-          aria-label="Tạo nhóm chat"
-          className="vc2-new-group-btn"
-        >
-          <UserPlus className="vc2-new-group-icon" />
-        </button>
-      </div>
-
-      <div className="vc2-tabs">
+      <div className="vc2-header-fixed">
+        <div className="vc2-header">
+          <button
+            onClick={() => router.push("/location")}
+            className="vc2-back-btn"
+            aria-label="Quay lại"
+          >
+            <ArrowLeft className="vc2-back-icon" />
+          </button>
+          <h1 className="vc2-title">Tin nhắn</h1>
+          <button
+            onClick={() => router.push("/chat/new-group")}
+            aria-label="Tạo nhóm chat"
+            className="vc2-new-group-btn"
+          >
+            <UserPlus className="vc2-new-group-icon" />
+          </button>
+        </div>
+        <div className="vc2-tabs">
         {(["all", "archived", "discover"] as Tab[]).map((t) => (
           <button
             key={t}
@@ -379,6 +385,7 @@ export default function V2ChatPage() {
             {t === "all" ? "Tất cả" : t === "archived" ? "Đã lưu trữ" : "Khám phá"}
           </button>
         ))}
+        </div>
       </div>
 
       <div ref={listRef} onScroll={handleScroll} className="vc2-list">
@@ -453,29 +460,23 @@ export default function V2ChatPage() {
               </div>
             )}
           </>
-             ) : (
-               <>
-                 {visible.length > 0 && (
-                   <VirtualizedList
-                     items={visible}
-                     renderItem={(conv) => renderRow(conv)}
-                     itemHeight={72} // Estimated height for each conversation row
-                     hasNextPage={conversationsHasMore}
-                     loadNextPage={loadMore}
-                     isLoading={loadingMore}
-                     height="100%"
-                   />
-                 )}
-                 {visible.length === 0 && (
-                   <div className="vc2-center-block">
-                     <MessageCircle className="vc2-empty-icon" />
-                     <p className="vc2-empty-text">
-                       {tab === "all" ? "Chưa có tin nhắn" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
-                     </p>
-                   </div>
-                 )}
-               </>
-             )}
+              ) : (
+                <>
+                  {visible.length > 0 && (
+                    <div className="vc2-conversations">
+                      {visible.map((conv) => renderRow(conv))}
+                    </div>
+                  )}
+                  {visible.length === 0 && (
+                    <div className="vc2-center-block">
+                      <MessageCircle className="vc2-empty-icon" />
+                      <p className="vc2-empty-text">
+                        {tab === "all" ? "Chưa có tin nhắn" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
       </div>
 
       <style jsx global>{`
@@ -491,7 +492,21 @@ export default function V2ChatPage() {
             radial-gradient(circle at 15% 20%, rgba(43, 176, 175, 0.5), transparent 55%),
             radial-gradient(circle at 85% 85%, rgba(43, 176, 175, 0.4), transparent 55%),
             #13181d;
-          color: var(--vm-text, #18181b);
+          overflow: hidden;
+        }
+
+        .vc2-header-fixed {
+          flex-shrink: 0;
+          z-index: 10;
+        }
+
+        .vc2-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 12px 16px 4px;
+          padding-top: calc(12px + env(safe-area-inset-top, 0px));
         }
 
         .vc2-header {
@@ -569,6 +584,12 @@ export default function V2ChatPage() {
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           padding: 4px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .vc2-conversations {
           display: flex;
           flex-direction: column;
           gap: 2px;
