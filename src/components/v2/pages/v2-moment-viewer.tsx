@@ -55,10 +55,16 @@ export function V2MomentViewer({
         video.addEventListener("loadedmetadata", apply, { once: true });
       }
     }
+    
+    // Dispatch event to hide scroll-to-top button when viewer opens
+    window.dispatchEvent(new Event("v2:sheet-open"));
+    
     // Pause the video when the viewer closes
     return () => {
       const v = videoRef.current;
       if (v) v.pause();
+      // Dispatch event to show scroll-to-top button when viewer closes
+      window.dispatchEvent(new Event("v2:sheet-close"));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

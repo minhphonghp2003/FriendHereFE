@@ -30,6 +30,15 @@ export const ImageZoom = ({ src, alt, className = "", children }: ImageZoomProps
   const initialPinchDistance = useRef<number | null>(null);
   const initialScale = useRef<number>(1);
 
+  // Dispatch events to hide/show scroll-to-top button when zoomed
+  useEffect(() => {
+    if (isZoomed) {
+      window.dispatchEvent(new Event("v2:sheet-open"));
+    } else {
+      window.dispatchEvent(new Event("v2:sheet-close"));
+    }
+  }, [isZoomed]);
+
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsZoomed(!isZoomed);

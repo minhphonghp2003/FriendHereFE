@@ -46,9 +46,15 @@ export function V2MediaViewer({ items, initialIndex = 0, onClose }: V2MediaViewe
     setTime(0);
     setPlaying(true);
     setShowControls(true);
+    
+    // Dispatch event to hide scroll-to-top button when viewer opens
+    window.dispatchEvent(new Event("v2:sheet-open"));
+    
     return () => {
       const v = videoRef.current;
       if (v) v.pause();
+      // Dispatch event to show scroll-to-top button when viewer closes
+      window.dispatchEvent(new Event("v2:sheet-close"));
     };
   }, [index]);
 
