@@ -86,20 +86,29 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
+  @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   html {
     @apply font-sans;
     height: 100vh;
+    /* Prevent overscroll behavior in PWA */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
   body {
     @apply bg-background text-foreground;
     height: 100vh;
-    /* Prevent body from shrinking when keyboard opens */
-    min-height: 100vh;
   }
+  
+  /* App root container for proper scrolling */
+  /* .app-root {
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  } */
   /* Safe area helpers for iOS PWA */
   .safe-top {
     padding-top: env(safe-area-inset-top);
@@ -214,17 +223,380 @@
   }
 }
 
-@keyframes reaction-burst {
-  0% {
-    transform: translate(-50%, 0) scale(0.5);
-    opacity: 0;
+  @keyframes reaction-burst {
+    0% {
+      transform: translate(-50%, 0) scale(0.5);
+      opacity: 0;
+    }
+    20% {
+      transform: translate(-50%, -16px) scale(1.2);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(-50%, -80px) scale(1);
+      opacity: 0;
+    }
   }
-  20% {
-    transform: translate(-50%, -16px) scale(1.2);
-    opacity: 1;
+
+  /* ===== Unified Sheet Styles ===== */
+  .unified-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 600; /* above scroll-to-top button (500) but below header (1000) */
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    animation: unified-fade-in 0.2s ease;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
   }
-  100% {
-    transform: translate(-50%, -80px) scale(1);
-    opacity: 0;
+
+  .unified-sheet-backdrop.closing {
+    animation: unified-fade-out 0.2s ease forwards;
   }
-}
+
+  @keyframes unified-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes unified-fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .unified-sheet-container {
+    position: relative;
+    width: 100%;
+    background: var(--vm-surface, #fff);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    will-change: transform;
+  }
+
+  @keyframes unified-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes unified-slide-down {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+
+  .unified-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--vm-text-3, #a1a1aa);
+    border-radius: 2px;
+    margin: 8px auto 12px;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+    touch-action: none;
+    flex-shrink: 0;
+  }
+
+  .unified-sheet-handle:active {
+    opacity: 0.6;
+  }
+
+  .unified-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px 12px;
+    border-bottom: 1px solid var(--vm-border, #e4e4e7);
+  }
+
+  .unified-sheet-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--vm-text, #18181b);
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Remove close button styles since we use backdrop tap to close and drag to close */
+  .unified-sheet-close-btn {
+    display: none; /* Hidden by default, can be enabled with showCloseButton prop */
+  }
+
+  .unified-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    touch-action: pan-y;
+  }
+
+  /* Loading state */
+  .unified-sheet-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+  }
+
+  .unified-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2.5px solid var(--vm-border, #e4e4e7);
+    border-top-color: #2bb0af;
+    border-radius: 50%;
+    animation: unified-spin 0.8s linear infinite;
+  }
+
+  .unified-spinner-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+  }
+
+  @keyframes unified-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Empty state */
+  .unified-sheet-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .unified-empty-text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--vm-text-3, #a1a1aa);
+    text-align: center;
+  }
+
+  /* Row item styles */
+  .unified-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+  }
+
+  .unified-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--vm-surface-2, #f4f4f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--vm-border, #e4e4e7);
+  }
+
+  .unified-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .unified-avatar-letter {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--vm-text-2, #52525b);
+  }
+
+  .unified-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .unified-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vm-text, #18181b);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unified-subtext {
+    font-size: 12px;
+    color: var(--vm-text-3, #a1a1aa);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Loading more indicator */
+  .unified-loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  /* End of list indicator */
+  .unified-sheet-end {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .unified-end-text {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vm-text-3, #a1a1aa);
+  }
+
+  .unified-sheet-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .unified-sheet-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+  }
+
+  .unified-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2.5px solid var(--vm-border, #e4e4e7);
+    border-top-color: #2bb0af;
+    border-radius: 50%;
+    animation: unified-spin 0.8s linear infinite;
+  }
+
+  .unified-spinner-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+  }
+
+  @keyframes unified-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .unified-sheet-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .unified-empty-text {
+    margin: 0;
+    font-size: 13px;
+    color: var(--vm-text-3, #a1a1aa);
+    text-align: center;
+  }
+
+  .unified-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+  }
+
+  .unified-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--vm-surface-2, #f4f4f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--vm-border, #e4e4e7);
+  }
+
+  .unified-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .unified-avatar-letter {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--vm-text-2, #52525b);
+  }
+
+  .unified-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .unified-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vm-text, #18181b);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unified-subtext {
+    font-size: 12px;
+    color: var(--vm-text-3, #a1a1aa);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unified-loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .unified-sheet-end {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .unified-end-text {
+    margin: 0;
+    font-size: 12px;
+    color: var(--vm-text-3, #a1a1aa);
+  }

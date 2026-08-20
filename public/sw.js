@@ -282,15 +282,15 @@ self.addEventListener("notificationclick", (event) => {
 
       for (const client of clientList) {
         if ("focus" in client) {
+          await client.focus();
           if (deepLink) {
-            try {
-              await client.navigate(deepLink);
-            } catch {
-              // navigate() can reject for cross-origin/hard cases —
-              // focusing alone is still better than a new window.
-            }
+            // Use postMessage to navigate since client.navigate() might not work reliably
+            client.postMessage({
+              type: "NAVIGATE_TO_DEEP_LINK",
+              deepLink: deepLink
+            });
           }
-          return client.focus();
+          return;
         }
       }
 

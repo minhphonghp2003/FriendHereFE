@@ -29,7 +29,7 @@ import { getPresignedUploadUrls, uploadToPresignedUrl } from "@/services/upload"
 import { searchGiphy, type GiphyItem } from "@/services/giphy";
 import { getMomentById, getMomentThumbnail } from "@/services/moment";
 import type { MomentDto } from "@/types/moment";
-import { MessageBubble } from "@/components/chat/message-bubble";
+import { MessageBubble, MessageTicks } from "@/components/chat/message-bubble";
 import { GroupSettingsDialog } from "@/components/chat/group-settings-dialog";
 import { V2UserDetailDialog } from "@/components/v2/dialogs/v2-user-detail-dialog";
 import { V2MomentViewer } from "@/components/v2/pages/v2-moment-viewer";
@@ -152,6 +152,12 @@ export default function V2ChatDetailPage() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
+  
+  // Swipe-to-go-back gesture handling
+  const [swipeBack, setSwipeBack] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const touchStartRef = useRef<number | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const messages = useAppSelector((s) => s.chat.messages[conversationId] ?? []);
   const hasMore = useAppSelector((s) => s.chat.messageHasMore[conversationId] ?? false);
   const editedMessageIds = useAppSelector((s) => s.chat.editedMessageIds);
@@ -430,6 +436,60 @@ export default function V2ChatDetailPage() {
       if (el) el.scrollTo({ top: el.scrollHeight });
     }
   }, [loading]);
+
+  // Swipe-to-go-back: detect edge swipe from left, behave like back button
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only detect swipes starting near the left edge (within 20px)
+      if (e.touches[0].clientX <= 20) {
+        touchStartRef.current = e.touches[0].clientX;
+      } else {
+        touchStartRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartRef.current === null) return;
+      const currentX = e.touches[0].clientX;
+      const delta = currentX - touchStartRef.current;
+      
+      if (delta > 0 && delta < 150) {
+        setSwipeBack(true);
+        setSwipeX(delta);
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartRef.current === null) return;
+      const currentX = e.changedTouches[0].clientX;
+      const delta = currentX - touchStartRef.current;
+      
+      // Trigger back navigation if swiped more than 80px
+      if (delta > 80) {
+        // Send leave room signal before navigating back
+        appHub.leaveConversation(conversationId).catch(console.error);
+        dispatch(setActiveConversation(null));
+        router.back();
+      }
+      
+      setSwipeBack(false);
+      setSwipeX(0);
+      touchStartRef.current = null;
+    };
+
+    page.addEventListener('touchstart', handleTouchStart, { passive: true });
+    page.addEventListener('touchmove', handleTouchMove, { passive: true });
+    page.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      page.removeEventListener('touchstart', handleTouchStart);
+      page.removeEventListener('touchmove', handleTouchMove);
+      page.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [conversationId, dispatch, router]);
 
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -1012,7 +1072,14 @@ export default function V2ChatDetailPage() {
   );
 
   return (
-    <div className="vcd2-page">
+    <div 
+      ref={pageRef}
+      className="vcd2-page"
+      style={{
+        transform: swipeBack ? `translateX(${swipeX}px)` : undefined,
+        transition: swipeBack ? 'none' : 'transform 0.3s ease'
+      }}
+    >
       <div className="vcd2-header">
         <button onClick={() => router.back()} className="vcd2-icon-btn" aria-label="Quay lại">
           <ArrowLeft className="vcd2-icon" />
@@ -1148,16 +1215,24 @@ export default function V2ChatDetailPage() {
                       {msg.senderName}
                     </p>
                   )}
-                  <MessageBubble
-                    msg={msg}
-                    isMe={isMe}
-                    currentUserId={user?.id}
-                    onViewMoment={handleViewMoment}
-                    onLongPress={handleLongPress}
-                    onOpenReactions={openReactions}
-                    onReplyClick={onTapReply}
-                    isEdited={editedMessageIds.includes(msg.id)}
-                  />
+                  <div className="vcd2-bubble-with-ticks">
+                    <MessageBubble
+                      msg={msg}
+                      isMe={isMe}
+                      currentUserId={user?.id}
+                      onViewMoment={handleViewMoment}
+                      onLongPress={handleLongPress}
+                      onOpenReactions={openReactions}
+                      onReplyClick={onTapReply}
+                      isEdited={editedMessageIds.includes(msg.id)}
+                      externalTicks={true}
+                    />
+                    {isMe && !isSystem && (
+                      <div className="vcd2-message-ticks">
+                        <MessageTicks status={msg.status} isMe={isMe} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </Fragment>
@@ -1781,6 +1856,21 @@ export default function V2ChatDetailPage() {
 
         .vcd2-bubble-col {
           max-width: 75%;
+        }
+
+        .vcd2-bubble-with-ticks {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+
+        .vcd2-message-ticks {
+          display: flex;
+          justify-content: flex-end;
+          padding-right: 2px;
+          font-size: 11px;
+          color: var(--vm-text-3, #a1a1aa);
         }
 
         .vcd2-sender-name {

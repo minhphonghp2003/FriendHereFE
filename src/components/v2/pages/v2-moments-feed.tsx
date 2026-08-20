@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, SwitchCamera, ImageIcon, Loader2, Check, X, MapPin, MessageSquare, Play, Pause, Plus } from "lucide-react";
 import { V2MomentReel } from "./v2-moment-reel";
 import { LoadingVideo } from "@/components/common/loading-video";
+import { VirtualizedList } from "@/components/common/virtualized-list";
 import { useFeedMoments, useCreateMoment } from "@/hooks/moments";
 import { useV2Modal } from "@/hooks/v2/use-v2-modal";
 import { useAuth } from "@/providers/auth-provider";

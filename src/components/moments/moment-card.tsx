@@ -254,15 +254,23 @@ export const MomentCard = ({
       ? moment.images[carouselIndex]?.originalUrl
       : moment.images[0]?.originalUrl;
 
+  // Check if moment is newly created (owner's moment without thumbnail)
+  const isNewlyCreated = isOwner && (
+    (moment.video && !moment.video.thumbUrl) ||
+    (moment.images.length > 0 && !moment.images[0].thumbUrl)
+  );
+
   if (fullscreen) {
     return (
       <div className="relative flex h-full w-full flex-col overflow-hidden bg-black">
         <div className="relative min-h-0 flex-1">
           <div className="absolute inset-0 flex items-center justify-center">
-            {moment.status === "Processing" ? (
+            {moment.status === "Processing" || isNewlyCreated ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-10 w-10 animate-spin text-white" />
-                <span className="text-sm font-medium text-white">Đang xử lý...</span>
+                <span className="text-sm font-medium text-white">
+                  {moment.status === "Processing" ? "Đang xử lý..." : "Đang tạo ảnh đại diện..."}
+                </span>
               </div>
             ) : moment.video ? (
               <video
@@ -559,18 +567,38 @@ export const MomentCard = ({
 
       <div className="relative">
         {moment.video && (
-          <MomentVideoPlayer src={moment.video.originalUrl} poster={moment.video.thumbUrl} />
+          <div className="relative aspect-square w-full overflow-hidden">
+            {isNewlyCreated && !moment.video.thumbUrl ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Đang xử lý...</span>
+                </div>
+              </div>
+            ) : (
+              <MomentVideoPlayer src={moment.video.originalUrl} poster={moment.video.thumbUrl} />
+            )}
+          </div>
         )}
         {!moment.video && moment.images.length === 1 && (
           <div className="bg-muted relative aspect-square w-full overflow-hidden">
-            <Image
-              src={moment.images[0].originalUrl}
-              alt=""
-              fill
-              sizes="(max-width: 640px) 412px, 745px"
-              className="h-full w-full object-cover select-none"
-              draggable={false}
-            />
+            {isNewlyCreated && !moment.images[0].thumbUrl ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Đang xử lý...</span>
+                </div>
+              </div>
+            ) : (
+              <Image
+                src={moment.images[0].originalUrl}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 412px, 745px"
+                className="h-full w-full object-cover select-none"
+                draggable={false}
+              />
+            )}
           </div>
         )}
         {!moment.video && moment.images.length > 1 && (

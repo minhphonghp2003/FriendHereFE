@@ -147,8 +147,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         pendingBatteryRef.current = null;
         pendingPositionUpdateRef.current = null;
         dispatch(resetLocation());
-        appHub.stop();
-        locationHub.stop();
+        appHub.stop().catch(() => {});
+        locationHub.stop().catch(() => {});
       }
       return;
     }
@@ -162,6 +162,14 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     const tryJoin = () => {
       if (canJoinRef.current) return;
+      
+      // Check if location hub connection is ready before attempting to join
+      const conn = locationHub.getConnection();
+      if (!conn || conn.state !== "Connected") {
+        console.log("[LocationProvider] Cannot join - location hub not connected");
+        return;
+      }
+      
       canJoinRef.current = true;
 
       console.log("[LocationProvider] Joining location hub...");
@@ -183,7 +191,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             lastSentPosition.current = { latitude: pos.latitude, longitude: pos.longitude };
           }
         })
-        .catch((err) => console.error("[LocationProvider] Join error:", err));
+        .catch((err) => {
+          console.error("[LocationProvider] Join error:", err);
+          canJoinRef.current = false; // Reset to allow retry on connection
+        });
     };
 
     const init = async () => {
@@ -307,6 +318,24 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         });
 
         locationHubReadyRef.current = true;
+        
+        // Add connection state listener to retry joining when connection is established
+        const conn = locationHub.getConnection();
+        if (conn) {
+          conn.onreconnecting(() => {
+            console.log("[LocationProvider] Location hub reconnecting...");
+            canJoinRef.current = false;
+          });
+          
+          conn.onreconnected(() => {
+            console.log("[LocationProvider] Location hub reconnected");
+            canJoinRef.current = false;
+            if (geoReadyRef.current || !("geolocation" in navigator)) {
+              tryJoin();
+            }
+          });
+        }
+        
         if (geoReadyRef.current || !("geolocation" in navigator)) tryJoin();
       } catch (err) {
         if (!cancelled) {
@@ -380,6 +409,44 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       locationHub.stop();
     };
   }, [user?.id, dispatch]);
+
+  // Handle token refresh - rejoin location hub with new token
+  useEffect(() => {
+    const handleTokenRefresh = () => {
+      console.log("[LocationProvider] Token refreshed, rejoining location hub...");
+      canJoinRef.current = false; // Reset to allow rejoin
+      
+      const conn = locationHub.getConnection();
+      if (conn && conn.state === "Connected" && pendingPosition.current) {
+        const pos = pendingPosition.current;
+        console.log("[LocationProvider] Rejoining with position:", pos);
+        
+        locationHub
+          .join({
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            accuracy: pos.accuracy,
+            speed: pos.speed,
+          })
+          .then(() => {
+            console.log("[LocationProvider] Successfully rejoined after token refresh");
+            canJoinRef.current = true;
+            
+            // Send pending battery update if any
+            if (batteryLevelRef.current !== null) {
+              pendingBatteryRef.current = batteryLevelRef.current;
+            }
+          })
+          .catch((err) => {
+            console.error("[LocationProvider] Rejoin after token refresh failed:", err);
+            canJoinRef.current = false;
+          });
+      }
+    };
+
+    window.addEventListener("signalr:token-refreshed", handleTokenRefresh);
+    return () => window.removeEventListener("signalr:token-refreshed", handleTokenRefresh);
+  }, [dispatch]);
 
   return children;
 }

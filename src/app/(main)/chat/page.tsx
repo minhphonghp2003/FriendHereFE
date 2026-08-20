@@ -17,6 +17,7 @@ import {
 } from "@/services/chat";
 import { appHub } from "@/lib/signalr/app-hub";
 import { useAuth } from "@/providers/auth-provider";
+import { VirtualizedList } from "@/components/common/virtualized-list";
 import {
   MessageCircle,
   Ban,
@@ -64,6 +65,7 @@ export default function V2ChatPage() {
   const dispatch = useAppDispatch();
   const { user } = useAuth();
   const conversations = useAppSelector((s) => s.chat.conversations);
+  const conversationsHasMore = useAppSelector((s) => s.chat.conversationsHasMore);
 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -124,6 +126,20 @@ export default function V2ChatPage() {
       unsubUnblock();
     };
   }, [loadConversations]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !conversationsHasMore) return;
+    
+    const last = conversations[conversations.length - 1];
+    if (last?.id) {
+      setLoadingMore(true);
+      try {
+        await loadConversations(last.id);
+      } finally {
+        setLoadingMore(false);
+      }
+    }
+  }, [loadingMore, conversationsHasMore, conversations, loadConversations]);
 
   const handleScroll = () => {
     const el = listRef.current;
@@ -437,27 +453,29 @@ export default function V2ChatPage() {
               </div>
             )}
           </>
-        ) : (
-          <>
-            {visible.length === 0 ? (
-              <div className="vc2-center-block">
-                <MessageCircle className="vc2-empty-icon" />
-                <p className="vc2-empty-text">
-                  {tab === "all" ? "Chưa có tin nhắn" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
-                </p>
-              </div>
-            ) : (
-              <>
-                {visible.map((conv) => renderRow(conv))}
-                {loadingMore && (
-                  <div className="vc2-center-block slim">
-                    <Loader2 className="vc2-spin" />
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
+             ) : (
+               <>
+                 {visible.length > 0 && (
+                   <VirtualizedList
+                     items={visible}
+                     renderItem={(conv) => renderRow(conv)}
+                     itemHeight={72} // Estimated height for each conversation row
+                     hasNextPage={conversationsHasMore}
+                     loadNextPage={loadMore}
+                     isLoading={loadingMore}
+                     height="100%"
+                   />
+                 )}
+                 {visible.length === 0 && (
+                   <div className="vc2-center-block">
+                     <MessageCircle className="vc2-empty-icon" />
+                     <p className="vc2-empty-text">
+                       {tab === "all" ? "Chưa có tin nhắn" : "Chưa có cuộc trò chuyện nào được lưu trữ"}
+                     </p>
+                   </div>
+                 )}
+               </>
+             )}
       </div>
 
       <style jsx global>{`

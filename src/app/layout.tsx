@@ -8,6 +8,7 @@ import { ReduxProvider } from "@/providers/redux-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { PushProvider } from "@/providers/push-provider";
 import { OfflineProvider } from "@/providers/offline-provider";
+import { UnreadCountProvider } from "@/providers/unread-count-provider";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { VersionUpdateAlert } from "@/components/version-update-alert";
@@ -67,11 +68,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ReduxProvider>
             <AuthProvider>
               <PushProvider>
-                <OfflineProvider>
-                  <VersionUpdateAlert />
-                  <OfflineBanner />
-                  {children}
-                </OfflineProvider>
+                <UnreadCountProvider>
+                  <OfflineProvider>
+                    <VersionUpdateAlert />
+                    <OfflineBanner />
+                    <div id="app-root" className="app-root">
+                      {children}
+                    </div>
+                  </OfflineProvider>
+                </UnreadCountProvider>
               </PushProvider>
             </AuthProvider>
           </ReduxProvider>

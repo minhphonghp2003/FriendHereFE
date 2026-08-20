@@ -6,6 +6,7 @@ import { ChevronUp, Users, MessageCircle, Loader2, Navigation } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { LoadingVideo } from "@/components/common/loading-video";
+import { VirtualizedList } from "@/components/common/virtualized-list";
 import { getOpponentConversation } from "@/services/chat";
 import { useActiveUsers } from "@/hooks/location/use-active-users";
 import { LOCATION_SORT, type LocationSort } from "@/services/location";
@@ -311,71 +312,69 @@ export function V2FriendsSheet({ onUserTap, onSheetOpen }: V2FriendsSheetProps) 
             ref={scrollRef}
             onScroll={handleListScroll}
           >
-            {nearbyFriends.map((friend) => {
-              const distanceLabel = formatDistance(friend);
-              return (
-                <div
-                  key={friend.userId}
-                  className="friend-card"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onUserTap?.(friend.userId)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onUserTap?.(friend.userId);
-                  }}
-                >
-                  <div className="friend-card-avatar">
-                    {friend.image ? (
-                      <img
-                        src={friend.image}
-                        alt={friend.name}
-                        className="friend-card-image"
-                      />
-                    ) : (
-                      <div className="friend-card-placeholder">
-                        {friend.name?.charAt(0) || "?"}
+            {nearbyFriends.length > 0 && (
+              <VirtualizedList
+                items={nearbyFriends}
+                renderItem={(friend) => {
+                  const distanceLabel = formatDistance(friend);
+                  return (
+                    <div
+                      className="friend-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onUserTap?.(friend.userId)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") onUserTap?.(friend.userId);
+                      }}
+                    >
+                      <div className="friend-card-avatar">
+                        {friend.image ? (
+                          <img
+                            src={friend.image}
+                            alt={friend.name}
+                            className="friend-card-image"
+                          />
+                        ) : (
+                          <div className="friend-card-placeholder">
+                            {friend.name?.charAt(0) || "?"}
+                          </div>
+                        )}
+                        <div className="friend-status online" />
                       </div>
-                    )}
-                    <div className="friend-status online" />
-                  </div>
 
-                  <div className="friend-card-info">
-                    <h4 className="friend-card-name">{friend.name}</h4>
-                    <div className="friend-card-meta">
-                      {distanceLabel && (
-                        <span className="friend-card-distance">{distanceLabel} away</span>
-                      )}
-                      {friend.status && (
-                        <>
-                          {distanceLabel && <span className="friend-card-meta-dot">·</span>}
-                          <span className="friend-card-status">{friend.status}</span>
-                        </>
-                      )}
+                      <div className="friend-card-info">
+                        <h4 className="friend-card-name">{friend.name}</h4>
+                        <div className="friend-card-meta">
+                          {distanceLabel && (
+                            <span className="friend-card-distance">{distanceLabel} away</span>
+                          )}
+                          {friend.status && (
+                            <>
+                              {distanceLabel && <span className="friend-card-meta-dot">·</span>}
+                              <span className="friend-card-status">{friend.status}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Trailing message button (v1 chat logic) */}
+                      <button
+                        onClick={(e) => handleChat(e, friend.userId, friend.name)}
+                        disabled={chatLoadingId === friend.userId}
+                        className="friend-card-chat-btn"
+                        aria-label={`Message ${friend.name}`}
+                      >
+                        <MessageCircle className="friend-card-chat-icon" fill="currentColor" />
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Trailing message button (v1 chat logic) */}
-                  <button
-                    onClick={(e) => handleChat(e, friend.userId, friend.name)}
-                    disabled={chatLoadingId === friend.userId}
-                    className="friend-card-chat-btn"
-                    aria-label={`Message ${friend.name}`}
-                  >
-                    <MessageCircle className="friend-card-chat-icon" fill="currentColor" />
-                  </button>
-                </div>
-              );
-            })}
-
-            {/* Infinite scroll loader */}
-            {isLoadingMore && (
-              <div className="friends-list-loading">
-                <Loader2 className="friends-list-loading-icon" />
-              </div>
-            )}
-
-            {!hasMore && nearbyFriends.length > 0 && (
-              <p className="friends-list-end">Đã hiển thị tất cả</p>
+                  );
+                }}
+                itemHeight={80} // Estimated height for each friend card
+                hasNextPage={hasMore}
+                loadNextPage={loadMore}
+                isLoading={isLoadingMore}
+                height="100%"
+              />
             )}
 
             {isLoading && nearbyFriends.length === 0 && (
