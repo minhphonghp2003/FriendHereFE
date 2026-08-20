@@ -55,10 +55,30 @@ export function V2MomentViewer({
         video.addEventListener("loadedmetadata", apply, { once: true });
       }
     }
+    
+    // Dispatch event to hide scroll-to-top button when viewer opens
+    window.dispatchEvent(new Event("v2:sheet-open"));
+    
+    // Disable body scroll when viewer is open
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = `-${window.scrollY}px`;
+    
+    const scrollY = window.scrollY;
+    
     // Pause the video when the viewer closes
     return () => {
       const v = videoRef.current;
       if (v) v.pause();
+      // Dispatch event to show scroll-to-top button when viewer closes
+      window.dispatchEvent(new Event("v2:sheet-close"));
+      // Re-enable body scroll when viewer closes and restore scroll position
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      window.scrollTo(0, scrollY);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
